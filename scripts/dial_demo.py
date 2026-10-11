@@ -38,7 +38,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 API = "https://api.getdial.ai/api/v1"
 USER_AGENT = "dispatchiq-dial-demo/1.0"
-BACKEND = "http://127.0.0.1:8000"
+BACKEND_PORT = 8000
 
 CLOUDFLARED_CANDIDATES = (
     r"C:\Program Files (x86)\cloudflared\cloudflared.exe",
@@ -98,18 +98,37 @@ def cloudflared_path() -> str:
     )
 
 
+def backend_url() -> str | None:
+    """Find the backend and the protocol it is actually speaking.
+
+    Not hardcoded, because the backend's TLS depends on whether uvicorn was
+    given --ssl-certfile and nothing here can know that. Guessing produced
+    exactly one bug already: after the server moved to HTTPS this script
+    reported it DOWN and would have pointed the tunnel at the wrong scheme.
+    """
+    import ssl
+
+    unverified = ssl._create_unverified_context()
+    for scheme in ("https", "http"):
+        url = f"{scheme}://127.0.0.1:{BACKEND_PORT}"
+        try:
+            context = unverified if scheme == "https" else None
+            with urllib.request.urlopen(url + "/api/health", timeout=5, context=context):
+                return url
+        except Exception:
+            continue
+    return None
+
+
 def backend_is_up() -> bool:
-    try:
-        with urllib.request.urlopen(BACKEND + "/api/health", timeout=5):
-            return True
-    except Exception:
-        return False
+    return backend_url() is not None
 
 
 def start_tunnel() -> tuple[subprocess.Popen, str]:
     """Open a quick tunnel to the backend and return its public hostname."""
+    target = backend_url() or f"http://127.0.0.1:{BACKEND_PORT}"
     process = subprocess.Popen(
-        [cloudflared_path(), "tunnel", "--url", BACKEND, "--no-autoupdate"],
+        [cloudflared_path(), "tunnel", "--url", target, "--no-autoupdate"],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
@@ -156,7 +175,8 @@ def status(key: str, number: str) -> int:
     print(f"inbound calling   {'on' if entry.get('callingEnabled') else 'off'}")
     print(f"self-hosted       {'enabled' if config.get('enabled') else 'disabled'}, mode={active}")
     print(f"dial connects to  {ws_url}")
-    print(f"backend here      {'up' if backend_is_up() else 'DOWN — start it first'}")
+    local = backend_url()
+    print(f"backend here      {local if local else 'DOWN — start it first'}")
 
     reachable = "unknown"
     if ws_url.startswith("wss://"):
@@ -213,7 +233,7 @@ def main() -> int:
     print("=" * 64)
     print(f"  CALL  {number}")
     print("=" * 64)
-    print(f"  tunnel        {https_url}")
+    print(f"  tunnel        {https_url} -> {backend_url()}")
     print(f"  dial connects {ws_url}")
     print(f"  inbound       {state}")
     print(f"  mode          {args.mode}")
