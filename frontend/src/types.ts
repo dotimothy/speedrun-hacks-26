@@ -31,6 +31,12 @@ export interface IncidentForm {
   incident_type: string
   location_text: string | null
   callback_number: string | null
+  caller_name: string | null
+  chief_complaint: string
+  awake: Tristate
+  breathing: Tristate
+  occupancy: string
+  fire_extent: string
   injuries: string
   persons_involved: number | null
   hazards: string[]

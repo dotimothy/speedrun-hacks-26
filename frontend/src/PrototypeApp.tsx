@@ -17,11 +17,15 @@ import type { ApprovedPhrase, ModelInfo, Prediction, ProcessResponse } from './t
 // The committed fixtures are the demo script, the offline fallback and the
 // test inputs all at once, so the console drives them directly.
 const FIXTURES = [
-  { id: 'kitchen_fire_en', label: 'Kitchen fire (EN)' },
-  { id: 'gas_smell_no_address_en', label: 'Gas smell, no address (EN)' },
-  { id: 'traffic_collision_es', label: 'Traffic collision (ES)' },
-  { id: 'weapon_crime_es', label: 'Intruder with a knife (ES)' },
-  { id: 'ambiguous_noise_en', label: 'Barely anything said (EN)' },
+  { id: 'medical_chest_pain_en', label: 'Chest pain', desk: 'Medical' },
+  { id: 'medical_not_breathing_en', label: 'Not breathing', desk: 'Medical' },
+  { id: 'kitchen_fire_en', label: 'Residence fire', desk: 'Fire' },
+  { id: 'gas_smell_no_address_en', label: 'Gas odor', desk: 'Fire' },
+  { id: 'commercial_fire_en', label: 'Restaurant fire', desk: 'Fire' },
+  { id: 'apartment_fire_es', label: 'Apartment fire', desk: 'Fire' },
+  { id: 'traffic_collision_es', label: 'Traffic collision', desk: 'Other' },
+  { id: 'weapon_crime_es', label: 'Intruder', desk: 'Other' },
+  { id: 'ambiguous_noise_en', label: 'Unclear caller', desk: 'Other' },
 ]
 
 export default function App() {

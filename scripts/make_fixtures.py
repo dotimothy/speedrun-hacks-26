@@ -86,6 +86,46 @@ SCENARIOS: list[dict] = [
         "exercises": "abstention: barely any information, most fields must stay unknown",
         "text": "Hello? Something is wrong. I... I can't really tell. Please.",
     },
+    {
+        "id": "medical_chest_pain_en",
+        "language": "en",
+        "exercises": "medical: chest pain, awake, breathing, caller, address, callback",
+        "text": (
+            "This is a medical emergency. My name is Helen Cho. My father is seventy "
+            "and he has chest pain. He is awake and breathing. We are at our house "
+            "at 220 Cedar Avenue. Please call me back at 555 0138."
+        ),
+    },
+    {
+        "id": "medical_not_breathing_en",
+        "language": "en",
+        "exercises": "medical: collapsed, not breathing, apartment address",
+        "text": (
+            "This is a medical emergency. My name is Marcus Hale. My wife collapsed "
+            "and she is not breathing. We are at 48 Elm Street, apartment 2. "
+            "Please call me back at 555 0144."
+        ),
+    },
+    {
+        "id": "commercial_fire_en",
+        "language": "en",
+        "exercises": "fire: commercial kitchen, one room, everyone outside",
+        "text": (
+            "There is smoke and flames in the kitchen of the restaurant at 900 Market "
+            "Street. My name is Luis Ortega. All six employees are outside. "
+            "My callback is 555 0184. No one is injured."
+        ),
+    },
+    {
+        "id": "apartment_fire_es",
+        "language": "es",
+        "exercises": "Spanish apartment fire: one unit, caller already outside",
+        "text": (
+            "Hay humo y fuego en Calle Reforma 120, departamento 4. "
+            "Me llamo Ana Ruiz. Ya sali a la calle. Hay dos personas afuera conmigo. "
+            "Mi numero es 555 0126. Nadie esta herido."
+        ),
+    },
 ]
 
 
@@ -136,10 +176,21 @@ def main() -> int:
         sid = scenario["id"]
         print(f"- {sid} ({scenario['language']}): {scenario['exercises']}")
 
-        (TRANSCRIPT_DIR / f"{sid}.txt").write_text(scenario["text"], encoding="utf-8")
+        transcript_path = TRANSCRIPT_DIR / f"{sid}.txt"
+        final = AUDIO_DIR / f"{sid}.wav"
+        previous = transcript_path.read_text(encoding="utf-8") if transcript_path.exists() else None
+        transcript_path.write_text(scenario["text"], encoding="utf-8")
+        if (
+            not args.clean
+            and previous == scenario["text"]
+            and final.exists()
+            and final.stat().st_size > 0
+        ):
+            print("  transcript unchanged, audio left in place")
+            index.append(scenario)
+            continue
 
         raw = AUDIO_DIR / f"{sid}.raw.wav"
-        final = AUDIO_DIR / f"{sid}.wav"
         if synthesize(scenario["text"], scenario["language"], raw):
             phone_band(raw, final)
             raw.unlink(missing_ok=True)

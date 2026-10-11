@@ -23,6 +23,35 @@ from pydantic import BaseModel, ConfigDict, Field
 # has somewhere to abstain to. Abstention is a real answer, not a failure.
 
 
+class Occupancy(str, Enum):
+    DWELLING = "dwelling"
+    MULTI_UNIT = "multi_unit"
+    COMMERCIAL = "commercial"
+    UNKNOWN = "unknown"
+
+
+class FireExtent(str, Enum):
+    """How much of the building is involved. Only meaningful on a fire or gas call."""
+
+    SMOKE_ONLY = "smoke_only"
+    ONE_ROOM = "one_room"
+    ONE_FLOOR = "one_floor"
+    WHOLE_BUILDING = "whole_building"
+    SPREADING = "spreading"
+    UNKNOWN = "unknown"
+
+
+class ChiefComplaint(str, Enum):
+    """What the medical caller says is wrong. Only meaningful on a medical call."""
+
+    CHEST_PAIN = "chest_pain"
+    TROUBLE_BREATHING = "trouble_breathing"
+    UNCONSCIOUS = "unconscious"
+    BLEEDING = "bleeding"
+    SEIZURE = "seizure"
+    UNKNOWN = "unknown"
+
+
 class IncidentType(str, Enum):
     STRUCTURE_FIRE = "structure_fire"
     MEDICAL = "medical"
@@ -92,6 +121,12 @@ FIELD_ORDER = (
     "incident_type",
     "location_text",
     "callback_number",
+    "caller_name",
+    "chief_complaint",
+    "awake",
+    "breathing",
+    "occupancy",
+    "fire_extent",
     "injuries",
     "persons_involved",
     "hazards",
@@ -175,6 +210,12 @@ class IncidentForm(BaseModel):
     incident_type: IncidentType = IncidentType.UNKNOWN
     location_text: str | None = None
     callback_number: str | None = None
+    caller_name: str | None = None
+    chief_complaint: ChiefComplaint = ChiefComplaint.UNKNOWN
+    awake: Tristate = Tristate.UNKNOWN
+    breathing: Tristate = Tristate.UNKNOWN
+    occupancy: Occupancy = Occupancy.UNKNOWN
+    fire_extent: FireExtent = FireExtent.UNKNOWN
     injuries: Injuries = Injuries.UNKNOWN
     persons_involved: int | None = None
     hazards: list[Hazard] = Field(default_factory=list)

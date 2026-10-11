@@ -26,6 +26,52 @@ body {
 button,
 input,
 textarea {
+
+.app { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+.top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.top h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: -0.01em; }
+.top p { margin: 0; max-width: 62ch; }
+
+.health { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.muted { color: var(--muted); }
+.warn { color: var(--urgent); }
+.working { color: var(--accent); }
+.empty { padding: 40px 0; }
+
+/* ---------------------------------------------------------------- controls */
+
+.controls {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin: 16px 0;
+  padding: 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.control-group { display: flex; flex-direction: column; gap: 6px; }
+.control-group.grow { flex: 1; min-width: 320px; }
+.control-group > label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+.desk { display: flex; gap: 8px; align-items: baseline; margin-top: 8px; }
+.desk-label { color: var(--muted); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; min-width: 72px; }
+.fixture-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+.form-section { margin-top: 14px; }
+.form-section h4 { margin: 0 0 2px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+.row { display: flex; gap: 6px; }
+.row input { flex: 1; }
+
+button, select, input {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 7px 11px;
   font: inherit;
 }
 button,
