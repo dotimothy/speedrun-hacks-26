@@ -289,19 +289,19 @@ def build_suggestions(
             added = [item for item in value if item not in known]
             if not added:
                 continue
-            outcome.suggestions.append(
-                _make(next_id, name, sorted(known | set(added)), UpdateKind.ADDITION,
-                      base_revision, prediction, evidence,
-                      previous=current.value if current else None)
-            )
+            suggestion = _make(next_id, name, sorted(known | set(added)),
+                               UpdateKind.ADDITION, base_revision, prediction, evidence,
+                               previous=current.value if current else None)
+            if _supersede_or_conflict(outcome, pending_by_field.get(name), suggestion, segment):
+                outcome.suggestions.append(suggestion)
             continue
 
         # Rule 4: nothing accepted -- a plain addition.
         if current is None or _is_empty(current.value):
             suggestion = _make(next_id, name, value, UpdateKind.ADDITION,
                                base_revision, prediction, evidence)
-            _supersede_or_conflict(outcome, pending_by_field.get(name), suggestion, segment)
-            outcome.suggestions.append(suggestion)
+            if _supersede_or_conflict(outcome, pending_by_field.get(name), suggestion, segment):
+                outcome.suggestions.append(suggestion)
             continue
 
         # Rules 5 and 6: it differs from something a human accepted.
@@ -467,25 +467,35 @@ def _value_kind(value: object) -> str:
 
 def _supersede_or_conflict(
     outcome: DiffOutcome, existing: Suggestion | None, fresh: Suggestion, segment: Segment
-) -> None:
-    """A newer pending suggestion on the same field retires the older one.
+) -> bool:
+    """Decide what a newer suggestion does to the pending one on its field.
 
-    Except a conflict, which is never superseded: it is a question waiting for
-    a human, and replacing it would answer that question by machine.
+    Returns whether the new suggestion should be kept. A repeat of something
+    already pending must NOT be kept: on a live call the same fact is
+    re-inferred every few seconds, and appending each time fills the review
+    queue with copies of one answer. Measured on a simulated call before this
+    returned anything: sixteen pending suggestions covering four fields,
+    "weapons_present: no" five times over.
+
+    A conflict is never superseded -- it is a question waiting for a human,
+    and replacing it would answer that question by machine.
     """
     if existing is None or existing.status is not SuggestionStatus.PENDING:
-        return
+        return True
     if existing.kind is UpdateKind.CONFLICT:
-        existing.conflict_options.append(
-            ConflictOption(
-                option_id=f"opt-{len(existing.conflict_options) + 1}",
-                value=fresh.proposed_value,
-                statement=segment.original_text,
-                segment_id=segment.id,
+        if fresh.proposed_value not in [o.value for o in existing.conflict_options]:
+            existing.conflict_options.append(
+                ConflictOption(
+                    option_id=f"opt-{len(existing.conflict_options) + 1}",
+                    value=fresh.proposed_value,
+                    statement=segment.original_text,
+                    segment_id=segment.id,
+                )
             )
-        )
-        return
+        return False
     if existing.proposed_value == fresh.proposed_value:
+        # Same answer again: strengthen the one on screen, do not add another.
         outcome.corroborated.setdefault(existing.id, []).append(segment.id)
-        return
+        return False
     outcome.superseded[existing.id] = fresh.id
+    return True

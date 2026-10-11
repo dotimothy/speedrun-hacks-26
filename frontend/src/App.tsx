@@ -10,6 +10,7 @@ import {
 import AutoReplyPanel from './components/AutoReplyPanel'
 import CallAudio from './components/CallAudio'
 import CallHistory, { loadHistory, recordCall } from './components/CallHistory'
+import LiveCall from './components/LiveCall'
 import type { CallRecord } from './components/CallHistory'
 import SettingsMenu from './components/SettingsMenu'
 import IncidentFormPane from './components/IncidentFormPane'
@@ -221,6 +222,8 @@ export default function App() {
         <MicPanel onAudio={onMicAudio} disabled={busy} />
         <CallAudio src={audioUrl} blob={audioBlob} label={audioLabel || 'call'} />
       </div>
+
+      <LiveCall />
 
       <div className="grid grid-intake">
         <CallHistory

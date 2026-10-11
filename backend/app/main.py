@@ -30,6 +30,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import tts
 from .asr import whisper_engine
+from .live.dial_bridge import bridge_for, close_bridge
 from .live.router import router as live_router
 from .autoreply import decide as decide_auto_reply
 from .config import FIXTURES_DIR, settings
@@ -441,11 +442,19 @@ async def dial_socket(websocket: WebSocket, call_id: str) -> None:
 
     await websocket.accept()
     session = DialSession(call_id=call_id)
+    # One review session per call, opened before the first word so the
+    # dashboard has somewhere to put the conversation as it arrives rather
+    # than only after the caller hangs up.
+    bridge = bridge_for(call_id)
     loop = CallLoop(
         session,
         send=websocket.send_text,
         synthesize=_dial_reply_audio,
         opening_phrase="greeting_en",
+        # The same tick transcribes, files a segment, and decides whether to
+        # speak -- so what the agent says and what the operator sees come
+        # from one pass over one transcript.
+        choose_reply=bridge.choose_reply,
     )
     try:
         await loop.run(websocket.receive_text)
@@ -456,7 +465,12 @@ async def dial_socket(websocket: WebSocket, call_id: str) -> None:
         call_id,
         session.buffered_seconds(),
     )
+    close_bridge(call_id)
     if session.pcm16k:
+        # A final pass over the whole call. The live session already holds the
+        # running record; this is the v1-shaped result the existing dashboard
+        # and /api/dispatchiq/calls/{id} expect, kept so nothing that worked
+        # before stops working.
         await _analyse_dial_call(call_id, bytes(session.pcm16k))
 
 

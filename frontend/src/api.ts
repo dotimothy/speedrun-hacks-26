@@ -109,3 +109,68 @@ export async function fetchFixtureList(): Promise<string[]> {
   const index = await response.json()
   return index.map((entry: { id: string }) => entry.id)
 }
+
+// ---------------------------------------------------------------- live v2
+
+export interface LiveSessionSummary {
+  session_id: string
+  created_at: string
+  revision: number
+  segments: number
+  pending: number
+  open_flags: number
+  published: number
+  language: string | null
+  incident_type: string | null
+  location_text: string | null
+  opening_line: string | null
+}
+
+export async function listLiveSessions(): Promise<LiveSessionSummary[]> {
+  const response = await fetch('/api/v2/sessions')
+  if (!response.ok) return []
+  return (await response.json()).sessions ?? []
+}
+
+export async function fetchLiveSession(sessionId: string): Promise<any | null> {
+  const response = await fetch('/api/v2/sessions/' + encodeURIComponent(sessionId))
+  return response.ok ? response.json() : null
+}
+
+/**
+ * Act on one suggestion.
+ *
+ * `base_revision` is the revision the operator was looking at and
+ * `operation_id` is this click's own id, so a double-click or a retry applies
+ * once. A 409 means somebody or something moved underneath this decision; the
+ * body carries the current snapshot so the caller re-renders from that rather
+ * than from a guess.
+ */
+export async function reviewSuggestion(
+  sessionId: string,
+  suggestionId: string,
+  action: 'accept' | 'reject' | 'resolve',
+  baseRevision: number,
+  extra: Record<string, unknown> = {},
+): Promise<{ ok: boolean; snapshot: any; conflict?: string }> {
+  const response = await fetch(
+    `/api/v2/sessions/${encodeURIComponent(sessionId)}/suggestions/${encodeURIComponent(
+      suggestionId,
+    )}/${action}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        base_revision: baseRevision,
+        operation_id:
+          (crypto as any).randomUUID?.() ?? String(Date.now()) + Math.random(),
+        ...extra,
+      }),
+    },
+  )
+  const data = await response.json()
+  if (response.status === 409) {
+    return { ok: false, snapshot: data.snapshot, conflict: data.reason }
+  }
+  return { ok: response.ok, snapshot: data.snapshot ?? data }
+}

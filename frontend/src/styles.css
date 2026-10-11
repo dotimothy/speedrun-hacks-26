@@ -360,3 +360,33 @@ code {
 .history-top strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .history-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .history-sub { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ------------------------------------------------------- live call view */
+
+.live-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--urgent);
+  margin-right: 7px;
+  animation: blink 1.6s ease-in-out infinite;
+}
+@keyframes blink { 0%,100% { opacity: 1 } 50% { opacity: 0.25 } }
+@media (prefers-reduced-motion: reduce) { .live-dot { animation: none } }
+
+.live-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+@media (max-width: 1000px) { .live-grid { grid-template-columns: 1fr; } }
+
+.live-head {
+  margin: 0 0 8px; font-size: 12px; text-transform: uppercase;
+  letter-spacing: 0.04em; color: var(--muted); font-weight: 600;
+}
+
+.conversation { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 300px; overflow-y: auto; }
+.conversation li { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 5px; }
+.conversation li:last-child { border-bottom: none; }
+.conversation .chip { flex: none; }
+.translation { flex-basis: 100%; font-size: 12px; padding-left: 4px; }
+
+.flag-strip { margin-bottom: 12px; border-left: 3px solid var(--urgent); padding-left: 10px; }
+.flag-strip p { margin: 2px 0; font-size: 13px; }
