@@ -141,6 +141,7 @@ def health() -> dict:
     return {
         "status": "ok",
         "mock_mode": settings.mock_mode,
+        "decision_default": settings.decision_engine,
         "whisper": {
             "device": whisper_engine.device,
             "compute_type": whisper_engine.compute_type,

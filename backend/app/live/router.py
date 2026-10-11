@@ -269,12 +269,22 @@ async def append_segment(session_id: str, request: Request) -> dict:
 
     engine = get_engine(req.decision_engine)
     t0 = time.perf_counter()
-    laya_result = engine.extract(caller_text, caller_english, language)
+    try:
+        laya_result = engine.extract(caller_text, caller_english, language)
+    except (RuntimeError, ValueError) as error:
+        if engine.name != "openai_decisions":
+            raise
+        raise HTTPException(status_code=502, detail=str(error)) from error
     rule_result = rule_engine.extract(caller_text, caller_english, language)
     resolution = resolve_confidence(
         laya_result, rule_result, caller_text, caller_english, asr_confidence=word_confidence
     )
     decision_ms = (time.perf_counter() - t0) * 1000
+
+    for prediction in resolution.predictions:
+        if prediction.raw_probability is not None:
+            prediction.breakdown = {**(prediction.breakdown or {}), "engine": laya_result.engine,
+                                    "model": laya_result.model}
 
     outcome = build_suggestions(
         accepted=snapshot.accepted_record,
@@ -300,7 +310,8 @@ async def append_segment(session_id: str, request: Request) -> dict:
             "whisper_device": whisper_engine.device,
             "asr_confidence": "measured" if word_confidence is not None else "not_applicable",
         },
-        calibration_warning=settings.CALIBRATION_WARNING,
+        calibration_warning=("Raw model probabilities are not calibrated for emergency calls. All proposed fields require operator review."
+                             if engine.name == "openai_decisions" else settings.CALIBRATION_WARNING),
         notes=list(laya_result.notes),
     )
 

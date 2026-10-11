@@ -246,3 +246,13 @@ def test_lowercase_intersection_does_not_turn_symptoms_into_location():
     from app.decision.rules import find_all_locations
     assert find_all_locations("He is coughing and bleeding") == []
     assert find_all_locations("We are with john and mary") == []
+
+
+def test_full_replacement_intersection_precedes_ordinal_substitution(client, session):
+    snapshot = say(client, session, "we are at oak and third.")["snapshot"]
+    suggestion = find(snapshot, "location_text")
+    client.post(f"/api/v2/sessions/{session}/suggestions/{suggestion['id']}/accept",
+                json={"base_revision": 0, "operation_id": "accept-original"})
+    updated = say(client, session, "sorry, fourth and third")["snapshot"]
+    assert find(updated, "location_text")["proposed_value"] == "fourth and third"
+    assert updated["accepted_record"]["location_text"]["value"] == "oak and third"

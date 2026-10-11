@@ -241,13 +241,12 @@ def build_suggestions(
         for name, current in accepted.items():
             if not isinstance(current.value, str):
                 continue
-            rebuilt = apply_ordinal_correction(current.value, segment_text)
+            # A complete replacement intersection takes precedence over a
+            # partial ordinal substitution ("fourth and third" is not
+            # "fourth, not third").
+            rebuilt = _restated_in_segment(name, segment_text, current.value)
             if not rebuilt or rebuilt == current.value:
-                # Not a partial retraction. It may still be a whole new value
-                # stated in this segment ("actually, Pine and Main"), which
-                # the cumulative pass hides behind the older match for the
-                # same reason.
-                rebuilt = _restated_in_segment(name, segment_text, current.value)
+                rebuilt = apply_ordinal_correction(current.value, segment_text)
             if not rebuilt or rebuilt == current.value:
                 continue
             evidence = _locate_in_segment(segment_text, segment_text.strip(), segment)
@@ -456,7 +455,8 @@ def _make(
         ),
         raw_model=(
             RawModelScore(
-                engine="laya",
+                engine=str(breakdown.get("engine", "laya")),
+                checkpoint=breakdown.get("model"),
                 probability=prediction.raw_probability,
                 probabilities=prediction.probabilities,
             )

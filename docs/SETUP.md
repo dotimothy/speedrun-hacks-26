@@ -175,3 +175,32 @@ All optional; the defaults are what the demo uses.
 | API calls fail from a phone but work locally | The certificate was not accepted for the API origin. Open `https://<lan-ip>:8000/api/health` once and accept it too |
 | Every `/api` call 500s in the dashboard | Protocol mismatch between the dev server and the backend. The startup line says which the backend speaks; `scripts/serve.py` avoids it |
 | Nothing works and the demo is in five minutes | `DISPATCHIQ_MOCK=1` — the committed fixtures are served with no models at all |
+
+
+### OpenAI Decisions for live sessions
+
+Set these in the ignored repository `.env` (never commit credentials):
+
+```dotenv
+OPENAI_API_KEY=your-key
+DISPATCHIQ_ALLOW_CLOUD=1
+DISPATCHIQ_DECISION_ENGINE=openai_decisions
+DISPATCHIQ_DECISIONS_MODEL=gpt-6-luna
+```
+
+Restart the API after changing configuration. Inherited environment variables
+override `.env`. This adapter uses OpenAI's `/v1/decisions` endpoint for typed
+incident and safety questions. Caller transcript text leaves this machine.
+Use synthetic calls for the prototype. Addresses and phone numbers still use
+deterministic extraction; this is not unrestricted entity extraction. All
+results remain proposals requiring human review. API failures retain input for
+retry instead of silently substituting rules. Scores are not calibrated for
+emergency calls.
+
+The live v2 session path performs real inference even when `DISPATCHIQ_MOCK=1`
+is used to skip local model warmup; the older v1 fixture path remains separate.
+Decisions does not transcribe audio: microphone input still requires a working
+Whisper installation. Use `http://localhost:5173/?input=transcript` to test typed
+utterances independently of speech recognition.
+
+API documentation: https://developers.openai.com/api/docs/guides/decisions
