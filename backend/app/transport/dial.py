@@ -87,6 +87,42 @@ def verify_signature(
     return hmac.compare_digest(expected, digest)
 
 
+def normalise_number(number: str | None) -> str:
+    """Compare numbers by their digits, ignoring formatting.
+
+    "4086445538", "+1 408 644 5538" and "(408) 644-5538" are one number. The
+    last ten digits are compared so a country code on one side and not the
+    other does not silently reject the right caller.
+    """
+    digits = "".join(ch for ch in (number or "") if ch.isdigit())
+    return digits[-10:] if len(digits) >= 10 else digits
+
+
+def allowed_callers() -> list[str]:
+    from ..config import settings
+
+    return [n for n in settings.allowed_callers if n]
+
+
+def caller_is_allowed(number: str | None) -> bool:
+    """Whether this caller may reach the demo.
+
+    An empty allowlist means no restriction, which is the right default for a
+    local prototype but the wrong one for a number that is live on the public
+    telephone network. Configure it before turning inbound on.
+
+    A caller with no number -- withheld caller ID -- is refused whenever an
+    allowlist exists. The whole point is knowing who is on the line.
+    """
+    allow = allowed_callers()
+    if not allow:
+        return True
+    if not number:
+        return False
+    wanted = normalise_number(number)
+    return any(normalise_number(entry) == wanted for entry in allow)
+
+
 @dataclass
 class DialSession:
     """Per-call state machine for one Dial audio socket.
@@ -97,6 +133,13 @@ class DialSession:
 
     call_id: str
     echo: bool = False
+    # Who is calling, from the call_connected frame. E.164, or None before it
+    # arrives. Kept because Dial has no caller allowlist of its own, so if
+    # inbound is to be restricted at all it has to happen here.
+    caller: str | None = None
+    called: str | None = None
+    direction: str | None = None
+    rejected: bool = False
     inbound_format: str | None = None
     outbound_format: str | None = None
     reconnect: bool = False
@@ -129,8 +172,31 @@ class DialSession:
         return []
 
     def _connected(self, frame: dict) -> list[str]:
-        self.inbound_format = frame.get("audioInboundFormat", "mulaw_8000")
-        self.outbound_format = frame.get("audioOutboundFormat", "mulaw_8000")
+        self.caller = frame.get("from")
+        self.called = frame.get("to")
+        self.direction = frame.get("direction")
+
+        # The documented shape is a nested `formats` object. Earlier code read
+        # flat audioInboundFormat/audioOutboundFormat keys, which are not in
+        # the protocol -- it worked only because the fallback default happens
+        # to be the format Dial actually sends. Both are read now, documented
+        # shape first, so a non-default format stops being silently wrong.
+        formats = frame.get("formats") or {}
+        self.inbound_format = (
+            formats.get("inbound") or frame.get("audioInboundFormat") or "mulaw_8000"
+        )
+        self.outbound_format = (
+            formats.get("outbound") or frame.get("audioOutboundFormat") or "mulaw_8000"
+        )
+
+        if not caller_is_allowed(self.caller):
+            log.warning(
+                "call %s from %s is not on the allowlist; ending",
+                self.call_id, self.caller or "an unknown number",
+            )
+            self.rejected = True
+            self.ended = True
+            return [json.dumps({"type": "end_call"})]
         self.reconnect = bool(frame.get("reconnect", False))
         for name in (self.inbound_format, self.outbound_format):
             if name not in SUPPORTED_FORMATS:

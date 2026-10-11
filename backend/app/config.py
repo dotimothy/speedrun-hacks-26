@@ -191,5 +191,13 @@ class Settings:
     # The /dispatchiq/llm/{call_id} socket refuses connections while it is empty.
     dial_llm_signing_secret: str = _env("DIAL_LLM_SIGNING_SECRET", "")
 
+    # Numbers permitted to reach the demo. Dial has no allowlist of its own,
+    # so this is the only thing standing between a live public number and
+    # whoever dials it. Empty means anyone, which is fine for a local
+    # prototype and wrong for a number on the telephone network.
+    allowed_callers: tuple[str, ...] = tuple(
+        n.strip() for n in _env("DISPATCHIQ_ALLOWED_CALLERS", "").split(",") if n.strip()
+    )
+
 
 settings = Settings()
