@@ -1,0 +1,152 @@
+"""Full-duplex call loop for the Dial audio socket.
+
+Caller audio comes in on one side while approved replies go out on the other,
+paced at 20 ms per frame. Two things make it more than a send loop:
+
+* **Barge-in.** If the caller starts talking while a reply is playing, the
+  queued audio is dropped and a ``clear`` frame tells Dial to stop playback.
+* **Decisions.** Every ``decide_every_s`` seconds of caller audio, the loop asks
+  ``choose_reply`` whether to speak. That callback is where the pipeline plugs
+  in. The loop itself only knows about approved phrases and their audio.
+
+Receiving never waits on sending: the sender runs as its own task, so a long
+reply cannot delay the caller's audio being read.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import contextlib
+import logging
+import math
+import struct
+import wave
+from typing import Awaitable, Callable
+
+from .dial import FRAME_MS, DialSession, clear_frame, reply_frames
+
+log = logging.getLogger("dispatchiq.dial")
+
+Receive = Callable[[], Awaitable[str]]
+Send = Callable[[str], Awaitable[None]]
+Synthesize = Callable[[str], bytes | None]  # approved phrase id -> WAV bytes
+ChooseReply = Callable[[DialSession], Awaitable[str | None]]
+
+
+def rms(pcm16: bytes) -> float:
+    """Root-mean-square level of 16-bit little-endian PCM."""
+    samples = [s for (s,) in struct.iter_unpack("<h", pcm16)]
+    if not samples:
+        return 0.0
+    return math.sqrt(sum(s * s for s in samples) / len(samples))
+
+
+class CallLoop:
+    def __init__(
+        self,
+        session: DialSession,
+        *,
+        send: Send,
+        synthesize: Synthesize,
+        choose_reply: ChooseReply | None = None,
+        opening_phrase: str | None = None,
+        barge_in_rms: float = 600.0,
+        decide_every_s: float = 3.0,
+        frame_interval: float = FRAME_MS / 1000,
+    ) -> None:
+        self.session = session
+        self.synthesize = synthesize
+        self.choose_reply = choose_reply
+        self.opening_phrase = opening_phrase
+        self.barge_in_rms = barge_in_rms
+        self.decide_every_s = decide_every_s
+        self.frame_interval = frame_interval
+        self.barge_ins = 0
+        self._opened = False
+        self._send_raw = send
+        self._send_lock = asyncio.Lock()
+        self._queue: asyncio.Queue[str] = asyncio.Queue()
+        self._sending = False
+        self._last_decision_s = 0.0
+
+    @property
+    def speaking(self) -> bool:
+        return self._sending or not self._queue.empty()
+
+    async def _send(self, frame: str) -> None:
+        async with self._send_lock:
+            await self._send_raw(frame)
+
+    async def run(self, receive: Receive) -> None:
+        sender = asyncio.create_task(self._sender())
+        try:
+            while not self.session.ended:
+                raw = await receive()
+                before = len(self.session.pcm16k)
+                for outgoing in self.session.on_message(raw):
+                    await self._send(outgoing)
+                # The opening line goes out as soon as the call connects, so
+                # the caller hears it before they speak. Dial sets the outbound
+                # format on call_connected, so that is the earliest it is safe.
+                if (
+                    self.opening_phrase
+                    and not self._opened
+                    and self.session.outbound_format is not None
+                    and not self.session.ended
+                ):
+                    self._opened = True
+                    self._speak(self.opening_phrase)
+                heard = bytes(self.session.pcm16k[before:])
+                if heard and self.speaking and rms(heard) >= self.barge_in_rms:
+                    await self._barge_in()
+                await self._maybe_decide()
+        finally:
+            sender.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await sender
+
+    async def _maybe_decide(self) -> None:
+        if self.choose_reply is None or self.speaking:
+            return
+        heard_s = self.session.buffered_seconds()
+        if heard_s - self._last_decision_s < self.decide_every_s:
+            return
+        self._last_decision_s = heard_s
+        phrase_id = await self.choose_reply(self.session)
+        if phrase_id is not None:
+            self._speak(phrase_id)
+
+    def _speak(self, phrase_id: str) -> None:
+        """Queue an approved phrase's audio. A bad or missing reply is skipped."""
+        wav = self.synthesize(phrase_id)
+        if wav is None:
+            log.warning("no audio for %s on call %s", phrase_id, self.session.call_id)
+            return
+        codec = self.session.outbound_format or "mulaw_8000"
+        try:
+            frames = reply_frames(wav, codec)
+        except (wave.Error, ValueError) as exc:
+            # A bad reply must not take the call down. It is skipped, not spoken.
+            log.warning("unusable reply audio for %s: %s", phrase_id, exc)
+            return
+        for frame in frames:
+            self._queue.put_nowait(frame)
+
+    async def _barge_in(self) -> None:
+        dropped = 0
+        while not self._queue.empty():
+            self._queue.get_nowait()
+            dropped += 1
+        self.barge_ins += 1
+        log.info("caller barged in on call %s, dropped %d frames", self.session.call_id, dropped)
+        await self._send(clear_frame())
+
+    async def _sender(self) -> None:
+        while True:
+            frame = await self._queue.get()
+            self._sending = True
+            try:
+                await self._send(frame)
+                await asyncio.sleep(self.frame_interval)
+            finally:
+                self._sending = False

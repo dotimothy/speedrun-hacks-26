@@ -32,6 +32,7 @@ CACHE_DIR = VOICES_DIR / "_rendered"
 # id -> (language, text). Bilingual because the product claim is multilingual;
 # the Spanish lines are what the demo's non-English scenario needs.
 APPROVED: dict[str, tuple[str, str]] = {
+    "greeting_en": ("en", "Hello, what is your emergency?"),
     "stay_on_line_en": ("en", "Please stay on the line with me."),
     "what_happening_en": ("en", "Can you tell me what is happening right now?"),
     "repeat_address_en": ("en", "Can you repeat the street address for me?"),
