@@ -228,8 +228,41 @@ def build_suggestions(
             )
         )
 
+    # --- retractions are detected from the segment, not the running text ---
+    #
+    # A caller correcting themselves names the change, not the whole fact:
+    # "Sorry, Fourth, not Third" never says the street. The cumulative
+    # extractor cannot help, and is actively misleading here -- it returns the
+    # *earliest* match in the transcript, which is precisely the value being
+    # corrected, so the correction reads as agreement and disappears. So this
+    # runs against the segment that carried the cue.
+    handled: set[str] = set()
+    if cue:
+        for name, current in accepted.items():
+            if not isinstance(current.value, str):
+                continue
+            rebuilt = apply_ordinal_correction(current.value, segment_text)
+            if not rebuilt or rebuilt == current.value:
+                # Not a partial retraction. It may still be a whole new value
+                # stated in this segment ("actually, Pine and Main"), which
+                # the cumulative pass hides behind the older match for the
+                # same reason.
+                rebuilt = _restated_in_segment(name, segment_text, current.value)
+            if not rebuilt or rebuilt == current.value:
+                continue
+            evidence = _locate_in_segment(segment_text, segment_text.strip(), segment)
+            suggestion = _make(
+                next_id, name, rebuilt, UpdateKind.CORRECTION, base_revision,
+                _blank_prediction(name, rebuilt), evidence, previous=current.value,
+            )
+            suggestion.prior_statement = str(current.value)
+            outcome.suggestions.append(suggestion)
+            handled.add(name)
+
     for prediction in predictions:
         name = prediction.label
+        if name in handled:
+            continue
         value = prediction.value
 
         # Rule 0: an absence of evidence never proposes erasing a value.
@@ -306,6 +339,42 @@ def build_suggestions(
         outcome.suggestions.append(suggestion)
 
     return outcome
+
+
+def _restated_in_segment(field_name: str, segment_text: str, accepted: str) -> str | None:
+    """A fresh value for this field spoken in this segment, if there is one.
+
+    Scoped to the segment deliberately. Running the extractor over the whole
+    transcript returns the earliest match, which is the value being replaced.
+    """
+    from ..decision.rules import find_all_locations, find_all_phones
+
+    extractors = {
+        # Relaxed here, and only here: a retraction plus an accepted location
+        # is enough context to read a bare capitalised pair as a street.
+        "location_text": lambda t: find_all_locations(t, relaxed=True),
+        "callback_number": find_all_phones,
+    }
+    extractor = extractors.get(field_name)
+    if extractor is None:
+        return None
+    for candidate in extractor(segment_text):
+        if candidate != accepted:
+            return candidate
+    return None
+
+
+def _blank_prediction(name: str, value: object) -> Prediction:
+    """A prediction standing in for a rule-derived correction.
+
+    The value came from the accepted record plus a retraction in the
+    transcript, not from a model, so there is no model probability to report
+    and ``raw_model`` stays null rather than borrowing a number.
+    """
+    return Prediction(
+        label=name, value=value, score=0.7,
+        breakdown={"source": "retraction_in_segment", "rule_check": "agree"},
+    )
 
 
 def _statement_for(current, accepted) -> str | None:

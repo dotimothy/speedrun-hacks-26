@@ -29,6 +29,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import tts
 from .asr import whisper_engine
+from .live.router import router as live_router
 from .autoreply import decide as decide_auto_reply
 from .config import FIXTURES_DIR, settings
 from .confidence import resolve as resolve_confidence
@@ -121,6 +122,12 @@ async def _parse_request(request: Request) -> tuple[ProcessRequest, bytes | None
 # --------------------------------------------------------------------------
 # routes
 # --------------------------------------------------------------------------
+# Live sessions (API v2, issue #1) live in their own router so that mounting
+# them is a one-line change here -- a teammate's Dial adapter is editing this
+# same file on another branch.
+app.include_router(live_router)
+
+
 # The dashboard plays the committed fixture audio through the real pipeline,
 # so the WAVs and the recorded expectations are served from here. Synthetic
 # material only -- there is no real call audio in this repository.

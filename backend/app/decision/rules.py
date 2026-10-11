@@ -105,11 +105,20 @@ def _looks_like_intersection(match: "re.Match") -> bool:
     return bool(_ORDINAL_ANCHORED.match(left) or _ORDINAL_ANCHORED.match(right))
 
 
-def find_intersections(text: str) -> list[str]:
-    """Every intersection in the text, in order -- not just the first."""
+def find_intersections(text: str, *, relaxed: bool = False) -> list[str]:
+    """Every intersection in the text, in order -- not just the first.
+
+    ``relaxed`` accepts a bare pair of capitalised words with no ordinal and
+    no cue -- "Pine and Main". It is off by default because in open text that
+    also matches "John and Mary". The caller layer turns it on only when the
+    surrounding context has already established that a location is being
+    given: an accepted location on file, plus a retraction in this very
+    segment. That is narrow enough to be safe and is the difference between
+    honouring "actually, Pine and Main" and silently dropping it.
+    """
     found: list[str] = []
     for match in _INTERSECTION.finditer(text):
-        if not _looks_like_intersection(match):
+        if not (relaxed or _looks_like_intersection(match)):
             continue
         value = match.group(0).strip(" ,.")
         # Drop a leading cue word so the stored value is the place itself.
@@ -119,7 +128,7 @@ def find_intersections(text: str) -> list[str]:
     return found
 
 
-def find_all_locations(text: str) -> list[str]:
+def find_all_locations(text: str, *, relaxed: bool = False) -> list[str]:
     """All location candidates, in order of appearance.
 
     Returning every match rather than the first is what lets the caller layer
@@ -138,7 +147,7 @@ def find_all_locations(text: str) -> list[str]:
             value = match.group(0).strip(" ,.")
             if value and value not in found:
                 found.append(value)
-    for value in find_intersections(text):
+    for value in find_intersections(text, relaxed=relaxed):
         if value not in found:
             found.append(value)
     return found
@@ -257,16 +266,27 @@ class RuleEngine:
 
         answers: dict[str, FieldAnswer] = {}
 
-        phone = find_phone(joined)
+        # All candidates, not the first: the caller layer needs to see when a
+        # transcript holds two different locations rather than silently
+        # getting whichever one appeared earliest.
+        phone_candidates = find_all_phones(joined)
+        location_candidates = find_all_locations(haystack) or find_all_locations(joined)
+
+        phone = phone_candidates[0] if phone_candidates else None
         if phone:
             answers["callback_number"] = FieldAnswer(
                 label="callback_number", value=phone, quote=phone, decided_on="rules"
             )
 
-        address = find_address(haystack) or find_address(joined)
+        address = location_candidates[0] if location_candidates else None
         if address:
             answers["location_text"] = FieldAnswer(
-                label="location_text", value=address, quote=address, decided_on="rules"
+                label="location_text", value=address, quote=address, decided_on="rules",
+                notes=(
+                    [f"{len(location_candidates)} location candidates: "
+                     + "; ".join(location_candidates)]
+                    if len(location_candidates) > 1 else []
+                ),
             )
 
         persons = find_persons(joined)
