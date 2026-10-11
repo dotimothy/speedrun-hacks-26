@@ -119,7 +119,7 @@ EVIDENCE_TERMS: dict[str, tuple[str, ...]] = {
         "cuchillo", "arma", "pistola", "entro a mi casa", "ladron", "robo",
     ),
     "injuries": (
-        "hurt", "injured", "bleeding", "coughing", "breathing", "unconscious", "pain",
+        "hurt", "injured", "burned", "burnt", "burns", "bleeding", "coughing", "breathing", "unconscious", "pain",
         "herido", "sangrando", "tosiendo", "respirar", "inconsciente", "dolor",
     ),
     "weapons_present": ("gun", "knife", "weapon", "shot", "arma", "pistola", "cuchillo"),

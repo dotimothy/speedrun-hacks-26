@@ -256,3 +256,23 @@ def test_full_replacement_intersection_precedes_ordinal_substitution(client, ses
     updated = say(client, session, "sorry, fourth and third")["snapshot"]
     assert find(updated, "location_text")["proposed_value"] == "fourth and third"
     assert updated["accepted_record"]["location_text"]["value"] == "oak and third"
+
+
+def test_accepted_correction_does_not_recur_on_unrelated_utterances(client, session):
+    first = say(client, session, "We're at Oak and Third")["snapshot"]
+    location = find(first, "location_text")
+    client.post(f"/api/v2/sessions/{session}/suggestions/{location['id']}/accept",
+                json={"base_revision": 0, "operation_id": "accept-original"})
+    corrected = say(client, session, "Sorry, it's Fourth and Third")["snapshot"]
+    location = find(corrected, "location_text")
+    assert location["proposed_value"] == "Fourth and Third"
+    client.post(f"/api/v2/sessions/{session}/suggestions/{location['id']}/accept",
+                json={"base_revision": 1, "operation_id": "accept-correction"})
+    for text in ["My roommate burned his hand. He's awake and talking",
+                 "I don't know if anyone is still upstairs.",
+                 "There's a strong smell, but I can't tell if it's gas or just smoke",
+                 "You can call me back at 415-555-0136"]:
+        snapshot = say(client, session, text)["snapshot"]
+        assert find(snapshot, "location_text") is None
+        assert snapshot["accepted_record"]["location_text"]["value"] == "Fourth and Third"
+    assert find(snapshot, "callback_number")["proposed_value"] == "415-555-0136"

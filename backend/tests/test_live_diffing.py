@@ -256,3 +256,29 @@ class TestTheDiffNeverWrites:
             )
         # The structural guarantee: inference proposes, it does not write.
         assert accepted["location_text"].model_dump() == before
+
+
+def test_unsupported_weapon_denial_is_not_proposed(next_id):
+    out = build_suggestions(
+        accepted={}, pending=[],
+        predictions=[Prediction(label="weapons_present", value="no", score=0.35)],
+        segment=segment(1, "There is smoke in my kitchen"), base_revision=0, next_id=next_id,
+    )
+    assert out.suggestions == []
+
+
+def test_old_evidence_is_not_attached_to_new_segment():
+    from app.live.diffing import _evidence_for_prediction
+    from app.schemas import EvidenceSpan
+    prediction = Prediction(label="location_text", value="Oak and Third", score=0.8,
+                            evidence=EvidenceSpan(text="Oak and Third", start=0, end=13,
+                                                  source="original", match="exact"))
+    assert _evidence_for_prediction(prediction, segment(4, "My roommate burned his hand")) is None
+
+
+def test_burn_injury_has_locatable_support():
+    from app.confidence import _evidence_for
+    text = "My roommate burned his hand. He's awake and talking"
+    evidence = _evidence_for("injuries", None, text, text)
+    assert evidence is not None
+    assert "burned his hand" in evidence.text

@@ -102,7 +102,7 @@ LIST_FIELDS = {"hazards", "access_notes"}
 # Fields a model may never propose without a located span. An invented injury
 # is the one false positive with a real-world cost, and it was measured: on a
 # near-empty call the model returned injuries=suspected at 0.785.
-EVIDENCE_REQUIRED = {"injuries"}
+EVIDENCE_REQUIRED = {"injuries", "weapons_present"}
 
 
 @dataclass
@@ -245,7 +245,7 @@ def build_suggestions(
             # partial ordinal substitution ("fourth and third" is not
             # "fourth, not third").
             rebuilt = _restated_in_segment(name, segment_text, current.value)
-            if not rebuilt or rebuilt == current.value:
+            if name == "location_text" and (not rebuilt or rebuilt == current.value):
                 rebuilt = apply_ordinal_correction(current.value, segment_text)
             if not rebuilt or rebuilt == current.value:
                 continue
@@ -285,6 +285,12 @@ def build_suggestions(
             if len(candidates) == 1:
                 value = candidates[0]
                 evidence = _locate_in_segment(segment_text, value, segment)
+            else:
+                # A cumulative value cannot create a new location/phone
+                # update unless this utterance actually contains that value.
+                evidence = _locate_in_segment(segment_text, str(value), segment)
+                if evidence is None:
+                    continue
 
         # Rule 2: already accepted and unchanged -- strengthen, do not restate.
         if current is not None and current.value == value:
@@ -316,7 +322,7 @@ def build_suggestions(
 
         # Rules 5 and 6: it differs from something a human accepted.
         proposed = value
-        if cue and isinstance(current.value, str) and isinstance(value, str):
+        if name == "location_text" and cue and isinstance(current.value, str) and isinstance(value, str):
             rebuilt = apply_ordinal_correction(current.value, segment_text)
             if rebuilt and rebuilt != current.value:
                 proposed = rebuilt
@@ -399,16 +405,8 @@ def _evidence_for_prediction(prediction: Prediction, segment: Segment) -> Eviden
     body = segment.original_text if span.source == "original" else (segment.translation or "")
     index = body.find(span.text) if body else -1
     if index == -1:
-        # The span came from an earlier segment in the cumulative text. Keep
-        # the quote, drop the offsets rather than point at the wrong words.
-        return EvidenceRef(
-            segment_id=segment.id,
-            source="original" if span.source == "original" else "translated",
-            text=span.text,
-            start=None,
-            end=None,
-            method=EvidenceMethod.KEYWORD_CONTEXT,
-        )
+        # Historical evidence must never be attributed to a new utterance.
+        return None
     return EvidenceRef(
         segment_id=segment.id,
         source="original" if span.source == "original" else "translated",
