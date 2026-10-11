@@ -29,11 +29,13 @@ from fastapi.staticfiles import StaticFiles
 
 from . import tts
 from .asr import whisper_engine
+from .autoreply import decide as decide_auto_reply
 from .config import FIXTURES_DIR, settings
 from .confidence import resolve as resolve_confidence
 from .decision.laya_model import LayaEngine
 from .decision.rules import RuleEngine
 from .schemas import (
+    AutoReplySuggestion,
     LatencyBreakdown,
     ProcessRequest,
     ProcessResponse,
@@ -52,6 +54,11 @@ rule_engine = RuleEngine()
 # prototype that keeps dispatcher corrections in a database it cannot explain
 # is worse than one that forgets them when it restarts.
 SESSIONS: dict[str, dict[str, object]] = {}
+
+# Phrases autonomous mode has already spoken, per session. Kept server-side so
+# the no-repeat rule survives a page reload and cannot be reset by a client
+# that simply forgets.
+SPOKEN: dict[str, list[str]] = {}
 
 
 @asynccontextmanager
@@ -75,6 +82,7 @@ app = FastAPI(title="DispatchIQ", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=list(settings.cors_origins),
+    allow_origin_regex=settings.cors_origin_regex,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -177,7 +185,27 @@ def speak(req: SpeakRequest) -> dict:
     result = tts.speak(req.phrase_id)
     if result is None:
         raise HTTPException(status_code=404, detail="unknown phrase id")
+    if req.session_id:
+        # Recorded whether a human pressed the button or autonomous mode did,
+        # so the no-repeat rule covers both and the session has one audit list.
+        spoken = SPOKEN.setdefault(req.session_id, [])
+        spoken.append(req.phrase_id)
+        result["spoken_this_session"] = list(spoken)
     return result
+
+
+@app.get("/api/sessions/{session_id}/spoken")
+def spoken(session_id: str) -> dict:
+    """Everything that has been said aloud to this caller, in order."""
+    ids = SPOKEN.get(session_id, [])
+    return {
+        "session_id": session_id,
+        "phrases": [
+            {"id": pid, "language": tts.APPROVED[pid][0], "text": tts.APPROVED[pid][1]}
+            for pid in ids
+            if pid in tts.APPROVED
+        ],
+    }
 
 
 @app.post("/api/process", response_model=ProcessResponse)
@@ -276,6 +304,29 @@ async def process(request: Request) -> ProcessResponse:
         end_to_end=None,
     )
 
+    reply, quiet_reason = decide_auto_reply(
+        suggested_action=outcome.suggested_action.value,
+        predictions=outcome.predictions,
+        detected_language=language,
+        confirmed=confirmed,
+        already_asked=SPOKEN.get(req.session_id, []),
+    )
+    if reply is not None:
+        phrase = tts.APPROVED.get(reply.phrase_id)
+        auto_reply = AutoReplySuggestion(
+            phrase_id=reply.phrase_id,
+            language=reply.language,
+            text=phrase[1] if phrase else None,
+            reason=reply.reason,
+            target=reply.target,
+            allowed=True,
+        )
+    else:
+        auto_reply = AutoReplySuggestion(
+            reason=quiet_reason,
+            allowed=outcome.suggested_action.value not in ("escalate_to_human_now",),
+        )
+
     return ProcessResponse(
         session_id=req.session_id,
         detected_language=language,
@@ -297,6 +348,7 @@ async def process(request: Request) -> ProcessResponse:
         },
         notes=outcome.prompts + notes,
         calibration_warning=settings.CALIBRATION_WARNING,
+        auto_reply=auto_reply,
     )
 
 

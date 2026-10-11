@@ -9,3 +9,5 @@ voices/
 .env
 .env.*
 !.env.example
+certs/
+frontend/tsconfig.tsbuildinfo

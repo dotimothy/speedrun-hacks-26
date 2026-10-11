@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   confirmFields,
   fetchHealth,
@@ -7,8 +7,10 @@ import {
   processAudio,
   processTranscript,
 } from './api'
-import { Recorder } from './audio/recorder'
+import AutoReplyPanel from './components/AutoReplyPanel'
+import CallAudio from './components/CallAudio'
 import IncidentFormPane from './components/IncidentFormPane'
+import MicPanel from './components/MicPanel'
 import PredictionList from './components/PredictionList'
 import TranscriptPane from './components/TranscriptPane'
 import { ActionBanner, LatencyPanel, ReplyBar } from './components/SidePanels'
@@ -34,11 +36,19 @@ export default function App() {
   const [hovered, setHovered] = useState<Prediction | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [recording, setRecording] = useState(false)
   const [transcriptDraft, setTranscriptDraft] = useState('')
   const [callCount, setCallCount] = useState(0)
 
-  const recorder = useRef(new Recorder())
+  // Whatever audio the current result came from, so it can be played back.
+  const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
+  const [audioLabel, setAudioLabel] = useState('')
+  const objectUrl = useRef<string | null>(null)
+
+  // Keep the latest whisper size available to the live callback without
+  // making the callback identity change on every keystroke elsewhere.
+  const sizeRef = useRef(whisperSize)
+  sizeRef.current = whisperSize
 
   useEffect(() => {
     fetchModels()
@@ -49,7 +59,19 @@ export default function App() {
       .catch(() => setError('backend not reachable — is uvicorn running on 8000?'))
     fetchPhrases().then(setPhrases).catch(() => undefined)
     fetchHealth().then(setHealth).catch(() => undefined)
+    return () => {
+      if (objectUrl.current) URL.revokeObjectURL(objectUrl.current)
+    }
   }, [])
+
+  const attachAudio = (blob: Blob, label: string) => {
+    // Revoke the previous one; a long demo would otherwise leak a WAV per call.
+    if (objectUrl.current) URL.revokeObjectURL(objectUrl.current)
+    objectUrl.current = URL.createObjectURL(blob)
+    setAudioUrl(objectUrl.current)
+    setAudioBlob(blob)
+    setAudioLabel(label)
+  }
 
   const run = async (work: () => Promise<ProcessResponse>) => {
     setBusy(true)
@@ -64,35 +86,33 @@ export default function App() {
     }
   }
 
-  const playFixture = async (id: string) => {
+  const playFixture = async (id: string, label: string) => {
     setSessionId(id)
-    // Fetch the fixture WAV through Vite's static serving and post it, so the
-    // demo exercises the real audio path rather than a transcript shortcut.
     const response = await fetch('/fixtures/audio/' + id + '.wav')
     if (!response.ok) {
       setError('fixture audio missing — run: python scripts/make_fixtures.py')
       return
     }
     const wav = await response.blob()
+    attachAudio(wav, label)
     await run(() => processAudio(id, wav, whisperSize))
   }
 
-  const toggleRecording = async () => {
-    if (!recording) {
-      try {
-        await recorder.current.start()
-        setRecording(true)
-      } catch {
-        setError('microphone refused — getUserMedia needs localhost, not a LAN IP')
-      }
+  // Live interim passes must not flip the UI into its busy state or the
+  // dispatcher would watch the panel blink every five seconds while they are
+  // still talking. Only the final pass does.
+  const onMicAudio = useCallback(async (wav: Blob, final: boolean) => {
+    const id = final ? 'mic-' + Date.now() : 'mic-live'
+    if (final) {
+      setSessionId(id)
+      attachAudio(wav, 'microphone recording')
+      await run(() => processAudio(id, wav, sizeRef.current))
       return
     }
-    setRecording(false)
-    const wav = await recorder.current.stop()
-    const id = 'mic-' + Date.now()
-    setSessionId(id)
-    await run(() => processAudio(id, wav, whisperSize))
-  }
+    const interim = await processAudio(id, wav, sizeRef.current)
+    setResult(interim)
+    setCallCount((n) => n + 1)
+  }, [])
 
   const onConfirm = async (fields: Record<string, unknown>) => {
     const cleaned = Object.fromEntries(
@@ -108,7 +128,9 @@ export default function App() {
 
   const banner = useMemo(() => {
     if (!result) return null
-    const prompts = result.notes.filter((note) => note.startsWith('Ask') || note.startsWith('Escalate'))
+    const prompts = result.notes.filter(
+      (note) => note.startsWith('Ask') || note.startsWith('Escalate'),
+    )
     return { action: result.suggested_action, prompts }
   }, [result])
 
@@ -127,7 +149,7 @@ export default function App() {
             <span className="chip">
               whisper {health.whisper?.device}/{health.whisper?.compute_type}
             </span>
-            <span className="chip">laya {health.laya?.ready ? 'ready' : 'down'}</span>
+            <span className="chip">laya {health.laya?.ready ? health.laya?.device : 'down'}</span>
             <span className="chip">tts {health.tts?.rendered ?? 0} phrases</span>
           </div>
         )}
@@ -142,7 +164,7 @@ export default function App() {
                 key={fixture.id}
                 disabled={busy}
                 className={sessionId === fixture.id ? 'active' : ''}
-                onClick={() => playFixture(fixture.id)}
+                onClick={() => playFixture(fixture.id, fixture.label)}
               >
                 {fixture.label}
               </button>
@@ -162,13 +184,6 @@ export default function App() {
           </select>
         </div>
 
-        <div className="control-group">
-          <label>Live</label>
-          <button className={recording ? 'recording' : ''} disabled={busy} onClick={toggleRecording}>
-            {recording ? 'Stop and process' : 'Record from microphone'}
-          </button>
-        </div>
-
         <div className="control-group grow">
           <label>Or paste a transcript (skips speech recognition)</label>
           <div className="row">
@@ -183,6 +198,8 @@ export default function App() {
               onClick={() => {
                 const id = 'typed-' + Date.now()
                 setSessionId(id)
+                setAudioUrl(null)
+                setAudioBlob(null)
                 return run(() => processTranscript(id, transcriptDraft))
               }}
             >
@@ -191,6 +208,11 @@ export default function App() {
           </div>
         </div>
       </section>
+
+      <div className="grid grid-intake">
+        <MicPanel onAudio={onMicAudio} disabled={busy} />
+        <CallAudio src={audioUrl} blob={audioBlob} label={audioLabel || 'call'} />
+      </div>
 
       {busy && <p className="working">working…</p>}
       {error && <p className="warn">{error}</p>}
@@ -238,7 +260,16 @@ export default function App() {
                 engine={result.engine}
                 cold={callCount <= 1}
               />
-              <ReplyBar phrases={phrases} language={result.detected_language} />
+              <AutoReplyPanel
+                suggestion={result.auto_reply}
+                sessionId={result.session_id}
+                action={result.suggested_action}
+              />
+              <ReplyBar
+                phrases={phrases}
+                language={result.detected_language}
+                sessionId={result.session_id}
+              />
             </div>
           </div>
 
@@ -254,7 +285,9 @@ export default function App() {
       )}
 
       {!result && !busy && (
-        <p className="muted empty">Pick a scenario above to run the pipeline.</p>
+        <p className="muted empty">
+          Pick a scenario above, or record from the microphone, to run the pipeline.
+        </p>
       )}
     </div>
   )

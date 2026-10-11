@@ -12,14 +12,25 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import statistics
+import ssl
 import sys
 import time
 import urllib.request
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-BASE = "http://127.0.0.1:8000"
+# The demo may be served over HTTPS with a self-signed certificate (see
+# scripts/serve.py). Point at it with DISPATCHIQ_API, and do not verify the
+# chain: it is signed by nobody on purpose, and this only ever talks to a
+# server on this machine.
+BASE = os.environ.get("DISPATCHIQ_API", "http://127.0.0.1:8000").rstrip("/")
+SSL_CONTEXT = ssl._create_unverified_context() if BASE.startswith("https") else None
+
+
+def _open(request, timeout):
+    return urllib.request.urlopen(request, timeout=timeout, context=SSL_CONTEXT)
 
 
 def post_audio(session_id: str, wav: Path, size: str) -> tuple[dict, float]:
@@ -41,7 +52,7 @@ def post_audio(session_id: str, wav: Path, size: str) -> tuple[dict, float]:
         headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
     )
     started = time.perf_counter()
-    with urllib.request.urlopen(request, timeout=900) as response:
+    with _open(request, 900) as response:
         data = json.loads(response.read())
     return data, (time.perf_counter() - started) * 1000
 
@@ -52,7 +63,7 @@ def main() -> int:
     parser.add_argument("--repeats", type=int, default=2, help="warm runs per fixture")
     args = parser.parse_args()
 
-    with urllib.request.urlopen(BASE + "/api/health", timeout=60) as response:
+    with _open(urllib.request.Request(BASE + "/api/health"), 60) as response:
         health = json.loads(response.read())
 
     index = json.loads((REPO / "fixtures" / "index.json").read_text(encoding="utf-8"))

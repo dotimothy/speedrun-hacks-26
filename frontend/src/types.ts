@@ -63,6 +63,16 @@ export interface ProcessResponse {
   engine: Record<string, string>
   notes: string[]
   calibration_warning: string | null
+  auto_reply: AutoReplySuggestion | null
+}
+
+export interface AutoReplySuggestion {
+  phrase_id: string | null
+  language: string | null
+  text: string | null
+  reason: string
+  target: string | null
+  allowed: boolean
 }
 
 export interface ModelInfo {

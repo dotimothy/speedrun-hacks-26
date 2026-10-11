@@ -13,13 +13,24 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import ssl
 import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-BASE = "http://127.0.0.1:8000"
+# The demo may be served over HTTPS with a self-signed certificate (see
+# scripts/serve.py). Point at it with DISPATCHIQ_API, and do not verify the
+# chain: it is signed by nobody on purpose, and this only ever talks to a
+# server on this machine.
+BASE = os.environ.get("DISPATCHIQ_API", "http://127.0.0.1:8000").rstrip("/")
+SSL_CONTEXT = ssl._create_unverified_context() if BASE.startswith("https") else None
+
+
+def _open(request, timeout):
+    return urllib.request.urlopen(request, timeout=timeout, context=SSL_CONTEXT)
 
 PASS, FAIL = "  ok  ", " FAIL "
 failures: list[str] = []
@@ -32,7 +43,7 @@ def check(condition: bool, description: str, detail: str = "") -> None:
 
 
 def get(path: str) -> dict:
-    with urllib.request.urlopen(BASE + path, timeout=60) as response:
+    with _open(urllib.request.Request(BASE + path), 60) as response:
         return json.loads(response.read())
 
 
@@ -42,7 +53,7 @@ def post_json(path: str, payload: dict, timeout: int = 600) -> dict:
         data=json.dumps(payload).encode(),
         headers={"Content-Type": "application/json"},
     )
-    with urllib.request.urlopen(request, timeout=timeout) as response:
+    with _open(request, timeout) as response:
         return json.loads(response.read())
 
 
@@ -64,7 +75,7 @@ def post_audio(session_id: str, wav: Path, size: str) -> dict:
         data=body,
         headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
     )
-    with urllib.request.urlopen(request, timeout=900) as response:
+    with _open(request, 900) as response:
         return json.loads(response.read())
 
 

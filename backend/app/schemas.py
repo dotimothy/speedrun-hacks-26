@@ -224,6 +224,7 @@ class ProcessResponse(BaseModel):
     # checkpoints are over-confident and that its temperatures are not
     # calibrated for this data, so every probability here is raw.
     calibration_warning: str | None = None
+    auto_reply: AutoReplySuggestion | None = None
 
 
 class ApprovedPhrase(BaseModel):
@@ -232,7 +233,28 @@ class ApprovedPhrase(BaseModel):
     text: str
 
 
+class AutoReplySuggestion(BaseModel):
+    """What autonomous mode would say, and why -- or why it is staying quiet.
+
+    Always computed and always returned, even when autonomous mode is off in
+    the UI, so the reason is visible rather than implicit. ``phrase_id`` being
+    null is itself informative: ``reason`` then says what stopped it.
+    """
+
+    phrase_id: str | None = None
+    language: str | None = None
+    text: str | None = None
+    reason: str = ""
+    target: str | None = None
+    # False when policy forbids speaking at all (an escalation, say), as
+    # opposed to simply having nothing to ask.
+    allowed: bool = True
+
+
 class SpeakRequest(BaseModel):
     """Only a phrase id. Free-text synthesis is deliberately not reachable."""
 
     phrase_id: str
+    # Optional: lets the server record what has been said to this caller, so a
+    # question is never asked twice.
+    session_id: str | None = None

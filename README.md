@@ -130,8 +130,7 @@ plan.md     team execution plan and sprint timeline
 
 ```bash
 python scripts/setup.py --install    # macOS/Linux: python3
-python -m uvicorn app.main:app --app-dir backend --port 8000
-cd frontend && npm run dev           # http://localhost:5173
+python scripts/serve.py              # HTTPS on 0.0.0.0, both servers
 ```
 
 `setup.py` installs the dependencies, fetches the Piper voices, generates the
@@ -172,6 +171,20 @@ an independent second opinion on everything else.
 
 **Piper** speaks the approved reply phrases. There is no code path that
 synthesises arbitrary text.
+
+Served over HTTPS on every interface, because `getUserMedia` only runs in a
+secure context and a LAN address is not one — without TLS the microphone works
+on the demo laptop and silently fails on every other device.
+
+### Autonomous mode
+
+Optional, off by default. Switched on, the system asks one of the approved
+questions by itself when a field is missing, after a visible countdown with a
+stop control. It is bounded by rules that are tested rather than promised: the
+approved phrases only, **never during an escalation**, never the same question
+twice, never a promise that help is coming, and it cannot write to the form or
+clear `requires_review`. On the intruder-with-a-knife scenario it goes quiet
+and hands to a human, which is the behaviour worth showing.
 
 ### Why the scores are built rather than read
 

@@ -85,6 +85,15 @@ class Settings:
     fuzzy_threshold: float = 0.9
 
     # --- TTS ---------------------------------------------------------------
+    # Piper's length_scale is seconds-per-phoneme: lower is faster. The
+    # default of 1.0 reads at an audiobook pace, which is wrong for this --
+    # a dispatcher asking "what is the address?" says it briskly, and in a
+    # demo every extra second of synthetic speech is a second nobody is
+    # watching the form fill in. 0.7 is noticeably quicker and still clear.
+    piper_length_scale: float = float(_env("DISPATCHIQ_TTS_SPEED", "0.7"))
+    # Slightly tighter than default prosody, which suits short questions.
+    piper_noise_scale: float = float(_env("DISPATCHIQ_TTS_NOISE", "0.55"))
+    piper_noise_w: float = float(_env("DISPATCHIQ_TTS_NOISE_W", "0.7"))
     piper_voices: dict[str, str] = field(
         default_factory=lambda: {
             "en": _env("DISPATCHIQ_VOICE_EN", "en_US-amy-medium"),
@@ -96,7 +105,24 @@ class Settings:
     cors_origins: tuple[str, ...] = (
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "https://localhost:5173",
+        "https://127.0.0.1:5173",
     )
+    # The dashboard may also be opened on a phone at the machine's LAN
+    # address, which cannot be known ahead of time. This allows private-range
+    # origins only -- the prototype is meant to run on a local network and
+    # nothing here should be exposed to the internet.
+    cors_origin_regex: str = _env(
+        "DISPATCHIQ_CORS_REGEX",
+        r"https?://(localhost|127\.0\.0\.1|\[::1\]|10\.\d+\.\d+\.\d+"
+        r"|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?",
+    )
+
+    # --- TLS ---------------------------------------------------------------
+    # Populated by scripts/make_cert.py. HTTPS matters because getUserMedia
+    # refuses to run in an insecure context, and a LAN address is one.
+    ssl_certfile: str = _env("DISPATCHIQ_SSL_CERT", "")
+    ssl_keyfile: str = _env("DISPATCHIQ_SSL_KEY", "")
     # Serve committed fixture responses instead of running models. Lets the
     # frontend be built before the backend is live, and is the documented
     # fallback if the GPU path fails during the demo.
