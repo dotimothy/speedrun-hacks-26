@@ -81,6 +81,18 @@ interface WireSuggestion {
 export interface Snapshot {
   session_id: string;
   decision_engine?: string | null;
+  assistant?: {
+    status: "ready" | "unavailable" | "error";
+    summary: string;
+    follow_up_question: string | null;
+    target_field: string | null;
+    source_segment_ids: string[];
+    source_revision: number;
+    source_segment_count: number;
+    model: string;
+    provider: string;
+    message: string | null;
+  } | null;
   revision: number;
   event_seq: number;
   detected_language: string | null;
@@ -352,6 +364,10 @@ export function setSessionEngine(id: string, engine: string, signal: AbortSignal
       { decision_engine: engine || null }, "POST", signal);
     return validateSnapshot(result.snapshot);
   });
+}
+export async function generateAssistance(id: string, signal: AbortSignal): Promise<Snapshot> {
+  const result = await request(`/sessions/${encodeURIComponent(id)}/assist`, {}, "POST", signal);
+  return validateSnapshot(result.snapshot);
 }
 export function appendUtterance(
   id: string,

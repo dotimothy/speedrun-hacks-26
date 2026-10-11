@@ -1,23 +1,14 @@
-"""Piper TTS over a fixed table of approved phrases.
+"""Piper speech for approved phrases and internal assistant questions.
 
-The only way to get audio out of this module is to name one of the phrases
-below. There is no code path that synthesises arbitrary text, which is
-deliberate: a system that can speak to an emergency caller in a generated
-sentence is a system that can say something nobody approved.
-
-Note what the phrases are. Every one is a question the dispatcher would ask
-anyway, or an instruction to stay on the line. None of them promises that help
-is coming, states an arrival time, or implies that anything has been
-dispatched -- the prototype has no authority to make those claims and the
-phrase table is where that limit is enforced.
-
-Phrases are rendered to WAV once at startup and cached, so pressing the button
-during a demo plays an existing file rather than waiting on synthesis.
+Public speech requests use approved IDs. The live call assistant can render
+one generated follow-up in memory; caller-specific audio is not cached.
 """
 
 from __future__ import annotations
 
 import base64
+import io
+from threading import Lock
 import logging
 import time
 from pathlib import Path
@@ -50,6 +41,18 @@ APPROVED: dict[str, tuple[str, str]] = {
         "Thank you, I have what I need. A dispatcher has your information "
         "and help is on the way. Please stay safe, and call back if anything "
         "changes.",
+    ),
+    # The closing line for a call that ended without the incident or the
+    # location on the record. It claims nothing about what was collected.
+    "wrap_up_partial_en": (
+        "en",
+        "Thank you. Your call is on record and a person will review what you "
+        "have told me. Please call back if anything changes.",
+    ),
+    "wrap_up_partial_es": (
+        "es",
+        "Gracias. Su llamada ha quedado registrada y una persona revisara lo "
+        "que me ha dicho. Vuelva a llamar si algo cambia.",
     ),
     "stay_on_line_es": ("es", "Por favor, no cuelgue, quedese en la linea."),
     "what_happening_es": ("es", "Puede decirme que esta pasando ahora mismo?"),
@@ -192,6 +195,33 @@ def speak(phrase_id: str) -> dict | None:
     }
 
 
+_question_lock = Lock()
+
+
+def synthesize_question(text: str, language: str) -> bytes | None:
+    """Internal assistant speech; caller-specific audio is never cached on disk."""
+    if language not in ("en", "es") or not text.strip().endswith("?") or text.count("?") != 1 or len(text) > 400:
+        return None
+    try:
+        import wave
+        from piper import SynthesisConfig
+        with _question_lock:
+            voice = _get_voice(language)
+            if voice is None:
+                return None
+            audio = io.BytesIO()
+            with wave.open(audio, "wb") as handle:
+                voice.synthesize_wav(text, handle, syn_config=SynthesisConfig(
+                    length_scale=settings.piper_length_scale,
+                    noise_scale=settings.piper_noise_scale,
+                    noise_w_scale=settings.piper_noise_w,
+                ))
+            return audio.getvalue()
+    except Exception:
+        log.warning("Piper could not synthesize an assistant question")
+        return None
+
+
 def status() -> dict:
     rendered = sorted(p.stem for p in CACHE_DIR.glob("*.wav")) if CACHE_DIR.exists() else []
     _ = rendered
@@ -205,6 +235,6 @@ def status() -> dict:
         "phrases": len(APPROVED),
         "rendered": len(rendered),
         "length_scale": settings.piper_length_scale,
-        "free_text_synthesis": "not available by design",
+        "free_text_synthesis": "internal assistant questions only; /api/speak uses approved phrases",
         "error": _load_error,
     }

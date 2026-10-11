@@ -130,8 +130,20 @@ exercised against live Dial telephony.
 
 ### Replies and autonomous mode
 
-- **Piper TTS** speaks pre-approved phrases only (`tts.APPROVED`). No code path synthesises
-  arbitrary text.
+- **Piper TTS** speaks approved phrases and internally generated follow-up questions
+  on live Dial audio calls. The public `/api/speak` endpoint still accepts approved phrase IDs only.
+- **Post-decision assistant** (`POST /api/v2/sessions/{id}/assist`) uses the selected
+  decision model's results and caller transcript to draft a summary and one
+  scenario-specific follow-up. The dashboard requests it after caller input; live
+  Dial audio calls run it automatically, speak an eligible question, and record
+  the exact question in the operator transcript. Summaries remain drafts and
+  never change the reviewed report. Existing safety pauses, question cooldowns,
+  and closing behavior apply; provider or synthesis failures use fixed questions.
+  The separate legacy Dial LLM socket continues to use approved phrases.
+  Configure `DISPATCHIQ_ALLOW_CLOUD=1`, `OPENAI_API_KEY`, and optionally
+  `DISPATCHIQ_ASSISTANT_MODEL` (default `gpt-6-luna`, with reasoning disabled for quick follow-ups) and
+  `DISPATCHIQ_ASSISTANT_TIMEOUT` (default 15 seconds). Set
+  `DISPATCHIQ_ASSISTANT_ENABLED=0` to disable this stage.
 - **Autonomous replies** (`autoreply.py`) are off by default. When on, the system may ask
   one approved question when a field is missing, with a visible countdown and a stop control.
   Rules are enforced in code and tested: approved phrases only, never during an escalation,
@@ -143,8 +155,10 @@ exercised against live Dial telephony.
 - Both transcripts, the prediction list, and an editable suggested form with per-field
   verification state.
 - Microphone and WAV input, call audio playback, and an auto-reply panel.
-- Settings drawer: decision engine choice, speech recognition model, abstention thresholds,
-  and a "this machine" panel reporting what was actually resolved.
+- Settings dialog: available decision engines, speech recognition model, and
+  local/cloud inference details. Preferences persist in the browser; selecting
+  an engine on an attached phone call changes subsequent extraction for that session.
+  Switching models leaves previously reviewed decisions unchanged.
 - Call history, which lists v2 sessions.
 
 **Not yet in the dashboard:** the v2 review queue (accept, reject, resolve), narrative
@@ -279,8 +293,9 @@ moves with input quality.
 head-count, because those are patterns rather than judgments, and it acts as
 an independent second opinion on everything else.
 
-**Piper** speaks the approved reply phrases. There is no code path that
-synthesises arbitrary text.
+**Piper** speaks approved reply phrases and generated assistant questions on
+live audio calls. Generated audio is rendered in memory and uses the same
+frame pacing and barge-in path as the fixed questions.
 
 **Dial** is an alternative transport. It replaces the browser audio path and
 nothing else: Whisper, the decision engines and the workflow see the same 16 kHz

@@ -400,6 +400,22 @@ class Diagnostics(BaseModel):
     notes: list[str] = Field(default_factory=list)
 
 
+class AssistantDraft(BaseModel):
+    status: Literal["ready", "unavailable", "error"]
+    summary: str = ""
+    follow_up_question: str | None = None
+    target_field: str | None = None
+    source_segment_ids: list[str] = Field(default_factory=list)
+    source_revision: int = 0
+    source_segment_count: int = 0
+    input_signature: str = ""
+    model: str = ""
+    provider: str = "OpenAI"
+    generated_at: str = Field(default_factory=utcnow)
+    latency_ms: float = 0.0
+    message: str | None = None
+
+
 class SessionSnapshot(BaseModel):
     """The whole recoverable state of one call.
 
@@ -421,6 +437,7 @@ class SessionSnapshot(BaseModel):
     closed: bool = False
     # Per-session override. None follows the deployment default.
     decision_engine: str | None = None
+    assistant: AssistantDraft | None = None
 
     segments: list[Segment] = Field(default_factory=list)
     accepted_record: dict[str, FieldValue] = Field(default_factory=dict)

@@ -502,6 +502,12 @@ class SessionStore:
             snapshot.event_seq += 1
         return snapshot
 
+    def set_assistant(self, session_id: str, draft) -> SessionSnapshot:
+        snapshot = self._state(session_id).snapshot
+        snapshot.assistant = draft
+        snapshot.event_seq += 1
+        return snapshot
+
     def regenerate_narrative(self, session_id: str, text: str) -> None:
         """Refresh the generated draft without discarding an operator's edit."""
         snapshot = self._state(session_id).snapshot

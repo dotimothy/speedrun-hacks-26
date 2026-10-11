@@ -15,6 +15,22 @@ import wave
 from app.transport.audio import pcm16_to_mulaw
 from app.transport.dial import DialSession, clear_frame
 from app.transport.dial_call import CallLoop, rms
+from app.transport.dial_call import GeneratedReply
+
+
+def test_generated_audio_uses_the_paced_queue_and_supports_barge_in():
+    async def scenario():
+        sent = []
+        async def send(frame): sent.append(frame)
+        def fixed_speech(_): raise AssertionError("Generated audio is already rendered")
+        loop = CallLoop(DialSession(call_id="generated"), send=send, synthesize=fixed_speech)
+        loop._speak(GeneratedReply("Where are you?", "en", reply_wav(0.2)))
+        assert not loop._queue.empty()
+        assert json.loads(loop._queue.get_nowait())["type"] == "media"
+        await loop._barge_in()
+        assert loop._queue.empty()
+        assert sent == [clear_frame()]
+    asyncio.run(scenario())
 
 
 def connected() -> str:

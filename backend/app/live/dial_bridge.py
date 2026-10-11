@@ -17,19 +17,20 @@ Two deliberate choices about what gets spoken:
   flagged, this returns ``None`` every tick. A synthetic voice talking over
   the worst moment of a call is the failure worth designing out, and it is
   worth more than the question it would have asked.
-* **Approved phrases only.** The return value is a phrase id. There is no path
-  from here to free text, so nothing unreviewed can reach a caller.
-* **Each question once.** A question comes back only if the caller said
-  nothing after it. Once they have answered, a field we still could not fill
-  is a gap for the operator to chase, not a question to repeat at them.
+* **Generated follow-ups with fixed fallback.** After extraction, the assistant
+  drafts a summary and question. Eligible questions are rendered before being
+  returned; a provider or speech failure falls back to the approved phrase.
+* **Nothing asked once it is known.** The questions come from
+  ``live.followup.follow_up_questions``, the same plan the operator view
+  shows, and that plan only ever lists fields that are still empty. The three
+  a call cannot be handed over without -- what, where, callback -- are asked a
+  second time if the first reply did not contain them; everything else once.
+* **One question, then room to answer.** After speaking, the agent waits for
+  the caller, or for a real pause, before speaking again.
 
-The questions themselves come from ``live.followup.follow_up_questions``, the
-same plan the operator view shows, so the phone and the screen never disagree
-about what is still missing. When there is nothing left on it the agent may
-still ask -- every question answered, or asked and replied to -- it plays one
-closing phrase, confirming a dispatcher has the record, and the loop hangs up
-once that audio has drained. Nothing is dispatched by this prototype, so the
-phrase says only that: the record still waits on a human.
+When the questions are used up the agent says so and the loop hangs up once
+that audio has drained. Nothing is dispatched by this prototype; the record
+still waits on a human.
 
 Everything the agent says is also written into the session as an operator
 utterance, so the dashboard shows both halves of the conversation. An answer
@@ -53,7 +54,9 @@ from ..config import settings
 from ..confidence import resolve as resolve_confidence
 from ..decision.registry import get_engine
 from ..decision.rules import RuleEngine
-from ..tts import APPROVED
+from ..tts import APPROVED, synthesize_question
+from ..transport.dial_call import GeneratedReply
+from . import assistant
 from .diffing import build_suggestions
 from .followup import observed, reviewed_incident
 from ..scenarios import known
@@ -67,35 +70,35 @@ rule_engine = RuleEngine()
 # Safety flags that stop the agent speaking entirely.
 SILENCING_FLAGS = {"weapon_mentioned", "caller_may_be_trapped"}
 
-# How long before a question may be asked again, in decision ticks (a tick is
-# settings.dial_decide_every_s of caller audio), and how many times in total.
-#
-# A question only comes back if the caller has said nothing at all since it
-# was asked -- a silence is worth repeating into, a reply is not. If they
-# answered and the extractor still could not fill the field, that is a gap for
-# the operator to see in the review queue, not a question to ask twice. Being
-# asked the same thing again when you have already answered it is its own kind
-# of failure on an emergency call.
-REASK_COOLDOWN_TICKS = 4
+# The three things worth asking for a second time. If the caller replied and
+# the field is still empty, the reply did not contain it -- they were mid-
+# story, or the question landed on top of them -- and a call cannot be handed
+# over without knowing what, where, and how to ring back. Everything else is
+# asked once: a detail the caller did not give is a gap for the operator.
+REASKABLE_FIELDS = ("incident_type", "location_text", "callback_number")
 REASK_LIMIT = 2
 
-# The holding phrase, for when there is nothing left to ask. Rare, because its
-# job is to show the line is open, not to fill every pause.
-HOLDING_COOLDOWN_TICKS = 6
-HOLDING_LIMIT = 4
+# How many quiet decision ticks (settings.dial_decide_every_s each) to leave
+# after speaking before speaking again. The caller gets time to answer; the
+# agent does not stack a second question on top of an unanswered first.
+QUIET_PATIENCE_TICKS = 3
 
-# What the call cannot end without. Everything else on the plan is detail an
-# operator can chase; without these two there is no incident to hand over, so
-# the agent holds the line instead of hanging up on someone.
+# The holding phrase is for one situation only: a quiet line, early in the
+# call, with nothing to ask. It is not what the agent says when it has run
+# out of questions -- that is the end of the call, and it says so.
+HOLDING_LIMIT = 2
+
+# What the closing phrase is allowed to claim. With both of these known the
+# agent says it has what it needs; without them it says only that a dispatcher
+# has what the caller told it.
 ESSENTIAL_FIELDS = ("incident_type", "location_text")
 
 # A caller who has said three things has been through the opening exchange.
 # Below that, running out of questions means the questions never got going.
 MIN_SEGMENTS_BEFORE_CLOSING = 3
 
-# Every question the scenario plan asks for now has an answer: say so,
-# reassure the caller, and let the line go.
 CLOSING_PHRASE = "wrap_up"
+PARTIAL_CLOSING_PHRASE = "wrap_up_partial"
 
 
 @dataclass
@@ -109,6 +112,11 @@ class DialBridge:
     _spoken: dict[str, tuple[int, int, int]] = field(default_factory=dict)
     _tick: int = 0
     _heard: int = 0
+    # The last question asked, and where the call stood when the agent last
+    # said anything: how many caller utterances there were, and on which tick.
+    _last_question: str | None = None
+    _heard_at_last_line: int = -1
+    _last_line_tick: int = 0
     _busy: bool = False
     _closing: bool = False
     _started: float = field(default_factory=time.perf_counter)
@@ -130,7 +138,7 @@ class DialBridge:
         return handle.name
 
     # ------------------------------------------------------------------
-    async def choose_reply(self, session) -> str | None:
+    async def choose_reply(self, session) -> str | GeneratedReply | None:
         """Called every few seconds of caller audio by ``CallLoop``."""
         # A tick that arrives while the previous one is still transcribing is
         # dropped rather than queued. A backlog would put older answers on
@@ -153,7 +161,7 @@ class DialBridge:
             self._busy = False
 
     # ------------------------------------------------------------------
-    def _process_chunk(self, pcm: bytes) -> str | None:
+    def _process_chunk(self, pcm: bytes) -> str | GeneratedReply | None:
         self.ensure_session()
         self._record_opening_line()
         path = self._pcm_to_wav(pcm)
@@ -266,7 +274,35 @@ class DialBridge:
             len(store.get(self.call_id).pending),
         )
 
-        phrase_id = self._pick_phrase()
+        return self._reply_after_decision()
+
+    def _reply_after_decision(self) -> str | GeneratedReply | None:
+        """Summarize extraction, then speak one eligible question with fallback."""
+        draft = None
+        if assistant.availability()["enabled"]:
+            result = assistant.refresh(self.call_id, store)
+            if not result["stale"]:
+                draft = result["snapshot"].assistant
+        preferred = draft.target_field if draft and draft.status == "ready" else None
+        phrase_id = self._pick_phrase(preferred)
+        if phrase_id is None:
+            return None
+        snapshot = store.get(self.call_id)
+        target = next((q for q in follow_up_questions(snapshot) if q["phrase_id"] == phrase_id), None)
+        if (draft and draft.status == "ready" and draft.follow_up_question and target
+                and target["field"] == draft.target_field
+                and draft.input_signature == assistant.signature(snapshot)):
+            language = (snapshot.detected_language or "en")[:2]
+            audio = synthesize_question(draft.follow_up_question, language)
+            # Human review can arrive during synthesis. Do not speak an old draft.
+            current = store.get(self.call_id)
+            if any(flag.kind.value in SILENCING_FLAGS for flag in current.open_flags):
+                return None
+            if draft.input_signature != assistant.signature(current):
+                return None
+            if audio:
+                self._record_agent_text(language, draft.follow_up_question)
+                return GeneratedReply(draft.follow_up_question, language, audio)
         if phrase_id is not None:
             self._record_agent_line(phrase_id)
         return phrase_id
@@ -286,6 +322,9 @@ class DialBridge:
         corroborating its own questions.
         """
         language, text = APPROVED[phrase_id]
+        self._record_agent_text(language, text)
+
+    def _record_agent_text(self, language: str, text: str) -> None:
         now = round((time.perf_counter() - self._started) * 1000)
         try:
             store.commit_append(
@@ -318,116 +357,95 @@ class DialBridge:
     def _say(self, phrase_id: str) -> str:
         _, times, _ = self._spoken.get(phrase_id, (0, 0, 0))
         self._spoken[phrase_id] = (self._tick, times + 1, self._heard)
+        self._heard_at_last_line = self._heard
+        self._last_line_tick = self._tick
         return phrase_id
 
-    def _may_say(
-        self,
-        phrase_id: str,
-        *,
-        cooldown: int,
-        limit: int,
-        only_if_unanswered: bool = False,
-    ) -> bool:
-        if phrase_id not in APPROVED:
-            return False
-        asked_at, times, heard_at = self._spoken.get(phrase_id, (-999, 0, -1))
-        if times >= limit or (self._tick - asked_at) < cooldown:
-            return False
-        if only_if_unanswered and times and self._heard != heard_at:
-            # They replied to this one. Whatever we failed to pull out of that
-            # reply is the operator's to chase, not ours to ask again.
-            return False
-        return True
+    def _times(self, phrase_id: str) -> int:
+        return self._spoken.get(phrase_id, (0, 0, 0))[1]
 
-    def _exhausted(
-        self,
-        phrase_id: str,
-        *,
-        limit: int = REASK_LIMIT,
-        retire_on_reply: bool = True,
-    ) -> bool:
-        """True when this phrase will never be said again.
+    def _next_question(self, questions: list[dict]) -> str | None:
+        """The next question worth asking, or None when they are used up.
 
-        Either it has hit its limit, or -- for a question -- it was asked and
-        the caller replied, and a question that got a reply is not asked
-        twice whatever came of the reply. The holding phrase is not a
-        question, so a reply does not retire it; only its limit does.
+        ``questions`` holds only fields that are still unknown, so nothing in
+        here is ever asked about once it has an answer. Anything never asked
+        comes first, in plan order. After that the three fields a call cannot
+        be handed over without get one more try each.
         """
-        if phrase_id not in APPROVED:
-            return True
-        _, times, heard_at = self._spoken.get(phrase_id, (0, 0, -1))
-        if times == 0:
-            return False
-        if times >= limit:
-            return True
-        return retire_on_reply and self._heard != heard_at
+        for question in questions:
+            if question["phrase_id"] in APPROVED and not self._times(question["phrase_id"]):
+                return question["phrase_id"]
+        for question in questions:
+            if (
+                question["field"] in REASKABLE_FIELDS
+                and question["phrase_id"] in APPROVED
+                and self._times(question["phrase_id"]) < REASK_LIMIT
+            ):
+                return question["phrase_id"]
+        return None
 
-    def _ready_to_close(self, snapshot, questions: list[dict], language: str) -> bool:
-        """Whether the call has run its course.
+    def _close(self, snapshot, language: str) -> str | None:
+        """Finish the call out loud, once.
 
-        The first version closed only when the question plan emptied, which on
-        a real call never happened: the plan grows with the incident type and
-        the extractor does not fill every field from spoken English. A caller
-        reached the end of the questions and got silence -- "Hello? Hello?" --
-        because the agent had nothing it was allowed to say and no way to
-        finish. Running out of things to ask is the end of the call; it just
-        has to be said out loud.
+        Which phrase depends on what is actually known. "I have what I need"
+        is only said when the incident and the location are both on the
+        record; otherwise the agent says a dispatcher has what the caller
+        told it, which is true of any call.
         """
-        if self._heard < MIN_SEGMENTS_BEFORE_CLOSING:
-            return False
-        if not all(self._exhausted(q["phrase_id"]) for q in questions):
-            return False
-
+        if self._closing:
+            return None
         values = observed(snapshot)
-        if all(known(values.get(field_name)) for field_name in ESSENTIAL_FIELDS):
-            return True
-
-        # We never established what happened or where. Keep the line open
-        # while there is still a holding phrase left to say; once even that
-        # is gone, closing beats a line that has gone quiet, which is what a
-        # caller hears as the call having dropped.
-        return self._exhausted(
-            f"stay_on_line_{language}",
-            limit=HOLDING_LIMIT,
-            retire_on_reply=False,
+        complete = all(known(values.get(name)) for name in ESSENTIAL_FIELDS)
+        phrase_id = f"{CLOSING_PHRASE if complete else PARTIAL_CLOSING_PHRASE}_{language}"
+        if phrase_id not in APPROVED:
+            return None
+        self._closing = True
+        log.info(
+            "call %s: questions used up (%s); closing the line",
+            self.call_id, "essentials known" if complete else "essentials missing",
         )
+        return self._say(phrase_id)
 
     def should_end_call(self) -> bool:
         """True once the closing phrase has been handed to the call loop.
 
         The loop hangs up only after the audio has drained, so the caller
-        hears the whole reassurance before the line closes.
+        hears the whole closing line before the call ends.
         """
         return self._closing
 
-    def _pick_phrase(self) -> str | None:
+    def _pick_phrase(self, preferred_field: str | None = None) -> str | None:
         """The next thing to say, or None to stay quiet.
 
-        The first version of this walked the question list once and returned
-        None forever after the last one -- so a caller who got as far as "Are
-        you safe right now?" was answered with permanent silence for the rest
-        of the call. Two things were wrong with it, and both are fixed here.
+        Three earlier versions of this each failed a real caller in a
+        different way, and the rules below are what is left after them:
 
-        A question was asked once ever, even if the caller never answered it.
-        A question nobody responded to is worth asking again after a pause,
-        which is what a person would do; ``REASK_COOLDOWN_TICKS`` and
-        ``REASK_LIMIT`` keep that from becoming nagging, and
-        ``only_if_unanswered`` keeps it from ever being asked at someone who
-        did reply.
+        * It asked five questions and then never spoke again. So running out
+          of questions now ends the call, out loud.
+        * It never repeated a question the caller had replied to, even when
+          the reply did not contain the answer. A caller mid-story was asked
+          for the address once, kept telling the story, and was never asked
+          again -- the agent filled the rest of the call with "please stay on
+          the line with me". So the questions that matter get a second try.
+        * It asked the next question on every tick, including quiet ones, so
+          two questions went out back to back with no room to answer the
+          first. So after speaking it waits for a reply, or for a real pause.
 
-        And running out of questions is not a reason to go mute. If the plan
-        is complete the call is closed properly; if it is merely paused, a
-        holding phrase keeps the line from sounding dropped.
-
-        The one case that still produces silence is the one that should: an
-        open weapon or trapped-caller flag.
+        The one case that produces silence throughout is the one that should:
+        an open weapon or trapped-caller flag.
         """
         snapshot = store.get(self.call_id)
         self._tick += 1
         # Caller utterances only. The agent's own lines are in the session
-        # too now, and counting them would make every question look answered
-        # the moment it was asked.
+        # too, and counting them would make every question look answered the
+        # moment it was asked.
+        previously_heard = self._heard
         self._heard = sum(1 for s in snapshot.segments if s.speaker is Speaker.CALLER)
+        # Whether the caller said anything on this turn at all.
+        speaking = self._heard > previously_heard
+
+        if self._closing:
+            return None
 
         if any(flag.kind.value in SILENCING_FLAGS for flag in snapshot.open_flags):
             # Hand over rather than talk. See the module docstring.
@@ -437,41 +455,51 @@ class DialBridge:
         if language not in SUPPORTED_LANGUAGES:
             return None
 
-        # A field counts as handled once it is accepted, or once a suggestion
-        # for it is waiting on a human -- asking again would talk past them.
+        # Only fields that are still unknown. A field counts as known once it
+        # is accepted, or once a suggestion for it is waiting on a human.
         questions = follow_up_questions(snapshot)
+        if preferred_field:
+            questions.sort(key=lambda question: question["field"] != preferred_field)
 
-        # First pass: anything never asked. Second: anything still unknown
-        # whose cooldown has elapsed.
-        for cooldown, limit in ((0, 1), (REASK_COOLDOWN_TICKS, REASK_LIMIT)):
-            for question in questions:
-                phrase_id = question["phrase_id"]
-                if self._may_say(
-                    phrase_id,
-                    cooldown=cooldown,
-                    limit=limit,
-                    only_if_unanswered=True,
-                ):
-                    return self._say(phrase_id)
+        still_open = {question["phrase_id"] for question in questions}
+        # A reply is the caller speaking -- or the last question's field
+        # filling in, which can happen without a new utterance when an
+        # operator accepts or types the answer while the caller waits.
+        replied = self._heard > self._heard_at_last_line or (
+            self._last_question is not None and self._last_question not in still_open
+        )
+        candidate = None
+        if replied:
+            candidate = self._next_question(questions)
+        else:
+            # The line has been quiet since the agent last spoke. Give the
+            # caller room before saying anything else.
+            if self._tick - self._last_line_tick < QUIET_PATIENCE_TICKS:
+                return None
+            # A pause long enough to mean the question was not heard, or not
+            # understood: put the same one again before moving on.
+            last = self._last_question
+            if last in still_open and self._times(last) < REASK_LIMIT:
+                candidate = last
+            else:
+                candidate = self._next_question(questions)
 
-        # Nothing may be asked. If that is because the questions are used up
-        # rather than merely resting, finish the call properly.
-        if self._ready_to_close(snapshot, questions, language):
-            closing = f"{CLOSING_PHRASE}_{language}"
-            if self._may_say(closing, cooldown=0, limit=1):
-                self._closing = True
-                log.info(
-                    "call %s: question plan complete; closing the line",
-                    self.call_id,
-                )
-                return self._say(closing)
-            return None
+        if candidate is not None:
+            self._last_question = candidate
+            return self._say(candidate)
 
-        # Questions remain but none may be asked yet. Say something anyway,
-        # occasionally: the caller should be able to tell the line is open.
+        # Nothing left to ask.
+        if self._heard >= MIN_SEGMENTS_BEFORE_CLOSING:
+            return self._close(snapshot, language)
+
+        # Too early to end the call, and nothing to ask: on a quiet line, say
+        # the line is open. If the caller is talking, let them talk.
         holding = f"stay_on_line_{language}"
-        if self._may_say(holding, cooldown=HOLDING_COOLDOWN_TICKS, limit=HOLDING_LIMIT):
-            return self._say(holding)
+        paused = self._tick - self._last_line_tick >= QUIET_PATIENCE_TICKS
+        if not speaking and paused and holding in APPROVED:
+            if self._times(holding) < HOLDING_LIMIT:
+                return self._say(holding)
+            return self._close(snapshot, language)
         return None
 
 

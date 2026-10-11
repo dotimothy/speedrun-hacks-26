@@ -13,6 +13,7 @@ import {
 import Intake from "./workspace/Intake";
 import ScenarioDecisions from "./components/ScenarioDecisions";
 import SettingsMenu from "./components/SettingsMenu";
+import CallAssistant from "./components/CallAssistant";
 import type { ModelInfo } from "./types";
 import { readModelPreferences, saveModelPreferences, type ModelPreferences } from "./workspace/modelPreferences";
 import {
@@ -23,6 +24,7 @@ import {
   readSession,
   reviewOperation,
   setSessionEngine,
+  generateAssistance,
   type Snapshot,
 } from "./workspace/v2";
 import { useTranscriptNavigation } from "./workspace/useTranscriptNavigation";
@@ -143,7 +145,35 @@ export default function App() {
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [settingsLoad, setSettingsLoad] = useState(0);
   const preferenceLoaded = useRef(false);
+  const [assistantBusy, setAssistantBusy] = useState(false);
+  const [assistantError, setAssistantError] = useState<string | null>(null);
+  const [assistantRefresh, setAssistantRefresh] = useState(0);
+  const lastAssistantRefresh = useRef(0);
+  const lastCallerId = session.server?.segments.filter(s => s.speaker === "caller").slice(-1)[0]?.id;
   const selectedEngine = attached.current ? session.server?.decision_engine || "" : modelPreferences.engine;
+
+  useEffect(() => {
+    const manualRefresh = assistantRefresh !== lastAssistantRefresh.current;
+    lastAssistantRefresh.current = assistantRefresh;
+    if (session.mode === "demo" || !lastCallerId || !models?.call_assistant?.enabled || (attached.current && !manualRefresh)) {
+      setAssistantBusy(false);
+      return;
+    }
+    const id = session.id;
+    const mode = session.mode;
+    const abort = new AbortController();
+    let disposed = false;
+    setAssistantBusy(true);
+    setAssistantError(null);
+    generateAssistance(id, abort.signal)
+      .then(snapshot => {
+        if (!disposed && currentSession.current.id === id)
+          localDispatch({ type: "server", snapshot: adaptSnapshot(snapshot, mode) });
+      })
+      .catch(error => { if (!disposed) setAssistantError(error instanceof Error ? error.message : "Summary generation failed. You can retry."); })
+      .finally(() => { if (!disposed) setAssistantBusy(false); });
+    return () => { disposed = true; abort.abort(); };
+  }, [session.id, session.mode, lastCallerId, models?.call_assistant?.enabled, assistantRefresh]);
 
   useEffect(() => {
     const abort = new AbortController();
@@ -885,6 +915,9 @@ export default function App() {
               </header>
 
               <ScenarioDecisions focus={session.server?.decision_focus} />
+              {!demo && <CallAssistant snapshot={session.server} enabled={!!models?.call_assistant?.enabled}
+                busy={assistantBusy} error={assistantError} onRefresh={() => setAssistantRefresh(n => n + 1)}
+                onSource={index => { setView("operator"); setSelected(index); }} />}
               {!!session.server?.follow_up_questions?.length && (
                 <details className="follow-up-plan" open>
                   <summary>Suggested follow-up questions ({session.server.follow_up_questions.length})</summary>

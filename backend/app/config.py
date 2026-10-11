@@ -100,6 +100,9 @@ class Settings:
     openai_model: str = _env("DISPATCHIQ_OPENAI_MODEL", "gpt-4o-mini")
     decisions_model: str = _env("DISPATCHIQ_DECISIONS_MODEL", "gpt-6-luna")
     openai_timeout_s: float = float(_env("DISPATCHIQ_OPENAI_TIMEOUT", "20"))
+    assistant_enabled: bool = _env("DISPATCHIQ_ASSISTANT_ENABLED", "1") == "1"
+    assistant_model: str = _env("DISPATCHIQ_ASSISTANT_MODEL", "gpt-6-luna")
+    assistant_timeout_s: float = float(_env("DISPATCHIQ_ASSISTANT_TIMEOUT", "15"))
     # What a typed answer is worth before anything corroborates it, for
     # engines that report no probability of their own. Deliberately middling:
     # one model asserting something, with nothing agreeing with it yet, is

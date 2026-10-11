@@ -1585,6 +1585,15 @@ textarea::placeholder {
   border-bottom: 1px solid color-mix(in srgb, var(--urgent, #b4381f) 35%, transparent);
   font-size: 0.82rem;
 }
+
+.call-assistant { margin: 16px 0; padding: 16px; border: 1px solid #c9d3cc; border-radius: 6px; background: #f1f6f3; }
+.call-assistant header { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.call-assistant h3 { margin: 0; font-size: 15px; }
+.call-assistant p { font-size: 13px; line-height: 1.6; }
+.call-assistant .assistant-caption { color: #4d5c56; font-size: 12px; }
+.call-assistant blockquote { margin: 12px 0; padding: 10px 14px; border-left: 3px solid #28604b; background: white; font-size: 15px; }
+.assistant-sources { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; }
+.assistant-sources button { font-size: 12px; padding: 4px 6px; }
 .inbound-strip > span {
   display: inline-flex;
   align-items: center;

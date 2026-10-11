@@ -26,6 +26,7 @@ import time
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
+from starlette.concurrency import run_in_threadpool
 
 from ..asr import whisper_engine
 from ..config import settings
@@ -46,6 +47,7 @@ from .models import (
     Speaker,
 )
 from . import narrative as narrative_builder
+from . import assistant as call_assistant
 from .dial_bridge import is_live
 from .store import SessionNotFound, StaleAction, store
 
@@ -143,6 +145,16 @@ def update_session_settings(session_id: str, payload: dict) -> dict:
             raise HTTPException(status_code=409, detail="Decision engine is unavailable")
     snapshot = store.set_decision_engine(session_id, name)
     return {"snapshot": json.loads(snapshot.model_dump_json())}
+
+
+@router.post("/sessions/{session_id}/assist")
+async def generate_call_assistance(session_id: str) -> dict:
+    _snapshot(session_id)
+    try:
+        result = await run_in_threadpool(call_assistant.refresh, session_id, store)
+    except SessionNotFound:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {**result, "snapshot": json.loads(result["snapshot"].model_dump_json())}
 
 
 @router.get("/sessions")

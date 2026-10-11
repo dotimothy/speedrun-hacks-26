@@ -96,7 +96,7 @@ def describe_all() -> list[dict]:
     """What each available engine is and where it runs. For /api/health."""
     described: list[dict] = []
     for name in available():
-        engine = _ENGINES.get(name) or _build(name)
+        engine = get_engine(name)
         if engine is None:
             continue
         try:

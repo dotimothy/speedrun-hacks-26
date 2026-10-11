@@ -88,6 +88,7 @@ export interface ModelInfo {
   decision_engines: (string | { name: string; model?: string; is_local?: boolean; ready?: boolean; error?: string; note?: string })[]
   decision_default: string
   cloud_inference_enabled?: boolean
+  call_assistant?: { enabled: boolean; model: string; provider: string; is_local: boolean }
   thresholds: Record<string, number>
 }
 

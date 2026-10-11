@@ -1,11 +1,15 @@
-"""What the agent says on a live call, and when it says nothing.
+"""What the agent says on a live call, when it waits, and how it ends one.
 
-The bug these were written for: the agent asked its five questions, reached
-"Are you safe right now?", and then never spoke again for the rest of the
-call. To a caller that is indistinguishable from the line dropping.
+Each class here is a way the agent failed a real caller on the live number:
 
-No model runs here -- the phrase policy is a pure function of session state,
-which is the point of keeping it separate from the transcription path.
+* it asked five questions and never spoke again;
+* it asked two questions back to back with no room to answer the first;
+* it never re-asked for an address the caller had talked straight past, and
+  filled the rest of the call with "please stay on the line with me";
+* it never hung up.
+
+No model runs here -- the phrase policy is a function of session state, which
+is the point of keeping it separate from the transcription path.
 """
 
 from __future__ import annotations
@@ -14,6 +18,7 @@ import pytest
 
 from app.live.dial_bridge import (
     HOLDING_LIMIT,
+    QUIET_PATIENCE_TICKS,
     REASK_LIMIT,
     DialBridge,
 )
@@ -24,9 +29,20 @@ from app.live.models import (
     ReviewFlagKind,
     Segment,
     Speaker,
+    Suggestion,
+    UpdateKind,
 )
 from app.live.store import SessionStore
 from app.tts import APPROVED
+
+QUESTIONS = {
+    "repeat_address_en",
+    "what_happening_en",
+    "ask_callback_en",
+    "ask_injuries_en",
+    "ask_safe_en",
+}
+CLOSINGS = {"wrap_up_en", "wrap_up_partial_en"}
 
 
 @pytest.fixture
@@ -45,7 +61,7 @@ def answer(snapshot, field: str, value: object, revision: int = 1) -> None:
 
 
 def heard(snapshot, text: str = "something the caller said") -> None:
-    """Record that the caller spoke. A reply is what stops a re-ask."""
+    """The caller says something. A reply is what lets the agent move on."""
     snapshot.segments.append(
         Segment(
             id=f"seg-{len(snapshot.segments)}",
@@ -56,6 +72,20 @@ def heard(snapshot, text: str = "something the caller said") -> None:
             final=True,
         )
     )
+
+
+def talk(agent, snapshot, turns: int, text: str = "and the stairs are full of smoke"):
+    """A caller who keeps talking without ever answering the question."""
+    spoken = []
+    for _ in range(turns):
+        heard(snapshot, text)
+        spoken.append(agent._pick_phrase())
+    return spoken
+
+
+def stay_quiet(agent, ticks: int):
+    """The caller says nothing; the agent still gets its turns."""
+    return [agent._pick_phrase() for _ in range(ticks)]
 
 
 def answer_everything(snapshot) -> None:
@@ -72,90 +102,149 @@ def answer_everything(snapshot) -> None:
         answer(snapshot, name, "stated by the caller")
 
 
-class TestItDoesNotGoSilentForever:
-    def test_the_bug_itself(self, bridge):
-        """Reaching the last question must not end the conversation.
-
-        Before the fix this returned the five questions and then None on
-        every subsequent tick, forever.
-        """
-        agent, _ = bridge
-        spoken = [agent._pick_phrase() for _ in range(24)]
-        # The last question is ask_safe; everything after it used to be None.
-        after_last_question = spoken[spoken.index("ask_safe_en") + 1 :]
-        assert any(x is not None for x in after_last_question)
-
-    def test_it_keeps_speaking_across_a_long_call(self, bridge):
-        agent, _ = bridge
-        spoken = [agent._pick_phrase() for _ in range(24)]
-        assert sum(1 for x in spoken if x) >= 10
-
-    def test_no_silent_gap_long_enough_to_sound_like_a_dropped_call(self, bridge):
-        agent, _ = bridge
-        longest = run = 0
-        for _ in range(24):
-            run = run + 1 if agent._pick_phrase() is None else 0
-            longest = max(longest, run)
-        # Ticks are a few seconds each; a handful is a pause, a dozen is a
-        # caller wondering whether anyone is there.
-        assert longest <= 6
-
-    def test_an_unanswered_question_comes_back(self, bridge):
-        """Nobody said anything. Asking again is what a person would do."""
-        agent, _ = bridge
-        spoken = [agent._pick_phrase() for _ in range(24)]
-        assert spoken.count("repeat_address_en") > 1
-
-    def test_but_it_stops_rather_than_nagging(self, bridge):
-        agent, _ = bridge
-        spoken = [agent._pick_phrase() for _ in range(60)]
-        assert spoken.count("repeat_address_en") <= REASK_LIMIT
-        assert spoken.count("stay_on_line_en") <= HOLDING_LIMIT
-
-
-class TestItDoesNotAskTwiceForSomethingAnswered:
-    """The caller's complaint: being asked a question they just answered."""
-
-    def test_a_question_is_not_repeated_after_the_caller_replies(self, bridge):
+class TestItAsksForWhatIsMissing:
+    def test_it_starts_with_the_address(self, bridge):
         agent, snapshot = bridge
-        first = agent._pick_phrase()
-        assert first == "repeat_address_en"
-        # They answered. The extractor got nothing useful out of it -- which
-        # is exactly the case that used to produce a repeat.
-        heard(snapshot, "it is the big building, you know the one")
-        later = [agent._pick_phrase() for _ in range(30)]
-        assert first not in later
+        heard(snapshot, "help")
+        assert agent._pick_phrase() == "repeat_address_en"
 
-    def test_an_answered_field_is_never_asked_about(self, bridge):
+    def test_it_never_asks_about_something_it_already_has(self, bridge):
         agent, snapshot = bridge
         answer(snapshot, "location_text", "Oak and Third")
-        heard(snapshot)
-        assert "repeat_address_en" not in [agent._pick_phrase() for _ in range(20)]
+        assert "repeat_address_en" not in talk(agent, snapshot, 20)
+
+    def test_a_pending_suggestion_counts_as_heard(self, bridge):
+        agent, snapshot = bridge
+        snapshot.suggestions.append(
+            Suggestion(id="s1", field="location_text", kind=UpdateKind.ADDITION,
+                       proposed_value="Oak and Third", base_revision=0)
+        )
+        # It was said; it is waiting for a human. Asking again talks past them.
+        assert "repeat_address_en" not in talk(agent, snapshot, 12)
+
+    def test_it_asks_in_the_caller_s_language(self, bridge):
+        agent, snapshot = bridge
+        snapshot.detected_language = "es"
+        heard(snapshot, "ayuda")
+        assert agent._pick_phrase().endswith("_es")
+
+    def test_it_says_nothing_in_a_language_it_cannot_speak(self, bridge):
+        agent, snapshot = bridge
+        snapshot.detected_language = "pt"
+        assert not any(talk(agent, snapshot, 5))
+
+    def test_it_asks_the_scenario_s_own_questions(self, bridge):
+        """The plan the operator sees is the plan the phone follows."""
+        agent, snapshot = bridge
+        answer(snapshot, "incident_type", "medical")
+        spoken = {p for p in talk(agent, snapshot, 20) if p}
+        assert spoken - QUESTIONS - CLOSINGS - {"stay_on_line_en"}
+        assert "what_happening_en" not in spoken  # the type is established
 
 
-class TestItClosesTheCallWhenItIsDone:
-    def test_it_reassures_the_caller_before_hanging_up(self, bridge):
+class TestItAsksAgainForWhatMatters:
+    """The call that was filled with "please stay on the line with me".
+
+    The caller was mid-story when asked for the address, kept telling the
+    story, and was never asked again -- a reply had been heard, so the
+    question was retired, and the agent had nothing left but its holding line.
+    """
+
+    def test_an_address_the_caller_talked_past_is_asked_for_again(self, bridge):
+        agent, snapshot = bridge
+        spoken = talk(agent, snapshot, 12)
+        assert spoken.count("repeat_address_en") == REASK_LIMIT
+
+    def test_so_are_the_incident_and_the_callback(self, bridge):
+        agent, snapshot = bridge
+        spoken = talk(agent, snapshot, 12)
+        assert spoken.count("what_happening_en") == REASK_LIMIT
+        assert spoken.count("ask_callback_en") == REASK_LIMIT
+
+    def test_but_a_detail_is_only_asked_for_once(self, bridge):
+        agent, snapshot = bridge
+        spoken = talk(agent, snapshot, 20)
+        assert spoken.count("ask_injuries_en") == 1
+        assert spoken.count("ask_safe_en") == 1
+
+    def test_everything_is_asked_once_before_anything_is_asked_twice(self, bridge):
+        agent, snapshot = bridge
+        spoken = talk(agent, snapshot, 5)
+        assert set(spoken) == QUESTIONS
+
+    def test_a_question_is_not_repeated_once_it_is_answered(self, bridge):
+        agent, snapshot = bridge
+        assert talk(agent, snapshot, 1) == ["repeat_address_en"]
+        answer(snapshot, "location_text", "1400 Birch Court")
+        assert "repeat_address_en" not in talk(agent, snapshot, 20)
+
+    def test_it_does_not_fill_a_talking_caller_s_call_with_holding_lines(self, bridge):
+        agent, snapshot = bridge
+        assert "stay_on_line_en" not in talk(agent, snapshot, 30)
+
+
+class TestItLeavesRoomToAnswer:
+    """Two questions went out back to back on a quiet tick."""
+
+    def test_it_does_not_stack_a_second_question_on_an_unanswered_first(self, bridge):
+        agent, snapshot = bridge
+        assert talk(agent, snapshot, 1) == ["repeat_address_en"]
+        assert stay_quiet(agent, QUIET_PATIENCE_TICKS - 1) == [None] * (
+            QUIET_PATIENCE_TICKS - 1
+        )
+
+    def test_after_a_real_pause_it_puts_the_same_question_again(self, bridge):
+        agent, snapshot = bridge
+        talk(agent, snapshot, 1)
+        said = [p for p in stay_quiet(agent, QUIET_PATIENCE_TICKS) if p]
+        assert said == ["repeat_address_en"]
+
+    def test_and_then_moves_on_rather_than_asking_a_third_time(self, bridge):
+        agent, snapshot = bridge
+        talk(agent, snapshot, 1)
+        said = [p for p in stay_quiet(agent, QUIET_PATIENCE_TICKS * 3) if p]
+        assert said.count("repeat_address_en") == REASK_LIMIT - 1
+        assert "what_happening_en" in said
+
+
+class TestItEndsTheCall:
+    def test_with_everything_known_it_says_it_has_what_it_needs(self, bridge):
         agent, snapshot = bridge
         answer_everything(snapshot)
         assert agent._pick_phrase() == "wrap_up_en"
         assert agent.should_end_call() is True
 
-    def test_it_does_not_hang_up_before_that(self, bridge):
+    def test_it_does_not_hang_up_while_there_is_something_to_ask(self, bridge):
         agent, snapshot = bridge
-        agent._pick_phrase()
-        assert agent.should_end_call() is False
-        answer(snapshot, "location_text", "Oak and Third")
-        heard(snapshot)
-        agent._pick_phrase()
+        talk(agent, snapshot, 3)
         assert agent.should_end_call() is False
 
-    def test_the_closing_phrase_is_said_once(self, bridge):
+    def test_a_caller_who_never_gives_the_essentials_still_gets_an_ending(self, bridge):
+        """From the live number: 47 seconds, no address, no hangup."""
+        agent, snapshot = bridge
+        spoken = talk(agent, snapshot, 20)
+        assert "wrap_up_partial_en" in spoken
+        assert agent.should_end_call() is True
+
+    def test_and_that_ending_does_not_claim_to_have_what_it_needs(self, bridge):
+        agent, snapshot = bridge
+        spoken = talk(agent, snapshot, 20)
+        assert "wrap_up_en" not in spoken
+        assert "have what i need" not in APPROVED["wrap_up_partial_en"][1].lower()
+
+    def test_with_the_essentials_it_closes_on_the_full_phrase(self, bridge):
+        agent, snapshot = bridge
+        answer(snapshot, "incident_type", "structure_fire")
+        answer(snapshot, "location_text", "1400 Birch Court, apartment 6A")
+        spoken = talk(agent, snapshot, 40)
+        assert "wrap_up_en" in spoken
+
+    def test_nothing_is_said_after_the_closing_phrase(self, bridge):
         agent, snapshot = bridge
         answer_everything(snapshot)
-        spoken = [agent._pick_phrase() for _ in range(10)]
-        assert spoken.count("wrap_up_en") == 1
-        # And nothing else: there is nothing left to say.
-        assert set(spoken) == {"wrap_up_en", None}
+        spoken = [agent._pick_phrase()] + talk(agent, snapshot, 10) + stay_quiet(agent, 10)
+        assert spoken[0] == "wrap_up_en"
+        assert set(spoken[1:]) == {None}
 
     def test_it_closes_in_the_caller_s_language(self, bridge):
         agent, snapshot = bridge
@@ -163,88 +252,32 @@ class TestItClosesTheCallWhenItIsDone:
         snapshot.detected_language = "es"
         assert agent._pick_phrase() == "wrap_up_es"
 
-    def test_a_safety_flag_still_wins(self, bridge):
-        """A complete record is not a reason to hang up on a weapon call."""
-        agent, snapshot = bridge
-        answer_everything(snapshot)
-        snapshot.review_flags.append(
-            ReviewFlag(
-                id="f1", kind=ReviewFlagKind.WEAPON_MENTIONED, text="review this"
-            )
-        )
-        assert agent._pick_phrase() is None
-        assert agent.should_end_call() is False
-
     def test_a_scenario_question_keeps_the_call_open(self, bridge):
-        """Codex's scenario questions appear once the type is known.
-
-        Answering the five generic fields is no longer the end of the call if
-        the incident type pulled in follow-ups, so the plan -- not a fixed
-        list -- decides when there is nothing left to ask.
-        """
+        """Scenario questions appear once the incident type is known, so the
+        plan -- not a fixed list of five -- decides when the asking is done."""
         agent, snapshot = bridge
         answer_everything(snapshot)
         answer(snapshot, "incident_type", "structure_fire")
-        phrases = [agent._pick_phrase() for _ in range(6)]
-        assert "wrap_up_en" not in phrases
-        assert any(p and p.startswith("ask_") for p in phrases)
+        heard(snapshot)
+        first = agent._pick_phrase()
+        assert first not in CLOSINGS and first is not None
         assert agent.should_end_call() is False
 
-
-class TestTheCallThatWentQuiet:
-    """From a real 100-second call to the live number.
-
-    The caller gave an address, said the fire was in 6B, said everyone was
-    out. The agent asked its questions, ran out of ones it was allowed to
-    repeat, played its holding lines, and then said nothing at all. The last
-    two things on the transcript are the caller saying "Hello?" twice.
-
-    The questions do not have to all be answered for a call to be over. They
-    only have to be used up.
-    """
-
-    def test_it_does_not_trail_off_when_the_questions_run_out(self, bridge):
+    def test_a_call_that_never_got_going_is_held_before_it_is_ended(self, bridge):
+        """One utterance, then nothing. Too early to hang up on anyone."""
         agent, snapshot = bridge
-        # What the extractor managed to get from that call: the essentials,
-        # and nothing else.
-        answer(snapshot, "incident_type", "structure_fire")
-        answer(snapshot, "location_text", "1400 Birch Court, apartment 6A")
+        answer_everything(snapshot)
+        del snapshot.segments[1:]
+        said = [p for p in stay_quiet(agent, 4) if p]
+        assert said and said[0] == "stay_on_line_en"
 
-        spoken = []
-        for _ in range(40):
-            # The caller keeps talking, as that caller did.
-            heard(snapshot, "and the stairs are full of smoke")
-            spoken.append(agent._pick_phrase())
-
-        assert "wrap_up_en" in spoken, "the call never finished"
-        # And once it has finished it is not still trailing holding phrases.
-        after = spoken[spoken.index("wrap_up_en") + 1 :]
-        assert set(after) <= {None}
-        assert agent.should_end_call() is True
-
-    def test_it_holds_the_line_rather_than_closing_on_an_unknown_incident(self, bridge):
-        """Nothing established: hanging up is the wrong end of the call."""
+    def test_but_not_held_forever(self, bridge):
         agent, snapshot = bridge
-        spoken = []
-        for _ in range(12):
-            heard(snapshot, "...")
-            spoken.append(agent._pick_phrase())
-        assert "wrap_up_en" not in spoken
-        assert "stay_on_line_en" in spoken
-
-    def test_but_a_line_with_nothing_left_to_say_is_closed_not_abandoned(self, bridge):
-        """Even with nothing established, silence is not the answer.
-
-        Once the questions and the holding phrases are both used up there is
-        nothing further an approved-phrase agent can do, and a caller left on
-        an open line hears a call that dropped.
-        """
-        agent, snapshot = bridge
-        spoken = []
-        for _ in range(60):
-            heard(snapshot, "...")
-            spoken.append(agent._pick_phrase())
-        assert "wrap_up_en" in spoken
+        answer_everything(snapshot)
+        del snapshot.segments[1:]
+        said = [p for p in stay_quiet(agent, 40) if p]
+        assert said.count("stay_on_line_en") == HOLDING_LIMIT
+        assert said[-1] in CLOSINGS
 
 
 class TestAQuietLine:
@@ -300,44 +333,11 @@ class TestWhatTheOperatorSees:
         agent._record_agent_line("ask_safe_en")
         assert all(s.speaker is not Speaker.CALLER for s in snapshot.segments)
 
-
-class TestItAsksForWhatIsMissing:
-    def test_it_moves_on_once_a_field_is_answered(self, bridge):
+    def test_the_agent_s_own_lines_do_not_count_as_the_caller_replying(self, bridge):
         agent, snapshot = bridge
-        assert agent._pick_phrase() == "repeat_address_en"
-        answer(snapshot, "location_text", "Oak and Third")
-        # Never asks for the address again now that it has one.
-        assert "repeat_address_en" not in [agent._pick_phrase() for _ in range(12)]
-
-    def test_it_asks_the_scenario_s_own_questions(self, bridge):
-        """The plan the operator sees is the plan the phone follows."""
-        agent, snapshot = bridge
-        answer(snapshot, "incident_type", "medical")
-        heard(snapshot)
-        spoken = {p for p in (agent._pick_phrase() for _ in range(20)) if p}
-        assert any(p not in ("stay_on_line_en", "wrap_up_en") for p in spoken)
-        assert "what_happening_en" not in spoken  # the type is established
-
-    def test_a_pending_suggestion_counts_as_heard(self, bridge):
-        agent, snapshot = bridge
-        from app.live.models import Suggestion, UpdateKind
-
-        snapshot.suggestions.append(
-            Suggestion(id="s1", field="location_text", kind=UpdateKind.ADDITION,
-                       proposed_value="Oak and Third", base_revision=0)
-        )
-        # It was said; it is waiting for a human. Asking again talks past them.
-        assert "repeat_address_en" not in [agent._pick_phrase() for _ in range(8)]
-
-    def test_it_asks_in_the_caller_s_language(self, bridge):
-        agent, snapshot = bridge
-        snapshot.detected_language = "es"
-        assert agent._pick_phrase().endswith("_es")
-
-    def test_it_says_nothing_in_a_language_it_cannot_speak(self, bridge):
-        agent, snapshot = bridge
-        snapshot.detected_language = "pt"
-        assert all(agent._pick_phrase() is None for _ in range(5))
+        talk(agent, snapshot, 1)
+        agent._record_agent_line("repeat_address_en")
+        assert agent._pick_phrase() is None  # still waiting for the caller
 
 
 class TestSilenceWhereSilenceIsCorrect:
@@ -346,23 +346,30 @@ class TestSilenceWhereSilenceIsCorrect:
         [ReviewFlagKind.WEAPON_MENTIONED, ReviewFlagKind.CALLER_MAY_BE_TRAPPED],
     )
     def test_a_safety_flag_silences_it_completely(self, bridge, kind):
-        """The one case that must still produce silence.
-
-        A synthetic voice asking a scripted question over someone who has
-        just said there is a weapon is worth less than nothing.
-        """
+        """A synthetic voice asking a scripted question over someone who has
+        just said there is a weapon is worth less than nothing."""
         agent, snapshot = bridge
         snapshot.review_flags.append(
             ReviewFlag(id="f1", kind=kind, text="review this statement")
         )
-        assert all(agent._pick_phrase() is None for _ in range(10))
+        assert not any(talk(agent, snapshot, 10))
+
+    def test_a_safety_flag_also_stops_it_hanging_up(self, bridge):
+        """A complete record is not a reason to end a weapon call."""
+        agent, snapshot = bridge
+        answer_everything(snapshot)
+        snapshot.review_flags.append(
+            ReviewFlag(id="f1", kind=ReviewFlagKind.WEAPON_MENTIONED, text="review")
+        )
+        assert agent._pick_phrase() is None
+        assert agent.should_end_call() is False
 
     def test_an_acknowledged_flag_lets_it_speak_again(self, bridge):
         agent, snapshot = bridge
         flag = ReviewFlag(id="f1", kind=ReviewFlagKind.WEAPON_MENTIONED, text="review")
         snapshot.review_flags.append(flag)
+        heard(snapshot)
         assert agent._pick_phrase() is None
-        # A human has seen it and taken the call on; the agent is no longer
-        # talking over an unreviewed safety statement.
         flag.status = "acknowledged"
+        heard(snapshot)
         assert agent._pick_phrase() is not None

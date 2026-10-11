@@ -21,7 +21,65 @@ function load(name) {
 const { initialSession, transition } = load("workspace/session.ts");
 const { requestSnapshot, parseResult } = load("workspace/backend.ts");
 const { Recorder, wavDuration } = load("audio/recorder.ts");
-const { adaptSnapshot } = load("workspace/v2.ts");
+const { adaptSnapshot, appendUtterance, generateAssistance } = load("workspace/v2.ts");
+const { readModelPreferences, saveModelPreferences } = load("workspace/modelPreferences.ts");
+
+test("assistant endpoint retains the summary and question without changing the reviewed record", async t => {
+  const snapshot = { session_id: "assistant", event_seq: 4, revision: 0, segments: [], accepted_record: {},
+    suggestions: [], narrative: {}, published: [], unresolved: [], review_flags: [],
+    assistant: { status: "ready", summary: "Caller reports chest pain.", follow_up_question: "Where are you?",
+      source_segment_ids: ["seg-1"], source_revision: 0, source_segment_count: 1, model: "configured-model" } };
+  const controller = new AbortController();
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    assert.equal(url, "/api/v2/sessions/assistant/assist");
+    assert.equal(options.method, "POST");
+    assert.equal(options.signal, controller.signal);
+    return new Response(JSON.stringify({ snapshot, cached: false, stale: false }), { status: 200 });
+  });
+  const raw = await generateAssistance("assistant", controller.signal);
+  assert.deepEqual(raw.assistant, snapshot.assistant);
+  assert.deepEqual(raw.accepted_record, {});
+  assert.deepEqual(adaptSnapshot(raw, "live").server.assistant, snapshot.assistant);
+});
+
+test("model settings persist and exclude engines no longer available", t => {
+  let stored = null;
+  t.mock.method(globalThis, "fetch", async () => { throw new Error("Unexpected request"); });
+  const oldStorage = globalThis.localStorage;
+  globalThis.localStorage = { getItem: () => stored, setItem: (_key, value) => { stored = value; } };
+  t.after(() => { globalThis.localStorage = oldStorage; });
+  const models = { decision_engines: [{ name: "rules", ready: true }, { name: "jev", ready: false }],
+    whisper_sizes: ["small", "base"], whisper_default: "small" };
+  saveModelPreferences({ engine: "rules", whisperSize: "base" });
+  assert.deepEqual(readModelPreferences(models), { engine: "rules", whisperSize: "base" });
+  saveModelPreferences({ engine: "jev", whisperSize: "unavailable" });
+  assert.deepEqual(readModelPreferences(models), { engine: "", whisperSize: "small" });
+  stored = "bad json";
+  assert.deepEqual(readModelPreferences(models), { engine: "", whisperSize: "small" });
+});
+
+test("selected decision and speech models reach both text and audio requests", async t => {
+  const snapshot = { session_id: "models", event_seq: 0, revision: 0, segments: [], accepted_record: {},
+    suggestions: [], narrative: {}, published: [], unresolved: [], review_flags: [] };
+  const payloads = [];
+  t.mock.method(globalThis, "fetch", async (_url, options) => {
+    if (options?.method === "POST") {
+      const payload = options.body instanceof FormData ? JSON.parse(options.body.get("payload")) : JSON.parse(options.body);
+      payloads.push(payload);
+      return new Response(JSON.stringify({ snapshot }), { status: 200 });
+    }
+    return new Response(JSON.stringify(snapshot), { status: 200 });
+  });
+  for (const input of ["A synthetic caller statement", new Blob(["audio"], { type: "audio/wav" })]) {
+    await appendUtterance("models", { input, clientId: "test-" + payloads.length, speaker: "caller",
+      decisionEngine: "rules", whisperSize: "base" }, new AbortController().signal);
+  }
+  assert.equal(payloads.length, 2);
+  for (const payload of payloads) {
+    assert.equal(payload.decision_engine, "rules");
+    assert.equal(payload.whisper_size, "base");
+  }
+});
 
 test("scenario decisions and cumulative observations remain reviewable through the UI adapter", () => {
   const focus = { scenario: "medical", title: "Medical", purpose: "Document changes", decisions: [

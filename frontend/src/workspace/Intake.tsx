@@ -62,9 +62,7 @@ export default function Intake({
         const data = await response.json();
         if (!disposed)
           setConnection(
-            data.decision_default === "openai_decisions"
-              ? "OpenAI Decisions configured · Hosted inference"
-              : data.mock_mode
+            data.mock_mode
                 ? "Development API · Model/ASR readiness not verified"
                 : "API connected · Configured decision engine",
           );

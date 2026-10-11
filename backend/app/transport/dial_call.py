@@ -1,13 +1,13 @@
 """Full-duplex call loop for the Dial audio socket.
 
-Caller audio comes in on one side while approved replies go out on the other,
+Caller audio comes in on one side while spoken replies go out on the other,
 paced at 20 ms per frame. Two things make it more than a send loop:
 
 * **Barge-in.** If the caller starts talking while a reply is playing, the
   queued audio is dropped and a ``clear`` frame tells Dial to stop playback.
 * **Decisions.** Every ``decide_every_s`` seconds of caller audio, the loop asks
   ``choose_reply`` whether to speak. That callback is where the pipeline plugs
-  in. The loop itself only knows about approved phrases and their audio.
+  in. The loop accepts approved phrase IDs or pre-rendered assistant questions.
 * **Closing.** ``should_end`` lets the pipeline say the call is finished. The
   loop still waits for the reply queue to drain before hanging up, so the last
   thing the caller hears is a complete sentence rather than a cut-off one.
@@ -24,6 +24,7 @@ import logging
 import math
 import struct
 import wave
+from dataclasses import dataclass, field
 from typing import Awaitable, Callable
 
 from .dial import FRAME_MS, DialSession, clear_frame, end_call_frame, reply_frames
@@ -33,7 +34,14 @@ log = logging.getLogger("dispatchiq.dial")
 Receive = Callable[[], Awaitable[str]]
 Send = Callable[[str], Awaitable[None]]
 Synthesize = Callable[[str], bytes | None]  # approved phrase id -> WAV bytes
-ChooseReply = Callable[[DialSession], Awaitable[str | None]]
+@dataclass(frozen=True)
+class GeneratedReply:
+    text: str
+    language: str
+    audio_wav: bytes = field(repr=False)
+
+
+ChooseReply = Callable[[DialSession], Awaitable[str | GeneratedReply | None]]
 ShouldEnd = Callable[[], bool]
 
 
@@ -138,9 +146,9 @@ class CallLoop:
         await self._send(end_call_frame())
         return True
 
-    def _speak(self, phrase_id: str) -> None:
-        """Queue an approved phrase's audio. A bad or missing reply is skipped."""
-        wav = self.synthesize(phrase_id)
+    def _speak(self, phrase_id: str | GeneratedReply) -> None:
+        """Queue fixed or pre-rendered generated audio through the same pacing."""
+        wav = phrase_id.audio_wav if isinstance(phrase_id, GeneratedReply) else self.synthesize(phrase_id)
         if wav is None:
             log.warning("no audio for %s on call %s", phrase_id, self.session.call_id)
             return

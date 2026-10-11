@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import type { ModelInfo } from '../types'
+import './SettingsMenu.css'
 
 interface EngineInfo {
   name: string
@@ -21,6 +22,10 @@ interface Props {
   onWhisperSize: (size: string) => void
   engine: string
   onEngine: (engine: string) => void
+  loading?: boolean
+  busy?: boolean
+  error?: string | null
+  onRetry?: () => void
 }
 
 /**
@@ -42,30 +47,29 @@ export default function SettingsMenu({
   onWhisperSize,
   engine,
   onEngine,
+  loading = false,
+  busy = false,
+  error,
+  onRetry,
 }: Props) {
-  const [engines, setEngines] = useState<EngineInfo[]>([])
-
+  const dialog = useRef<HTMLDialogElement>(null)
+  const engines: EngineInfo[] = (models?.decision_engines ?? []).map(entry =>
+    typeof entry === 'string' ? { name: entry } : entry)
   useEffect(() => {
-    const listed = models?.decision_engines
-    if (Array.isArray(listed)) {
-      // The backend may send plain names (v1) or full descriptions (v2).
-      setEngines(
-        listed.map((entry: unknown) =>
-          typeof entry === 'string' ? { name: entry, is_local: true, ready: true } : (entry as EngineInfo),
-        ),
-      )
-    }
-  }, [models])
+    const node = dialog.current
+    if (open && node && !node.open) node.showModal()
+    return () => { if (node?.open) node.close() }
+  }, [open])
 
   if (!open) return null
 
-  const selected = engines.find((e) => e.name === engine)
+  const selected = engines.find((e) => e.name === (engine || models?.decision_default))
   const usingCloud = selected ? selected.is_local === false : false
 
   return (
-    <>
-      <div className="scrim" onClick={onClose} />
-      <aside className="drawer" role="dialog" aria-label="Settings">
+      <dialog ref={dialog} className="model-settings" aria-label="Settings"
+        onCancel={onClose} onClick={event => { if (event.target === event.currentTarget) onClose() }}>
+        <div className="settings-content">
         <header className="drawer-head">
           <h2>Settings</h2>
           <button className="link" onClick={onClose}>
@@ -75,18 +79,25 @@ export default function SettingsMenu({
 
         {usingCloud && (
           <p className="cloud-warning">
-            This engine runs off this machine. The caller's words are sent to a third
-            party, and the project's local-inference claim does not hold while it is
-            selected — say so in the demo rather than leaving the slide up.
+            This model sends the caller's transcript to the configured external provider.
           </p>
         )}
 
         <section className="drawer-section">
           <h3>Decision engine</h3>
-          <p className="muted">Which model answers the typed questions about the call.</p>
+          <p className="muted">Applies to new input and the active phone session. Existing results stay as recorded. Your choice is remembered in this browser.</p>
+          {loading && <p role="status">Loading available models…</p>}
+          {busy && <p role="status">Saving model selection…</p>}
+          {error && <p role="alert">{error} {onRetry && <button onClick={onRetry}>Reload models</button>}</p>}
           <div className="engine-list">
+            <label className={'engine' + (!engine ? ' engine-active' : '')}>
+              <input type="radio" name="engine" value="" checked={!engine} disabled={loading || busy || !models}
+                onChange={() => onEngine('')} />
+              <span className="engine-body"><strong>Server default{models ? ` (${models.decision_default})` : ''}</strong></span>
+            </label>
             {engines.map((item) => {
-              const disabled = item.ready === false
+              const unavailable = item.ready === false
+              const disabled = unavailable || loading || busy
               return (
                 <label
                   key={item.name}
@@ -106,11 +117,11 @@ export default function SettingsMenu({
                   />
                   <span className="engine-body">
                     <span className="engine-row">
-                      <strong>{item.name}</strong>
+                      <strong>{{ laya: 'Laya', rules: 'Rules', openai: 'OpenAI', openai_decisions: 'OpenAI Decisions', jev: 'Jev' }[item.name] || item.name}</strong>
                       <span className={'badge ' + (item.is_local === false ? 'band-mid' : 'band-high')}>
                         {item.is_local === false ? 'off this machine' : 'on this machine'}
                       </span>
-                      {disabled && <span className="badge band-none">unavailable</span>}
+                      {unavailable && <span className="badge band-none">unavailable</span>}
                     </span>
                     <span className="muted">{item.model}</span>
                     {item.error && <span className="engine-note warn">{item.error}</span>}
@@ -120,11 +131,9 @@ export default function SettingsMenu({
               )
             })}
           </div>
-          {models && (models as any).cloud_inference_enabled === false && (
+          {models?.cloud_inference_enabled === false && (
             <p className="muted">
-              Cloud engines are disabled for this deployment. Set
-              <code> DISPATCHIQ_ALLOW_CLOUD=1</code> to offer them — deliberately, in
-              configuration, not from this menu.
+              Cloud engines are not enabled for this deployment.
             </p>
           )}
         </section>
@@ -133,7 +142,7 @@ export default function SettingsMenu({
           <h3>Speech recognition</h3>
           <label className="setting-row">
             <span>Whisper model</span>
-            <select value={whisperSize} onChange={(event) => onWhisperSize(event.target.value)}>
+            <select value={whisperSize} disabled={loading || busy || !models} onChange={(event) => onWhisperSize(event.target.value)}>
               {(models?.whisper_sizes ?? ['small']).map((size) => (
                 <option key={size} value={size}>
                   {size}
@@ -143,10 +152,14 @@ export default function SettingsMenu({
             </select>
           </label>
           <p className="muted">
-            Larger is more accurate and slower. On a Mac this runs on the CPU —
-            CTranslate2 has no Metal backend — so prefer <code>tiny</code> or{' '}
-            <code>base</code> there.
+            Used for microphone and WAV input from this workspace. Phone audio uses the server's speech settings.
           </p>
+        </section>
+
+        <section className="drawer-section">
+          <h3>Summary &amp; follow-up LLM</h3>
+          <p>{models?.call_assistant?.enabled ? `${models.call_assistant.provider} · ${models.call_assistant.model}` : 'Unavailable'}</p>
+          <p className="muted">Runs after the decision model and sends the transcript and extracted fields to OpenAI. Generates operator drafts; does not change the reviewed record.</p>
         </section>
 
         <section className="drawer-section">
@@ -198,7 +211,7 @@ export default function SettingsMenu({
             <p className="muted">{health.calibration_warning}</p>
           </section>
         )}
-      </aside>
-    </>
+        </div>
+      </dialog>
   )
 }

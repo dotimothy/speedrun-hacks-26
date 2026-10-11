@@ -178,12 +178,14 @@ def health() -> dict:
 @app.get("/api/models")
 def models() -> dict:
     """What the UI is allowed to offer in its pickers."""
+    from .live.assistant import availability
     return {
         "whisper_sizes": list(settings.whisper_sizes),
         "whisper_default": settings.whisper_default_size,
         "whisper_loaded": whisper_engine.loaded_sizes(),
         "decision_engines": describe_engines(),
         "decision_default": settings.decision_engine,
+        "call_assistant": availability(),
         "cloud_inference_enabled": settings.allow_cloud_inference,
         "laya_checkpoints": ["multilingual", "english", "typed-decisions"],
         "thresholds": {
