@@ -221,11 +221,11 @@
   ],
   "requires_review": true,
   "latency_ms": {
-    "asr": 312.9,
+    "asr": 301.8,
     "translate": 0.0,
     "decision": 56.800000000000004,
     "tts": 0.0,
-    "server_total": 373.1,
+    "server_total": 362.1,
     "network": null,
     "end_to_end": null
   },
@@ -244,6 +244,14 @@
     "Scores are raw model probabilities, not calibrated. Laya ships temperatures its own docs flag as invalid for these option counts (issue #394), so a 0.9 here does not mean 90% correct. Treat every field as needing review."
   ],
   "calibration_warning": "Scores are raw model probabilities, not calibrated. Laya ships temperatures its own docs flag as invalid for these option counts (issue #394), so a 0.9 here does not mean 90% correct. Treat every field as needing review.",
+  "auto_reply": {
+    "phrase_id": "repeat_address_en",
+    "language": "en",
+    "text": "Can you repeat the street address for me?",
+    "reason": "location_text is still unknown",
+    "target": "location_text",
+    "allowed": true
+  },
   "_fixture": {
     "exercises": "abstention: barely any information, most fields must stay unknown",
     "language_expected": "en",

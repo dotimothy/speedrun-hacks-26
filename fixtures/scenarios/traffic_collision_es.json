@@ -253,11 +253,11 @@
   "missing_fields": [],
   "requires_review": true,
   "latency_ms": {
-    "asr": 989.4,
+    "asr": 1014.6,
     "translate": 0.0,
-    "decision": 101.5,
+    "decision": 107.2,
     "tts": 0.0,
-    "server_total": 1095.5,
+    "server_total": 1126.9,
     "network": null,
     "end_to_end": null
   },
@@ -273,6 +273,14 @@
     "Scores are raw model probabilities, not calibrated. Laya ships temperatures its own docs flag as invalid for these option counts (issue #394), so a 0.9 here does not mean 90% correct. Treat every field as needing review."
   ],
   "calibration_warning": "Scores are raw model probabilities, not calibrated. Laya ships temperatures its own docs flag as invalid for these option counts (issue #394), so a 0.9 here does not mean 90% correct. Treat every field as needing review.",
+  "auto_reply": {
+    "phrase_id": "ask_injuries_es",
+    "language": "es",
+    "text": "Hay alguien herido?",
+    "reason": "injuries is still unknown",
+    "target": "injuries",
+    "allowed": true
+  },
   "_fixture": {
     "exercises": "multilingual end to end: Spanish original plus English translation",
     "language_expected": "es",
