@@ -25,6 +25,20 @@ CACHE_DIR = VOICES_DIR / "_rendered"
 # id -> (language, text). Bilingual because the product claim is multilingual;
 # the Spanish lines are what the demo's non-English scenario needs.
 APPROVED: dict[str, tuple[str, str]] = {
+    "demo_address_en": ("en", "What is the address, including any apartment or floor?"),
+    "demo_incident_en": ("en", "What happened, and what can you see from where you are?"),
+    "demo_callback_en": ("en", "What phone number should we use if we get disconnected?"),
+    "demo_injuries_en": ("en", "Is anyone hurt, and what injuries have you noticed?"),
+    "demo_safety_en": ("en", "Are you in a safe place away from the danger?"),
+    "demo_people_en": ("en", "How many people are involved, as far as you can tell?"),
+    "demo_whereabouts_en": ("en", "Is everyone accounted for, or is anyone still missing?"),
+    "demo_address_es": ("es", "Cual es la direccion, incluyendo el apartamento o piso?"),
+    "demo_incident_es": ("es", "Que paso y que puede ver desde donde esta?"),
+    "demo_callback_es": ("es", "A que numero podemos llamarle si se corta la llamada?"),
+    "demo_injuries_es": ("es", "Hay alguien herido y que lesiones ha notado?"),
+    "demo_safety_es": ("es", "Esta en un lugar seguro, lejos del peligro?"),
+    "demo_people_es": ("es", "Cuantas personas estan involucradas, hasta donde sabe?"),
+    "demo_whereabouts_es": ("es", "Se sabe donde estan todos, o falta alguien?"),
     "greeting_en": ("en", "Hello, what is your emergency?"),
     "stay_on_line_en": ("en", "Please stay on the line with me."),
     "what_happening_en": ("en", "Can you tell me what is happening right now?"),

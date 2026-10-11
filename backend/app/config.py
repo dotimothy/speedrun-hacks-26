@@ -205,6 +205,8 @@ class Settings:
     dial_decide_every_s: float = float(_env("DIAL_DECIDE_EVERY_S", "3.0"))
     dial_speech_pause_s: float = float(_env("DIAL_SPEECH_PAUSE_S", "0.9"))
     dial_speech_rms: float = float(_env("DIAL_SPEECH_RMS", "300"))
+    dial_demo_mode: bool = _env("DIAL_DEMO_MODE", "1") == "1"
+    dial_demo_max_s: float = float(_env("DIAL_DEMO_MAX_S", "65"))
     # Audio shorter than this is not sent to Whisper: a breath or a syllable
     # is where hallucinated filler comes from.
     dial_min_chunk_s: float = float(_env("DIAL_MIN_CHUNK_S", "1.8"))

@@ -147,6 +147,21 @@ def update_session_settings(session_id: str, payload: dict) -> dict:
     return {"snapshot": json.loads(snapshot.model_dump_json())}
 
 
+@router.post("/phone-settings")
+def update_phone_settings(payload: dict) -> dict:
+    enabled = payload.get("phone_demo_mode")
+    if not isinstance(enabled, bool):
+        raise HTTPException(status_code=422, detail="phone_demo_mode must be a boolean")
+    session_id = payload.get("session_id")
+    if session_id is not None:
+        if not isinstance(session_id, str):
+            raise HTTPException(status_code=422, detail="session_id must be a string")
+        _snapshot(session_id)
+    settings.dial_demo_mode = enabled
+    snapshot = store.set_phone_demo_mode(session_id, enabled) if session_id else None
+    return {"phone_demo_mode": enabled, "snapshot": json.loads(snapshot.model_dump_json()) if snapshot else None}
+
+
 @router.post("/sessions/{session_id}/assist")
 async def generate_call_assistance(session_id: str) -> dict:
     _snapshot(session_id)

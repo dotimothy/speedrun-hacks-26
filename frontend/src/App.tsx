@@ -25,6 +25,7 @@ import {
   reviewOperation,
   setSessionEngine,
   generateAssistance,
+  setPhoneDemoMode,
   type Snapshot,
 } from "./workspace/v2";
 import { useTranscriptNavigation } from "./workspace/useTranscriptNavigation";
@@ -216,6 +217,21 @@ export default function App() {
       saveModelPreferences(next);
     } catch (error) {
       setSettingsError(error instanceof Error ? error.message : "Could not change the decision model.");
+    } finally { setSettingsBusy(false); }
+  }
+
+  async function choosePhoneDemoMode(enabled: boolean) {
+    if (settingsBusy) return;
+    setSettingsBusy(true);
+    setSettingsError(null);
+    const id = session.id;
+    try {
+      const result = await setPhoneDemoMode(enabled, attached.current ? id : undefined, AbortSignal.timeout(15000));
+      setModels(previous => previous ? { ...previous, phone_demo_mode: result.phone_demo_mode } : previous);
+      if (result.snapshot && currentSession.current.id === id)
+        localDispatch({ type: "server", snapshot: adaptSnapshot(result.snapshot, session.mode) });
+    } catch (error) {
+      setSettingsError(error instanceof Error ? error.message : "Could not change phone demo mode.");
     } finally { setSettingsBusy(false); }
   }
 
@@ -1470,6 +1486,8 @@ export default function App() {
         health={null}
         engine={selectedEngine}
         onEngine={engine => void chooseEngine(engine)}
+        phoneDemoMode={attached.current ? !!session.server?.phone_demo_mode : !!models?.phone_demo_mode}
+        onPhoneDemoMode={enabled => void choosePhoneDemoMode(enabled)}
         whisperSize={modelPreferences.whisperSize}
         onWhisperSize={whisperSize => {
           const next = { ...modelPreferences, whisperSize };

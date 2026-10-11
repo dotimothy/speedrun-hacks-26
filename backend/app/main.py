@@ -186,6 +186,7 @@ def models() -> dict:
         "decision_engines": describe_engines(),
         "decision_default": settings.decision_engine,
         "call_assistant": availability(),
+        "phone_demo_mode": settings.dial_demo_mode,
         "cloud_inference_enabled": settings.allow_cloud_inference,
         "laya_checkpoints": ["multilingual", "english", "typed-decisions"],
         "thresholds": {

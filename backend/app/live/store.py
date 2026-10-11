@@ -495,6 +495,12 @@ class SessionStore:
         snapshot.event_seq += 1
         return snapshot
 
+    def set_phone_demo_mode(self, session_id: str, enabled: bool) -> SessionSnapshot:
+        snapshot = self._state(session_id).snapshot
+        snapshot.phone_demo_mode = enabled
+        snapshot.event_seq += 1
+        return snapshot
+
     def set_decision_engine(self, session_id: str, engine: str | None) -> SessionSnapshot:
         snapshot = self._state(session_id).snapshot
         if snapshot.decision_engine != engine:

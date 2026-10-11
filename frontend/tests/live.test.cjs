@@ -21,8 +21,18 @@ function load(name) {
 const { initialSession, transition } = load("workspace/session.ts");
 const { requestSnapshot, parseResult } = load("workspace/backend.ts");
 const { Recorder, wavDuration } = load("audio/recorder.ts");
-const { adaptSnapshot, appendUtterance, generateAssistance } = load("workspace/v2.ts");
+const { adaptSnapshot, appendUtterance, generateAssistance, setPhoneDemoMode } = load("workspace/v2.ts");
 const { readModelPreferences, saveModelPreferences } = load("workspace/modelPreferences.ts");
+test("phone demo switch updates default and selected session through the API", async t => {
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    assert.equal(url, "/api/v2/phone-settings");
+    assert.equal(options.method, "POST");
+    assert.deepEqual(JSON.parse(options.body), { phone_demo_mode: true, session_id: "call-demo" });
+    return new Response(JSON.stringify({ phone_demo_mode: true, snapshot: null }), { status: 200 });
+  });
+  assert.deepEqual(await setPhoneDemoMode(true, "call-demo", new AbortController().signal),
+    { phone_demo_mode: true, snapshot: null });
+});
 
 test("assistant endpoint retains the summary and question without changing the reviewed record", async t => {
   const snapshot = { session_id: "assistant", event_seq: 4, revision: 0, segments: [], accepted_record: {},

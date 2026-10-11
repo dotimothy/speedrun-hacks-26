@@ -14,6 +14,7 @@ export default function CallAssistant({ snapshot, enabled, busy, error, onRefres
       </button>
     </header>
     <p className="assistant-caption">LLM draft for operator review · Uses OpenAI after decision extraction.</p>
+    {snapshot?.phone_demo_mode && <p>Phone demo mode speaks short fixed questions. The spoken question appears in the transcript.</p>}
     {busy && <p role="status">Summarizing caller statements and choosing the next question…</p>}
     {error && <p role="alert">{error}</p>}
     {!enabled && <p>LLM assistance is unavailable for this deployment. The scenario questions below remain available.</p>}

@@ -257,3 +257,54 @@ def test_phone_flush_after_hangup_files_evidence_without_speaking(phone):
     assert state.segments[-1].speaker == Speaker.CALLER
     assert state.pending
     assert state.assistant is None
+
+
+def test_spoken_topic_is_removed_from_llm_candidates(phone):
+    bridge, local_store = phone
+    bridge._process_chunk(bytes(64000))
+    state = local_store.get(bridge.call_id)
+    assert state.segments[-1].question_field == "location_text"
+    assert "location_text" not in {q["field"] for q in assistant.context(state)["follow_up_candidates"]}
+
+
+def test_phone_demo_keeps_llm_summary_but_speaks_the_short_fixed_question(phone):
+    bridge, local_store = phone
+    local_store.set_phone_demo_mode(bridge.call_id, True)
+    reply = bridge._process_chunk(bytes(64000))
+    state = local_store.get(bridge.call_id)
+    assert state.assistant.status == "ready"
+    assert reply == "demo_address_en"
+    assert state.segments[-1].original_text == "What is the address, including any apartment or floor?"
+
+
+def test_llm_rejects_duplicate_wording_even_under_different_target(enabled, monkeypatch):
+    state = snapshot()
+    state.segments.append(Segment(id="op-1", index=1, speaker=Speaker.OPERATOR,
+                                 original_text="What is the address where your father is?", question_field="other_field"))
+    monkeypatch.setattr(assistant, "_complete", content)
+    assert assistant.generate(state).status == "error"
+
+
+def test_supplied_fire_call_moves_on_without_repeating_any_question(phone, monkeypatch):
+    from app.live import dial_bridge
+    bridge, local_store = phone
+    # Disable cloud calls so the fallback policy is tested independently of model behavior.
+    monkeypatch.setattr(settings, "assistant_enabled", False)
+    caller_lines = [
+        "There is a fire near me right now. Oh no, the lady is falling down.",
+        "One, two, three, four, first treat.", "One, two, three, four.",
+        "Five sticks, six seventy-nine.", "Yes", "A brick building.",
+        "First Street", "123-456-6789.", "Yes", "No.", "Yeah",
+        "I seen them in the building.", "A brick building.", "They're all outside.",
+    ]
+    for text in caller_lines:
+        original = SimpleNamespace(text=text, language="en", language_probability=1.0, word_confidence=0.98)
+        monkeypatch.setattr(dial_bridge.whisper_engine, "transcribe_and_translate", lambda *args, original=original: (original, None))
+        bridge._process_chunk(bytes(64000))
+    state = local_store.get(bridge.call_id)
+    questions = [s for s in state.segments if s.speaker == Speaker.OPERATOR and s.question_field]
+    assert len(questions) >= 5
+    topics = [s.question_field for s in questions]
+    wordings = [assistant.question_key(s.original_text) for s in questions]
+    assert len(topics) == len(set(topics))
+    assert len(wordings) == len(set(wordings))

@@ -70,6 +70,8 @@ class Segment(BaseModel):
     read as "the very beginning of the call".
     """
 
+    # Conversation bookkeeping only; never a caller's factual assertion.
+    question_field: str | None = None
     id: str
     index: int
     speaker: Speaker = Speaker.UNKNOWN
@@ -437,6 +439,7 @@ class SessionSnapshot(BaseModel):
     closed: bool = False
     # Per-session override. None follows the deployment default.
     decision_engine: str | None = None
+    phone_demo_mode: bool = False
     assistant: AssistantDraft | None = None
 
     segments: list[Segment] = Field(default_factory=list)

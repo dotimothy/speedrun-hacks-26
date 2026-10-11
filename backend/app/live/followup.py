@@ -6,6 +6,16 @@ from ..decision.scenario_tasks import DECISIONS, SCENARIO_TASKS, DECISION_LABELS
 from ..tts import APPROVED
 from .models import Presence, UpdateKind
 
+DEMO_QUESTION_PLAN = (
+    ("location_text", "demo_address"),
+    ("incident_type", "demo_incident"),
+    ("callback_number", "demo_callback"),
+    ("injuries", "demo_injuries"),
+    ("caller_safe", "demo_safety"),
+    ("persons_involved", "demo_people"),
+    ("people_accounted_for", "demo_whereabouts"),
+)
+
 
 def reviewed_incident(snapshot) -> str | None:
     item = snapshot.accepted_record.get("incident_type")
@@ -47,7 +57,7 @@ def follow_up_questions(snapshot) -> list[dict]:
             "text": APPROVED[f"{base}_{language}"][1],
             "reason": "Conflicting statements need clarification" if name in conflicts else reasons.get(name, "Not yet established"),
         }
-        for name, base in question_plan(values.get("incident_type"), values)
+        for name, base in (DEMO_QUESTION_PLAN if snapshot.phone_demo_mode else question_plan(values.get("incident_type"), values))
         if not known(values.get(name))
     ]
 

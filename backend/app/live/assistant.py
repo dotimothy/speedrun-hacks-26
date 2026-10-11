@@ -53,6 +53,7 @@ def availability() -> dict:
 
 def context(snapshot: SessionSnapshot) -> dict:
     callers = [s for s in snapshot.segments if s.speaker == Speaker.CALLER]
+    asked_fields = {s.question_field for s in snapshot.segments if s.speaker == Speaker.OPERATOR and s.question_field}
     return {
         "language": snapshot.detected_language or "en",
         "caller_statements": [{"id":s.id, "original":s.original_text, "translation":s.translation} for s in callers],
@@ -61,9 +62,13 @@ def context(snapshot: SessionSnapshot) -> dict:
         "pending_decisions": [{"field":s.field,"value":s.proposed_value,"kind":s.kind.value,
                                "alternatives":[o.value for o in s.conflict_options]} for s in snapshot.pending],
         "decision_focus": snapshot.decision_focus,
-        "follow_up_candidates": snapshot.follow_up_questions,
+        "follow_up_candidates": [q for q in snapshot.follow_up_questions if q["field"] not in asked_fields],
         "unresolved": [item.text for item in snapshot.unresolved],
     }
+
+
+def question_key(text: str) -> str:
+    return " ".join("".join(character if character.isalnum() else " " for character in text.casefold()).split())
 
 
 def signature(snapshot: SessionSnapshot) -> str:
@@ -139,6 +144,8 @@ def generate(snapshot: SessionSnapshot) -> AssistantDraft:
             question = result.follow_up_question.strip()
             if len(question) > 400 or not question.endswith("?") or question.count("?") != 1:
                 raise ValueError("Expected one short question")
+            if question_key(question) in {question_key(text) for text in payload["previous_operator_questions"]}:
+                raise ValueError("Question was already asked")
         elif result.follow_up_question is not None or candidate_fields:
             raise ValueError("Missing follow-up target")
         return AssistantDraft(status="ready",**result.model_dump(),**base,

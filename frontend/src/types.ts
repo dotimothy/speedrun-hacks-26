@@ -89,6 +89,7 @@ export interface ModelInfo {
   decision_default: string
   cloud_inference_enabled?: boolean
   call_assistant?: { enabled: boolean; model: string; provider: string; is_local: boolean }
+  phone_demo_mode?: boolean
   thresholds: Record<string, number>
 }
 

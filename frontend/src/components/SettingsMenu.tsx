@@ -22,6 +22,8 @@ interface Props {
   onWhisperSize: (size: string) => void
   engine: string
   onEngine: (engine: string) => void
+  phoneDemoMode?: boolean
+  onPhoneDemoMode?: (enabled: boolean) => void
   loading?: boolean
   busy?: boolean
   error?: string | null
@@ -47,6 +49,8 @@ export default function SettingsMenu({
   onWhisperSize,
   engine,
   onEngine,
+  phoneDemoMode = false,
+  onPhoneDemoMode,
   loading = false,
   busy = false,
   error,
@@ -137,6 +141,16 @@ export default function SettingsMenu({
             </p>
           )}
         </section>
+
+        {onPhoneDemoMode && <section className="drawer-section">
+          <h3>Phone demo mode</h3>
+          <label className="setting-row">
+            <span>Short demo (about one minute)</span>
+            <input type="checkbox" checked={phoneDemoMode} disabled={loading || busy || !models}
+              onChange={event => onPhoneDemoMode(event.target.checked)} />
+          </label>
+          <p className="muted">Up to six concise questions covering location, callback, injuries, safety, headcount, and whereabouts. Each is asked once, then a closing message. Applies to new phone calls and the selected active call.</p>
+        </section>}
 
         <section className="drawer-section">
           <h3>Speech recognition</h3>

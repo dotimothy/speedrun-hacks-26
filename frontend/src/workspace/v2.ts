@@ -81,6 +81,7 @@ interface WireSuggestion {
 export interface Snapshot {
   session_id: string;
   decision_engine?: string | null;
+  phone_demo_mode?: boolean;
   assistant?: {
     status: "ready" | "unavailable" | "error";
     summary: string;
@@ -368,6 +369,10 @@ export function setSessionEngine(id: string, engine: string, signal: AbortSignal
 export async function generateAssistance(id: string, signal: AbortSignal): Promise<Snapshot> {
   const result = await request(`/sessions/${encodeURIComponent(id)}/assist`, {}, "POST", signal);
   return validateSnapshot(result.snapshot);
+}
+export async function setPhoneDemoMode(enabled: boolean, sessionId: string | undefined, signal: AbortSignal): Promise<{ phone_demo_mode: boolean; snapshot: Snapshot | null }> {
+  const result = await request("/phone-settings", { phone_demo_mode: enabled, session_id: sessionId }, "POST", signal);
+  return { phone_demo_mode: result.phone_demo_mode, snapshot: result.snapshot ? validateSnapshot(result.snapshot) : null };
 }
 export function appendUtterance(
   id: string,

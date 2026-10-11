@@ -19,7 +19,6 @@ import pytest
 from app.live.dial_bridge import (
     HOLDING_LIMIT,
     QUIET_PATIENCE_TICKS,
-    REASK_LIMIT,
     DialBridge,
 )
 from app.live.models import (
@@ -142,24 +141,40 @@ class TestItAsksForWhatIsMissing:
         assert "what_happening_en" not in spoken  # the type is established
 
 
-class TestItAsksAgainForWhatMatters:
-    """The call that was filled with "please stay on the line with me".
+class TestItMovesOnAfterAsking:
+    def test_same_wording_under_another_field_is_not_repeated(self, bridge, monkeypatch):
+        agent, snapshot = bridge
+        heard(snapshot)
+        questions = [
+            {"field":"injury_a", "phrase_id":"ask_injuries_en"},
+            {"field":"injury_b", "phrase_id":"different_injury_id"},
+            {"field":"safety", "phrase_id":"ask_safe_en"},
+        ]
+        monkeypatch.setitem(APPROVED, "different_injury_id", APPROVED["ask_injuries_en"])
+        monkeypatch.setattr("app.live.dial_bridge.follow_up_questions", lambda _: questions)
+        assert agent._pick_phrase() == "ask_injuries_en"
+        heard(snapshot)
+        assert agent._pick_phrase() == "ask_safe_en"
 
-    The caller was mid-story when asked for the address, kept telling the
-    story, and was never asked again -- a reply had been heard, so the
-    question was retired, and the agent had nothing left but its holding line.
-    """
+    def test_topic_is_not_reasked_after_language_changes(self, bridge):
+        agent, snapshot = bridge
+        heard(snapshot)
+        assert agent._pick_phrase() == "repeat_address_en"
+        snapshot.detected_language = "es"
+        assert "repeat_address_es" not in talk(agent, snapshot, 20)
 
-    def test_an_address_the_caller_talked_past_is_asked_for_again(self, bridge):
+    """Repeated and unanswered questions are left for operator review."""
+
+    def test_address_is_only_asked_once_even_when_not_extracted(self, bridge):
         agent, snapshot = bridge
         spoken = talk(agent, snapshot, 12)
-        assert spoken.count("repeat_address_en") == REASK_LIMIT
+        assert spoken.count("repeat_address_en") == 1
 
-    def test_so_are_the_incident_and_the_callback(self, bridge):
+    def test_incident_and_callback_are_also_only_asked_once(self, bridge):
         agent, snapshot = bridge
         spoken = talk(agent, snapshot, 12)
-        assert spoken.count("what_happening_en") == REASK_LIMIT
-        assert spoken.count("ask_callback_en") == REASK_LIMIT
+        assert spoken.count("what_happening_en") == 1
+        assert spoken.count("ask_callback_en") == 1
 
     def test_but_a_detail_is_only_asked_for_once(self, bridge):
         agent, snapshot = bridge
@@ -167,7 +182,7 @@ class TestItAsksAgainForWhatMatters:
         assert spoken.count("ask_injuries_en") == 1
         assert spoken.count("ask_safe_en") == 1
 
-    def test_everything_is_asked_once_before_anything_is_asked_twice(self, bridge):
+    def test_each_missing_topic_is_asked_once(self, bridge):
         agent, snapshot = bridge
         spoken = talk(agent, snapshot, 5)
         assert set(spoken) == QUESTIONS
@@ -193,17 +208,17 @@ class TestItLeavesRoomToAnswer:
             QUIET_PATIENCE_TICKS - 1
         )
 
-    def test_after_a_real_pause_it_puts_the_same_question_again(self, bridge):
+    def test_after_a_real_pause_it_moves_to_the_next_question(self, bridge):
         agent, snapshot = bridge
         talk(agent, snapshot, 1)
         said = [p for p in stay_quiet(agent, QUIET_PATIENCE_TICKS) if p]
-        assert said == ["repeat_address_en"]
+        assert said == ["what_happening_en"]
 
-    def test_and_then_moves_on_rather_than_asking_a_third_time(self, bridge):
+    def test_subsequent_quiet_ticks_do_not_repeat_the_address(self, bridge):
         agent, snapshot = bridge
         talk(agent, snapshot, 1)
         said = [p for p in stay_quiet(agent, QUIET_PATIENCE_TICKS * 3) if p]
-        assert said.count("repeat_address_en") == REASK_LIMIT - 1
+        assert said.count("repeat_address_en") == 0
         assert "what_happening_en" in said
 
 

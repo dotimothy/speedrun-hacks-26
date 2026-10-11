@@ -22,9 +22,8 @@ Two deliberate choices about what gets spoken:
   returned; a provider or speech failure falls back to the approved phrase.
 * **Nothing asked once it is known.** The questions come from
   ``live.followup.follow_up_questions``, the same plan the operator view
-  shows, and that plan only ever lists fields that are still empty. The three
-  a call cannot be handed over without -- what, where, callback -- are asked a
-  second time if the first reply did not contain them; everything else once.
+  shows. Topics and spoken wording are tracked across scenario changes so
+  each question is asked once, even when extraction cannot fill the answer.
 * **One question, then room to answer.** After speaking, the agent waits for
   the caller, or for a real pause, before speaking again.
 
@@ -70,14 +69,6 @@ rule_engine = RuleEngine()
 # Safety flags that stop the agent speaking entirely.
 SILENCING_FLAGS = {"weapon_mentioned", "caller_may_be_trapped"}
 
-# The three things worth asking for a second time. If the caller replied and
-# the field is still empty, the reply did not contain it -- they were mid-
-# story, or the question landed on top of them -- and a call cannot be handed
-# over without knowing what, where, and how to ring back. Everything else is
-# asked once: a detail the caller did not give is a gap for the operator.
-REASKABLE_FIELDS = ("incident_type", "location_text", "callback_number")
-REASK_LIMIT = 2
-
 # How many quiet decision ticks (settings.dial_decide_every_s each) to leave
 # after speaking before speaking again. The caller gets time to answer; the
 # agent does not stack a second question on top of an unanswered first.
@@ -110,6 +101,8 @@ class DialBridge:
     _offset: int = 0
     # phrase id -> (tick last spoken, times spoken, segments heard by then).
     _spoken: dict[str, tuple[int, int, int]] = field(default_factory=dict)
+    _asked_fields: set[str] = field(default_factory=set)
+    _asked_wordings: set[str] = field(default_factory=set)
     _tick: int = 0
     _heard: int = 0
     # The last question asked, and where the call stood when the agent last
@@ -125,6 +118,7 @@ class DialBridge:
     def ensure_session(self) -> None:
         if not store.exists(self.call_id):
             store.create(self.call_id)
+            store.set_phone_demo_mode(self.call_id, settings.dial_demo_mode)
             log.info("live session opened for Dial call %s", self.call_id)
 
     def _pcm_to_wav(self, pcm: bytes) -> str:
@@ -290,13 +284,14 @@ class DialBridge:
             result = assistant.refresh(self.call_id, store)
             if not result["stale"]:
                 draft = result["snapshot"].assistant
-        preferred = draft.target_field if draft and draft.status == "ready" else None
+        snapshot = store.get(self.call_id)
+        preferred = draft.target_field if draft and draft.status == "ready" and not snapshot.phone_demo_mode else None
         phrase_id = self._pick_phrase(preferred)
         if phrase_id is None:
             return None
         snapshot = store.get(self.call_id)
         target = next((q for q in follow_up_questions(snapshot) if q["phrase_id"] == phrase_id), None)
-        if (draft and draft.status == "ready" and draft.follow_up_question and target
+        if (not snapshot.phone_demo_mode and draft and draft.status == "ready" and draft.follow_up_question and target
                 and target["field"] == draft.target_field
                 and draft.input_signature == assistant.signature(snapshot)):
             language = (snapshot.detected_language or "en")[:2]
@@ -308,7 +303,7 @@ class DialBridge:
             if draft.input_signature != assistant.signature(current):
                 return None
             if audio:
-                self._record_agent_text(language, draft.follow_up_question)
+                self._record_agent_text(language, draft.follow_up_question, draft.target_field)
                 return GeneratedReply(draft.follow_up_question, language, audio)
         if phrase_id is not None:
             self._record_agent_line(phrase_id)
@@ -329,9 +324,13 @@ class DialBridge:
         corroborating its own questions.
         """
         language, text = APPROVED[phrase_id]
-        self._record_agent_text(language, text)
+        target = next((q["field"] for q in follow_up_questions(store.get(self.call_id)) if q["phrase_id"] == phrase_id), None)
+        self._record_agent_text(language, text, target)
 
-    def _record_agent_text(self, language: str, text: str) -> None:
+    def _record_agent_text(self, language: str, text: str, question_field: str | None = None) -> None:
+        if question_field:
+            self._asked_fields.add(question_field)
+            self._asked_wordings.add(assistant.question_key(text))
         now = round((time.perf_counter() - self._started) * 1000)
         try:
             store.commit_append(
@@ -340,6 +339,7 @@ class DialBridge:
                     id=store.next_id(self.call_id, "seg"),
                     index=len(store.get(self.call_id).segments),
                     speaker=Speaker.OPERATOR,
+                    question_field=question_field,
                     original_text=text,
                     language=language,
                     start_ms=now,
@@ -362,6 +362,10 @@ class DialBridge:
             self._record_agent_line(opening)
 
     def _say(self, phrase_id: str) -> str:
+        question = next((q for q in follow_up_questions(store.get(self.call_id)) if q["phrase_id"] == phrase_id), None)
+        if question:
+            self._asked_fields.add(question["field"])
+            self._asked_wordings.add(assistant.question_key(APPROVED[phrase_id][1]))
         _, times, _ = self._spoken.get(phrase_id, (0, 0, 0))
         self._spoken[phrase_id] = (self._tick, times + 1, self._heard)
         self._heard_at_last_line = self._heard
@@ -374,20 +378,16 @@ class DialBridge:
     def _next_question(self, questions: list[dict]) -> str | None:
         """The next question worth asking, or None when they are used up.
 
-        ``questions`` holds only fields that are still unknown, so nothing in
-        here is ever asked about once it has an answer. Anything never asked
-        comes first, in plan order. After that the three fields a call cannot
-        be handed over without get one more try each.
+        Fields and wording are both checked, because two scenario fields can
+        share a phrase or ask the same thing under different IDs.
         """
+        operators = [s for s in store.get(self.call_id).segments if s.speaker == Speaker.OPERATOR]
+        asked_fields = self._asked_fields | {s.question_field for s in operators if s.question_field}
+        asked_wordings = self._asked_wordings | {assistant.question_key(s.original_text) for s in operators}
         for question in questions:
-            if question["phrase_id"] in APPROVED and not self._times(question["phrase_id"]):
-                return question["phrase_id"]
-        for question in questions:
-            if (
-                question["field"] in REASKABLE_FIELDS
-                and question["phrase_id"] in APPROVED
-                and self._times(question["phrase_id"]) < REASK_LIMIT
-            ):
+            if (question["phrase_id"] in APPROVED and not self._times(question["phrase_id"])
+                    and question["field"] not in asked_fields
+                    and assistant.question_key(APPROVED[question["phrase_id"]][1]) not in asked_wordings):
                 return question["phrase_id"]
         return None
 
@@ -429,11 +429,9 @@ class DialBridge:
 
         * It asked five questions and then never spoke again. So running out
           of questions now ends the call, out loud.
-        * It never repeated a question the caller had replied to, even when
-          the reply did not contain the answer. A caller mid-story was asked
-          for the address once, kept telling the story, and was never asked
-          again -- the agent filled the rest of the call with "please stay on
-          the line with me". So the questions that matter get a second try.
+        * Question IDs from different scenarios could ask the same thing,
+          so topic and wording history now prevents repeats across both the
+          generated and fixed reply paths.
         * It asked the next question on every tick, including quiet ones, so
           two questions went out back to back with no room to answer the
           first. So after speaking it waits for a reply, or for a real pause.
@@ -462,6 +460,11 @@ class DialBridge:
         if language not in SUPPORTED_LANGUAGES:
             return None
 
+        if snapshot.phone_demo_mode and (
+            len(self._asked_fields) >= 6 or time.perf_counter() - self._started >= settings.dial_demo_max_s
+        ):
+            return self._close(snapshot, language)
+
         # Only fields that are still unknown. A field counts as known once it
         # is accepted, or once a suggestion for it is waiting on a human.
         questions = follow_up_questions(snapshot)
@@ -481,22 +484,17 @@ class DialBridge:
         else:
             # The line has been quiet since the agent last spoke. Give the
             # caller room before saying anything else.
-            if self._tick - self._last_line_tick < QUIET_PATIENCE_TICKS:
+            patience = 1 if snapshot.phone_demo_mode else QUIET_PATIENCE_TICKS
+            if self._tick - self._last_line_tick < patience:
                 return None
-            # A pause long enough to mean the question was not heard, or not
-            # understood: put the same one again before moving on.
-            last = self._last_question
-            if last in still_open and self._times(last) < REASK_LIMIT:
-                candidate = last
-            else:
-                candidate = self._next_question(questions)
+            candidate = self._next_question(questions)
 
         if candidate is not None:
             self._last_question = candidate
             return self._say(candidate)
 
         # Nothing left to ask.
-        if self._heard >= MIN_SEGMENTS_BEFORE_CLOSING:
+        if snapshot.phone_demo_mode or self._heard >= MIN_SEGMENTS_BEFORE_CLOSING:
             return self._close(snapshot, language)
 
         # Too early to end the call, and nothing to ask: on a quiet line, say

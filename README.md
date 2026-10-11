@@ -139,6 +139,8 @@ exercised against live Dial telephony.
   the exact question in the operator transcript. Summaries remain drafts and
   never change the reviewed report. Existing safety pauses, question cooldowns,
   and closing behavior apply; provider or synthesis failures use fixed questions.
+  Asked topics and wording are recorded with the operator transcript and excluded
+  from future questions, including after scenario changes or extraction failures.
   The separate legacy Dial LLM socket continues to use approved phrases.
   Configure `DISPATCHIQ_ALLOW_CLOUD=1`, `OPENAI_API_KEY`, and optionally
   `DISPATCHIQ_ASSISTANT_MODEL` (default `gpt-6-luna`, with reasoning disabled for quick follow-ups) and
@@ -302,6 +304,17 @@ preserving long sentences across the idle three-second decision timer. Short
 answers are processed at the same speech boundary, and remaining speech is
 filed when the caller disconnects. `DIAL_SPEECH_PAUSE_S` controls the pause and
 `DIAL_SPEECH_RMS` controls the speech energy threshold (default 300).
+
+**Phone demo mode** is enabled by default (`DIAL_DEMO_MODE=1`) and can be
+switched in Settings. It asks up to six concise fixed questions about the address,
+incident, callback number, injuries, safety, headcount, and whereabouts, skipping information already
+known. Each topic is asked once. Scenario detail questions and generated spoken
+wording are skipped in this mode; the LLM summary remains available. After the
+questions, or about 65 seconds (`DIAL_DEMO_MAX_S`), the agent plays its closing
+reassurance and hangs up after the audio drains. Calls target about one minute;
+ongoing caller speech and safety pauses can extend that time. Switching the mode
+off restores detailed scenario questions. The Settings switch applies to new
+phone calls and the selected call; the environment flag controls startup.
 
 **Dial** is an alternative transport. It replaces the browser audio path and
 nothing else: Whisper, the decision engines and the workflow see the same 16 kHz
