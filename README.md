@@ -126,9 +126,78 @@ Full contract and schema rules: [`plan.md`](./plan.md).
 plan.md     team execution plan and sprint timeline
 ```
 
+## Running it
+
+```bash
+pip install -r backend/requirements.txt
+python -m piper.download_voices en_US-amy-medium es_MX-ald-medium --data-dir voices
+python scripts/make_fixtures.py          # synthesises the demo call audio
+
+python -m uvicorn app.main:app --app-dir backend --port 8000
+cd frontend && npm install && npm run dev        # http://localhost:5173
+```
+
+First run downloads Whisper and Laya weights. Check `/api/health` — it reports
+the resolved device, so you can tell a GPU run from a CPU fallback.
+
+```bash
+python -m pytest -q        # 67 contract tests, no GPU required
+python scripts/smoke.py    # end-to-end against a running backend
+python scripts/bench.py    # writes docs/LATENCY.md
+```
+
+`DISPATCHIQ_MOCK=1` serves the committed fixture responses with no models
+loaded at all — the demo fallback.
+
+## How the pieces are chosen
+
+**Laya** answers the typed questions — one non-autoregressive forward pass,
+measured at 35–45 ms for the full question set against 2.3–10.5 s for a
+generative model asked the same thing. It also routes by language, so the
+same questions can be asked of the caller's own words and of Whisper's
+English translation and the answers compared.
+
+**Whisper** (`faster-whisper`) produces both transcripts and, importantly, a
+per-word probability — the one confidence signal in the stack that genuinely
+moves with input quality.
+
+**A regex/keyword extractor** owns the address, the callback number and the
+head-count, because those are patterns rather than judgments, and it acts as
+an independent second opinion on everything else.
+
+**Piper** speaks the approved reply phrases. There is no code path that
+synthesises arbitrary text.
+
+### Why the scores are built rather than read
+
+Every self-reported confidence on this stack was measured and discarded: a
+generative model asked for a 0–1 score returned exactly `1.0` every time;
+token logprobs under constrained JSON decoding measure grammar friction, not
+belief; self-consistency over seven samples agreed 7/7 on every case including
+the ambiguous ones. Laya reports real probabilities, but its own documentation
+says the shipped checkpoints are over-confident.
+
+So a field's score is derived from agreement between independent methods, and
+anything with no locatable support in the transcript and no second opinion is
+capped below the abstention threshold and reported as `unknown`.
+
+The clearest demonstration is a real failure the pipeline catches: on the
+Spanish kitchen-fire call, Laya's multilingual checkpoint returns `gas_leak`
+at **0.956** while the English translation of the same sentence returns
+`structure_fire` at **0.867**. Cross-checking turns that into `unknown` with
+both candidates shown, instead of telling a dispatcher "gas leak, 96%".
+
+## Measured
+
+Median warm end-to-end **647 ms** per call on an RTX 3090 (Whisper `small`),
+of which **65 ms** is the decision engine. Full table in
+[`docs/LATENCY.md`](./docs/LATENCY.md).
+
 ## Status
 
-Pre-build. `plan.md` holds the sprint plan, role ownership, and risk fallbacks.
+Working prototype on `feat/full-prototype`. `plan.md` holds the sprint plan and
+role ownership; [`docs/DEMO.md`](./docs/DEMO.md) is the run sheet;
+[`docs/API.md`](./docs/API.md) documents the contract.
 
 ## Team
 

@@ -1,0 +1,282 @@
+{
+  "session_id": "traffic_collision_es",
+  "detected_language": "es",
+  "language_probability": 0.982421875,
+  "transcript_original": "hubo un choque entre dos puertes en la avenida Juarez 250, hay 4 personas en el carro y uno está sangrando. Mi número es 55050163, estoy afuera en la banqueta.",
+  "transcript_english": "There was a crash between two cars on the avenue, Juarez 250, there are four people in the car and one is bleeding, my number is 55050163, I'm out, in the bench.",
+  "predictions": [
+    {
+      "label": "incident_type",
+      "value": "traffic_collision",
+      "score": 0.956,
+      "evidence": {
+        "text": "There was a crash between two cars on the avenue, Juarez 250, there are four people in the car and one is bleeding, my number is 55050163, I'm out, in the bench.",
+        "start": 0,
+        "end": 161,
+        "source": "english",
+        "match": "exact"
+      },
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": {
+        "structure_fire": 0.0,
+        "medical": 0.0,
+        "traffic_collision": 0.9995,
+        "crime_in_progress": 0.0001,
+        "gas_leak": 0.0,
+        "water_rescue": 0.0,
+        "other": 0.0004
+      },
+      "raw_probability": 0.9995,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "laya_original": 0.9995,
+        "asr_factor": 0.957,
+        "asr_confidence": "measured",
+        "laya_english": 0.9986,
+        "cross_check": "agree",
+        "rule_check": "no_opinion",
+        "final": 0.9557
+      }
+    },
+    {
+      "label": "injuries",
+      "value": "unknown",
+      "score": 0.203,
+      "evidence": {
+        "text": "There was a crash between two cars on the avenue, Juarez 250, there are four people in the car and one is bleeding, my number is 55050163, I'm out, in the bench.",
+        "start": 0,
+        "end": 161,
+        "source": "english",
+        "match": "exact"
+      },
+      "verification_state": "unverified",
+      "conflict": true,
+      "evidence_unverified": false,
+      "probabilities": {
+        "none": 0.0475,
+        "suspected": 0.731,
+        "confirmed": 0.2214
+      },
+      "raw_probability": 0.731,
+      "decided_on": "original",
+      "alternative": "confirmed",
+      "breakdown": {
+        "laya_original": 0.731,
+        "asr_factor": 0.957,
+        "asr_confidence": "measured",
+        "laya_english": 0.4252,
+        "cross_check": "disagree",
+        "cross_value": "confirmed",
+        "rule_check": "no_opinion",
+        "final": 0.2034,
+        "abstained": "score < 0.55"
+      }
+    },
+    {
+      "label": "weapons_present",
+      "value": "no",
+      "score": 0.905,
+      "evidence": null,
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": {
+        "true": 0.0678,
+        "false": 0.9322
+      },
+      "raw_probability": 0.9322,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "laya_original": 0.9322,
+        "asr_factor": 0.957,
+        "asr_confidence": "measured",
+        "laya_english": 0.9603,
+        "cross_check": "agree",
+        "rule_check": "no_opinion",
+        "final": 0.9052,
+        "p_true": 0.0678,
+        "thresholds": "yes>=0.7 no<=0.3"
+      }
+    },
+    {
+      "label": "caller_safe",
+      "value": "unknown",
+      "score": 0.0,
+      "evidence": {
+        "text": "Mi número es 55050163, estoy afuera en la banqueta.",
+        "start": 108,
+        "end": 159,
+        "source": "original",
+        "match": "exact"
+      },
+      "verification_state": "unverified",
+      "conflict": true,
+      "evidence_unverified": false,
+      "probabilities": {
+        "trapped": 0.0002,
+        "evacuated": 0.1321
+      },
+      "raw_probability": null,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "composed_from": [
+          "caller_trapped",
+          "caller_evacuated"
+        ],
+        "p_trapped": 0.0002,
+        "p_evacuated": 0.1321,
+        "reason": "the call never says either way; the two language passes disagreed",
+        "asr_factor": 0.957,
+        "final": 0.0
+      }
+    },
+    {
+      "label": "hazards",
+      "value": [],
+      "score": 0.0,
+      "evidence": null,
+      "verification_state": "unverified",
+      "conflict": true,
+      "evidence_unverified": false,
+      "probabilities": {
+        "smoke": 0.0,
+        "fire": 0.0049,
+        "gas": 0.0,
+        "weapon": 0.0467,
+        "water": 0.0067,
+        "electrical": 0.0839,
+        "vehicle": 0.897
+      },
+      "raw_probability": null,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "per_hazard": {
+          "smoke": 0.0,
+          "fire": 0.0049,
+          "gas": 0.0,
+          "weapon": 0.0467,
+          "water": 0.0067,
+          "electrical": 0.0839,
+          "vehicle": 0.897
+        },
+        "threshold": 0.7,
+        "cross_check": "disagree"
+      }
+    },
+    {
+      "label": "location_text",
+      "value": "avenida Juarez 250",
+      "score": 0.765,
+      "evidence": {
+        "text": "avenida Juarez 250",
+        "start": 39,
+        "end": 57,
+        "source": "original",
+        "match": "exact"
+      },
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": null,
+      "raw_probability": null,
+      "decided_on": "rules",
+      "alternative": null,
+      "breakdown": {
+        "extractor": "regex",
+        "asr_factor": 0.957,
+        "asr_confidence": "measured",
+        "final": 0.765
+      }
+    },
+    {
+      "label": "callback_number",
+      "value": "55050163",
+      "score": 0.909,
+      "evidence": {
+        "text": "55050163",
+        "start": 121,
+        "end": 129,
+        "source": "original",
+        "match": "exact"
+      },
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": null,
+      "raw_probability": null,
+      "decided_on": "rules",
+      "alternative": null,
+      "breakdown": {
+        "extractor": "regex",
+        "asr_factor": 0.957,
+        "asr_confidence": "measured",
+        "final": 0.909
+      }
+    },
+    {
+      "label": "persons_involved",
+      "value": 4,
+      "score": 0.813,
+      "evidence": null,
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": null,
+      "raw_probability": null,
+      "decided_on": "rules",
+      "alternative": null,
+      "breakdown": {
+        "extractor": "regex",
+        "asr_factor": 0.957,
+        "asr_confidence": "measured",
+        "final": 0.813
+      }
+    }
+  ],
+  "suggested_form": {
+    "incident_type": "traffic_collision",
+    "location_text": "avenida Juarez 250",
+    "callback_number": "55050163",
+    "injuries": "unknown",
+    "persons_involved": 4,
+    "hazards": [],
+    "weapons_present": "no",
+    "caller_safe": "unknown"
+  },
+  "suggested_action": "request_human_confirmation",
+  "missing_fields": [],
+  "requires_review": true,
+  "latency_ms": {
+    "asr": 989.4,
+    "translate": 0.0,
+    "decision": 101.5,
+    "tts": 0.0,
+    "server_total": 1095.5,
+    "network": null,
+    "end_to_end": null
+  },
+  "engine": {
+    "decision": "laya",
+    "decision_model": "multilingual",
+    "whisper_size": "small",
+    "whisper_device": "cuda",
+    "asr_confidence": "measured"
+  },
+  "notes": [
+    "Cross-checked against Whisper's English translation on a second checkpoint; per-field disagreements are flagged.",
+    "Scores are raw model probabilities, not calibrated. Laya ships temperatures its own docs flag as invalid for these option counts (issue #394), so a 0.9 here does not mean 90% correct. Treat every field as needing review."
+  ],
+  "calibration_warning": "Scores are raw model probabilities, not calibrated. Laya ships temperatures its own docs flag as invalid for these option counts (issue #394), so a 0.9 here does not mean 90% correct. Treat every field as needing review.",
+  "_fixture": {
+    "exercises": "multilingual end to end: Spanish original plus English translation",
+    "language_expected": "es",
+    "input_mode": "audio",
+    "script": "Hubo un choque entre dos coches en la Avenida Juarez 250. Hay cuatro personas en el carro y uno esta sangrando. Mi numero es 555 0163. Estoy afuera, en la banqueta."
+  }
+}

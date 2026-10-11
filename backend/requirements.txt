@@ -1,0 +1,21 @@
+# Core API
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.9
+python-multipart>=0.0.9
+
+# Speech recognition: original-language transcript plus English translation,
+# with the per-word probabilities the scoring pipeline depends on.
+faster-whisper>=1.1
+ctranslate2>=4.4
+
+# Typed decisions in one forward pass, with probabilities. The primary
+# decision engine.
+laya>=0.4.3
+
+# Approved-phrase replies. Wheels bundle espeak-ng, so there is no separate
+# phonemiser to install.
+piper-tts>=1.8
+
+pytest>=8.0
+httpx>=0.27

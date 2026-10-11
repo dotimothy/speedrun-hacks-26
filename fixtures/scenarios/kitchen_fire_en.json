@@ -1,0 +1,278 @@
+{
+  "session_id": "kitchen_fire_en",
+  "detected_language": "en",
+  "language_probability": 0.9970703125,
+  "transcript_original": "Help! There is smoke coming from my kitchen and my son is coughing badly. I am at 418 Alameda Street, Apartment 3B. My number is 550147. I got him out into the hallway.",
+  "transcript_english": "Help! There is smoke coming from my kitchen and my son is coughing badly. I am at 418 Alameda Street, Apartment 3B. My number is 550147. I got him out into the hallway.",
+  "predictions": [
+    {
+      "label": "incident_type",
+      "value": "structure_fire",
+      "score": 0.855,
+      "evidence": {
+        "text": "There is smoke coming from my kitchen and my son is coughing badly.",
+        "start": 6,
+        "end": 73,
+        "source": "original",
+        "match": "exact"
+      },
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": {
+        "structure_fire": 0.7955,
+        "medical": 0.1111,
+        "traffic_collision": 0.0009,
+        "crime_in_progress": 0.0012,
+        "gas_leak": 0.0028,
+        "water_rescue": 0.0047,
+        "other": 0.0838
+      },
+      "raw_probability": 0.7955,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "laya_original": 0.7955,
+        "asr_factor": 0.977,
+        "asr_confidence": "measured",
+        "cross_check": "unavailable",
+        "rule_check": "agree",
+        "final": 0.8546
+      }
+    },
+    {
+      "label": "injuries",
+      "value": "unknown",
+      "score": 0.407,
+      "evidence": {
+        "text": "There is smoke coming from my kitchen and my son is coughing badly.",
+        "start": 6,
+        "end": 73,
+        "source": "original",
+        "match": "exact"
+      },
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": {
+        "none": 0.293,
+        "suspected": 0.4167,
+        "confirmed": 0.2904
+      },
+      "raw_probability": 0.4167,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "laya_original": 0.4167,
+        "asr_factor": 0.977,
+        "asr_confidence": "measured",
+        "cross_check": "unavailable",
+        "rule_check": "no_opinion",
+        "final": 0.407,
+        "abstained": "score < 0.55"
+      }
+    },
+    {
+      "label": "weapons_present",
+      "value": "no",
+      "score": 0.35,
+      "evidence": null,
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": {
+        "true": 0.0281,
+        "false": 0.9719
+      },
+      "raw_probability": 0.9719,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "laya_original": 0.9719,
+        "asr_factor": 0.977,
+        "asr_confidence": "measured",
+        "cross_check": "unavailable",
+        "rule_check": "no_opinion",
+        "final": 0.35,
+        "p_true": 0.0281,
+        "thresholds": "yes>=0.7 no<=0.3",
+        "uncorroborated": "no evidence span located and no independent agreement; score capped at 0.35"
+      }
+    },
+    {
+      "label": "caller_safe",
+      "value": "unknown",
+      "score": 0.0,
+      "evidence": null,
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": {
+        "trapped": 0.1096,
+        "evacuated": 0.2014
+      },
+      "raw_probability": null,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "composed_from": [
+          "caller_trapped",
+          "caller_evacuated"
+        ],
+        "p_trapped": 0.1096,
+        "p_evacuated": 0.2014,
+        "reason": "the call never says either way",
+        "asr_factor": 0.977,
+        "final": 0.0
+      }
+    },
+    {
+      "label": "hazards",
+      "value": [
+        "smoke",
+        "fire"
+      ],
+      "score": 0.818,
+      "evidence": {
+        "text": "There is smoke coming from my kitchen and my son is coughing badly.",
+        "start": 6,
+        "end": 73,
+        "source": "original",
+        "match": "exact"
+      },
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": {
+        "smoke": 0.8319,
+        "fire": 0.805,
+        "gas": 0.6329,
+        "weapon": 0.0026,
+        "water": 0.0347,
+        "electrical": 0.0725,
+        "vehicle": 0.1164
+      },
+      "raw_probability": null,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "per_hazard": {
+          "smoke": 0.8319,
+          "fire": 0.805,
+          "gas": 0.6329,
+          "weapon": 0.0026,
+          "water": 0.0347,
+          "electrical": 0.0725,
+          "vehicle": 0.1164
+        },
+        "threshold": 0.7,
+        "cross_check": "agree"
+      }
+    },
+    {
+      "label": "location_text",
+      "value": "418 Alameda Street",
+      "score": 0.781,
+      "evidence": {
+        "text": "418 Alameda Street",
+        "start": 82,
+        "end": 100,
+        "source": "original",
+        "match": "exact"
+      },
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": null,
+      "raw_probability": null,
+      "decided_on": "rules",
+      "alternative": null,
+      "breakdown": {
+        "extractor": "regex",
+        "asr_factor": 0.977,
+        "asr_confidence": "measured",
+        "final": 0.781
+      }
+    },
+    {
+      "label": "callback_number",
+      "value": null,
+      "score": 0.0,
+      "evidence": null,
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": null,
+      "raw_probability": null,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "reason": "no pattern matched",
+        "extractor": "regex"
+      }
+    },
+    {
+      "label": "persons_involved",
+      "value": null,
+      "score": 0.0,
+      "evidence": null,
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": null,
+      "raw_probability": null,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "reason": "no pattern matched",
+        "extractor": "regex"
+      }
+    }
+  ],
+  "suggested_form": {
+    "incident_type": "structure_fire",
+    "location_text": "418 Alameda Street",
+    "callback_number": null,
+    "injuries": "unknown",
+    "persons_involved": null,
+    "hazards": [
+      "smoke",
+      "fire"
+    ],
+    "weapons_present": "no",
+    "caller_safe": "unknown"
+  },
+  "suggested_action": "request_missing_critical_field",
+  "missing_fields": [
+    "callback_number"
+  ],
+  "requires_review": true,
+  "latency_ms": {
+    "asr": 1129.6,
+    "translate": 0.0,
+    "decision": 169.79999999999998,
+    "tts": 0.0,
+    "server_total": 1303.2,
+    "network": null,
+    "end_to_end": null
+  },
+  "engine": {
+    "decision": "laya",
+    "decision_model": "english",
+    "whisper_size": "small",
+    "whisper_device": "cuda",
+    "asr_confidence": "measured"
+  },
+  "notes": [
+    "Ask for a number you can call back on.",
+    "Call was already English, so there is no second rendering to cross-check against. Scores rest on a single checkpoint.",
+    "Scores are raw model probabilities, not calibrated. Laya ships temperatures its own docs flag as invalid for these option counts (issue #394), so a 0.9 here does not mean 90% correct. Treat every field as needing review."
+  ],
+  "calibration_warning": "Scores are raw model probabilities, not calibrated. Laya ships temperatures its own docs flag as invalid for these option counts (issue #394), so a 0.9 here does not mean 90% correct. Treat every field as needing review.",
+  "_fixture": {
+    "exercises": "happy path: every critical field present, hazards, suspected injury",
+    "language_expected": "en",
+    "input_mode": "audio",
+    "script": "Help, there is smoke coming from my kitchen and my son is coughing badly. I am at 418 Alameda Street, apartment 3B. My number is 555 0147. I got him out into the hallway."
+  }
+}

@@ -1,0 +1,289 @@
+{
+  "session_id": "weapon_crime_es",
+  "detected_language": "es",
+  "language_probability": 0.9912109375,
+  "transcript_original": "alguien entró a mi casa y tiene un cuchillo estoy escondido adentro en el vano no puedo salir calle vuelos 88 mi número es 555 0175",
+  "transcript_english": "Someone enters my house and has a knife I'm hidden inside the bathroom I can't get out There are 88 My number is 555 0175",
+  "predictions": [
+    {
+      "label": "incident_type",
+      "value": "unknown",
+      "score": 0.139,
+      "evidence": {
+        "text": "Someone enters my house and has a knife I'm hidden inside the bathroom I can't get out There are 88 My number is 555 0175",
+        "start": 0,
+        "end": 121,
+        "source": "english",
+        "match": "exact"
+      },
+      "verification_state": "unverified",
+      "conflict": true,
+      "evidence_unverified": false,
+      "probabilities": {
+        "structure_fire": 0.215,
+        "medical": 0.0041,
+        "traffic_collision": 0.189,
+        "crime_in_progress": 0.0325,
+        "gas_leak": 0.1056,
+        "water_rescue": 0.1542,
+        "other": 0.2996
+      },
+      "raw_probability": 0.2996,
+      "decided_on": "original",
+      "alternative": "crime_in_progress",
+      "breakdown": {
+        "laya_original": 0.2996,
+        "asr_factor": 0.93,
+        "asr_confidence": "measured",
+        "laya_english": 0.7006,
+        "cross_check": "disagree",
+        "cross_value": "crime_in_progress",
+        "rule_check": "no_opinion",
+        "final": 0.1393,
+        "abstained": "score < 0.55"
+      }
+    },
+    {
+      "label": "injuries",
+      "value": "unknown",
+      "score": 0.188,
+      "evidence": null,
+      "verification_state": "unverified",
+      "conflict": true,
+      "evidence_unverified": false,
+      "probabilities": {
+        "none": 0.0294,
+        "suspected": 0.9584,
+        "confirmed": 0.0123
+      },
+      "raw_probability": 0.9584,
+      "decided_on": "original",
+      "alternative": "none",
+      "breakdown": {
+        "laya_original": 0.9584,
+        "asr_factor": 0.93,
+        "asr_confidence": "measured",
+        "laya_english": 0.4048,
+        "cross_check": "disagree",
+        "cross_value": "none",
+        "rule_check": "no_opinion",
+        "final": 0.1883,
+        "abstained": "score < 0.55"
+      }
+    },
+    {
+      "label": "weapons_present",
+      "value": "yes",
+      "score": 0.6,
+      "evidence": {
+        "text": "Someone enters my house and has a knife I'm hidden inside the bathroom I can't get out There are 88 My number is 555 0175",
+        "start": 0,
+        "end": 121,
+        "source": "english",
+        "match": "exact"
+      },
+      "verification_state": "unverified",
+      "conflict": true,
+      "evidence_unverified": false,
+      "probabilities": {
+        "true": 0.0513,
+        "false": 0.9487
+      },
+      "raw_probability": 0.9487,
+      "decided_on": "original",
+      "alternative": "yes",
+      "breakdown": {
+        "laya_original": 0.9487,
+        "asr_factor": 0.93,
+        "asr_confidence": "measured",
+        "laya_english": 0.7146,
+        "cross_check": "disagree",
+        "cross_value": "yes",
+        "rule_check": "disagree",
+        "rule_value": "yes",
+        "final": 0.1994,
+        "p_true": 0.0513,
+        "thresholds": "yes>=0.7 no<=0.3",
+        "forced_unknown": "passes disagreed after thresholding",
+        "rule_override": "weapon term found verbatim in the transcript; reported as yes"
+      }
+    },
+    {
+      "label": "caller_safe",
+      "value": "no",
+      "score": 0.78,
+      "evidence": {
+        "text": "Someone enters my house and has a knife I'm hidden inside the bathroom I can't get out There are 88 My number is 555 0175",
+        "start": 0,
+        "end": 121,
+        "source": "english",
+        "match": "exact"
+      },
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": {
+        "trapped": 0.8385,
+        "evacuated": 0.164
+      },
+      "raw_probability": null,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "composed_from": [
+          "caller_trapped",
+          "caller_evacuated"
+        ],
+        "p_trapped": 0.8385,
+        "p_evacuated": 0.164,
+        "reason": "caller states they are trapped",
+        "asr_factor": 0.93,
+        "final": 0.78
+      }
+    },
+    {
+      "label": "hazards",
+      "value": [],
+      "score": 0.0,
+      "evidence": null,
+      "verification_state": "unverified",
+      "conflict": true,
+      "evidence_unverified": false,
+      "probabilities": {
+        "smoke": 0.006,
+        "fire": 0.1532,
+        "gas": 0.1128,
+        "weapon": 0.1387,
+        "water": 0.01,
+        "electrical": 0.7326,
+        "vehicle": 0.9667
+      },
+      "raw_probability": null,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "per_hazard": {
+          "smoke": 0.006,
+          "fire": 0.1532,
+          "gas": 0.1128,
+          "weapon": 0.1387,
+          "water": 0.01,
+          "electrical": 0.7326,
+          "vehicle": 0.9667
+        },
+        "threshold": 0.7,
+        "cross_check": "disagree"
+      }
+    },
+    {
+      "label": "location_text",
+      "value": "calle vuelos 88",
+      "score": 0.744,
+      "evidence": {
+        "text": "calle vuelos 88",
+        "start": 94,
+        "end": 109,
+        "source": "original",
+        "match": "exact"
+      },
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": null,
+      "raw_probability": null,
+      "decided_on": "rules",
+      "alternative": null,
+      "breakdown": {
+        "extractor": "regex",
+        "asr_factor": 0.93,
+        "asr_confidence": "measured",
+        "final": 0.744
+      }
+    },
+    {
+      "label": "callback_number",
+      "value": "555 0175",
+      "score": 0.884,
+      "evidence": {
+        "text": "555 0175",
+        "start": 123,
+        "end": 131,
+        "source": "original",
+        "match": "exact"
+      },
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": null,
+      "raw_probability": null,
+      "decided_on": "rules",
+      "alternative": null,
+      "breakdown": {
+        "extractor": "regex",
+        "asr_factor": 0.93,
+        "asr_confidence": "measured",
+        "final": 0.884
+      }
+    },
+    {
+      "label": "persons_involved",
+      "value": null,
+      "score": 0.0,
+      "evidence": null,
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": null,
+      "raw_probability": null,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "reason": "no pattern matched",
+        "extractor": "regex"
+      }
+    }
+  ],
+  "suggested_form": {
+    "incident_type": "unknown",
+    "location_text": "calle vuelos 88",
+    "callback_number": "555 0175",
+    "injuries": "unknown",
+    "persons_involved": null,
+    "hazards": [],
+    "weapons_present": "yes",
+    "caller_safe": "no"
+  },
+  "suggested_action": "escalate_to_human_now",
+  "missing_fields": [
+    "incident_type"
+  ],
+  "requires_review": true,
+  "latency_ms": {
+    "asr": 1002.7,
+    "translate": 0.0,
+    "decision": 107.0,
+    "tts": 0.0,
+    "server_total": 1115.7,
+    "network": null,
+    "end_to_end": null
+  },
+  "engine": {
+    "decision": "laya",
+    "decision_model": "multilingual",
+    "whisper_size": "small",
+    "whisper_device": "cuda",
+    "asr_confidence": "measured"
+  },
+  "notes": [
+    "A weapon or an unsafe caller was indicated. Escalate to a human now.",
+    "Cross-checked against Whisper's English translation on a second checkpoint; per-field disagreements are flagged.",
+    "Scores are raw model probabilities, not calibrated. Laya ships temperatures its own docs flag as invalid for these option counts (issue #394), so a 0.9 here does not mean 90% correct. Treat every field as needing review."
+  ],
+  "calibration_warning": "Scores are raw model probabilities, not calibrated. Laya ships temperatures its own docs flag as invalid for these option counts (issue #394), so a 0.9 here does not mean 90% correct. Treat every field as needing review.",
+  "_fixture": {
+    "exercises": "escalation path: weapon indicated, caller not safe",
+    "language_expected": "es",
+    "input_mode": "audio",
+    "script": "Alguien entro a mi casa y tiene un cuchillo. Estoy escondido adentro en el bano, no puedo salir. Calle Morelos 88. Mi numero es 555 0175."
+  }
+}

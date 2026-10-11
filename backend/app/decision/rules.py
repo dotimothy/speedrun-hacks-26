@@ -1,0 +1,193 @@
+"""Deterministic extraction. No model, no probability, no guessing.
+
+This module does two jobs.
+
+**It owns the fields a regex is simply better at.** A phone number and a street
+address are patterns, not judgments. Asking a neural model to find them trades
+a correct answer for a plausible one, so Laya is never asked about them -- this
+module extracts them and the result is exact or absent.
+
+**It is the second opinion on the fields Laya does own.** Keyword corroboration
+is weak evidence on its own, but "two unrelated methods reached the same
+answer" is a much better signal than one model's probability. Where this module
+and Laya disagree, ``confidence.py`` penalises the field and says so.
+
+Nothing here is tuned to the demo fixtures: the patterns are general and the
+keyword sets are bilingual because the product claim is multilingual.
+"""
+
+from __future__ import annotations
+
+import re
+import time
+
+from .base import EngineResult, FieldAnswer
+
+# --------------------------------------------------------------------------
+# Patterns
+# --------------------------------------------------------------------------
+
+# Deliberately permissive about separators and strict about length: a 7-to-15
+# digit run is a phone number, a 4-digit one is a year or a street number.
+_PHONE = re.compile(
+    r"(?<!\d)(?:\+?\d{1,3}[\s.-]?)?(?:\(\d{2,4}\)[\s.-]?)?\d{3}[\s.-]?\d{3,4}(?:[\s.-]?\d{2,4})?(?!\d)"
+)
+
+_STREET_WORDS = (
+    r"street|st\.?|avenue|ave\.?|road|rd\.?|boulevard|blvd\.?|drive|dr\.?|lane|ln\.?|"
+    r"way|court|ct\.?|place|pl\.?|highway|hwy\.?|apartment|apt\.?|unit|floor|"
+    r"calle|avenida|carrera|callejon|piso|apartamento|numero"
+)
+
+# "418 Alameda Street", "Calle Alameda 418", "apt 3B" -- a number adjacent to a
+# street word, in either order, which is how addresses appear in both languages.
+_ADDRESS = re.compile(
+    rf"(?:\b(?:{_STREET_WORDS})\b[\s,]*[\w'-]*[\s,]*\d+[\w-]*"
+    rf"|\b\d+[\w-]*[\s,]+(?:[\w'-]+[\s,]+){{0,3}}?(?:{_STREET_WORDS})\b)",
+    re.IGNORECASE,
+)
+
+_PERSONS = re.compile(
+    r"\b(\d{1,3}|one|two|three|four|five|six|seven|eight|nine|ten"
+    r"|un|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s+"
+    r"(?:people|persons?|passengers?|victims?|kids?|children|adults?"
+    r"|personas?|pasajeros?|victimas?|ninos?|adultos?)\b",
+    re.IGNORECASE,
+)
+
+_NUMBER_WORDS = {
+    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+    "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+    "un": 1, "uno": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5,
+    "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10,
+}
+
+# Keyword corroboration for the categorical fields. Order matters only in that
+# the highest hit count wins; a tie produces no opinion rather than a coin flip.
+_INCIDENT_KEYWORDS: dict[str, tuple[str, ...]] = {
+    "structure_fire": ("fire", "smoke", "burning", "flames", "on fire",
+                       "fuego", "humo", "incendio", "llamas", "quemando"),
+    "medical": ("chest pain", "not breathing", "unconscious", "bleeding", "seizure",
+                "heart attack", "stroke", "overdose", "collapsed",
+                "dolor de pecho", "no respira", "inconsciente", "sangrando",
+                "convulsion", "infarto", "desmayo"),
+    "traffic_collision": ("crash", "collision", "accident", "hit by a car", "rear-ended",
+                          "choque", "accidente", "atropellado", "colision"),
+    "crime_in_progress": ("robbery", "breaking in", "stabbed", "shot", "assault",
+                          "intruder", "stealing",
+                          "robo", "asalto", "apunalado", "disparo", "intruso"),
+    "gas_leak": ("gas leak", "smell gas", "smells like gas", "gas smell", "propane",
+                 "fuga de gas", "huele a gas", "olor a gas"),
+    "water_rescue": ("drowning", "in the water", "swept away", "under the ice",
+                     "ahogando", "en el agua", "se ahoga"),
+}
+
+_HAZARD_KEYWORDS: dict[str, tuple[str, ...]] = {
+    "smoke": ("smoke", "humo"),
+    "fire": ("fire", "flames", "burning", "fuego", "llamas", "incendio"),
+    "gas": ("gas", "propane", "fuga"),
+    "weapon": ("gun", "knife", "weapon", "firearm", "arma", "pistola", "cuchillo"),
+    "water": ("flood", "water", "drowning", "inundacion", "agua", "ahogando"),
+    "electrical": ("live wire", "wires", "electrical", "sparks", "cable", "chispas"),
+    "vehicle": ("car", "truck", "van", "motorcycle", "bus",
+                "coche", "carro", "camion", "moto", "autobus"),
+}
+
+
+def _best_keyword_match(text: str, table: dict[str, tuple[str, ...]]) -> tuple[str | None, int]:
+    low = text.lower()
+    scores = {k: sum(low.count(term) for term in terms) for k, terms in table.items()}
+    hits = {k: n for k, n in scores.items() if n > 0}
+    if not hits:
+        return None, 0
+    best = max(hits, key=lambda k: hits[k])
+    top = hits[best]
+    # A tie between two categories is not an opinion.
+    if sum(1 for n in hits.values() if n == top) > 1:
+        return None, top
+    return best, top
+
+
+def find_phone(text: str) -> str | None:
+    for match in _PHONE.finditer(text):
+        digits = re.sub(r"\D", "", match.group(0))
+        if 7 <= len(digits) <= 15:
+            return match.group(0).strip()
+    return None
+
+
+def find_address(text: str) -> str | None:
+    match = _ADDRESS.search(text)
+    return match.group(0).strip(" ,.") if match else None
+
+
+def find_persons(text: str) -> int | None:
+    match = _PERSONS.search(text)
+    if not match:
+        return None
+    token = match.group(1).lower()
+    if token.isdigit():
+        value = int(token)
+        return value if 0 < value < 1000 else None
+    return _NUMBER_WORDS.get(token)
+
+
+class RuleEngine:
+    """Usable both as the cross-check and as a standalone fallback engine."""
+
+    name = "rules"
+
+    def ready(self) -> bool:
+        return True
+
+    def extract(self, original: str, english: str, language: str | None) -> EngineResult:
+        started = time.perf_counter()
+        # Patterns are matched against both renderings: a phone number survives
+        # translation, but a street name may only be recognisable in one.
+        haystack = original if original else english
+        joined = "\n".join(t for t in (original, english) if t)
+
+        answers: dict[str, FieldAnswer] = {}
+
+        phone = find_phone(joined)
+        if phone:
+            answers["callback_number"] = FieldAnswer(
+                label="callback_number", value=phone, quote=phone, decided_on="rules"
+            )
+
+        address = find_address(haystack) or find_address(joined)
+        if address:
+            answers["location_text"] = FieldAnswer(
+                label="location_text", value=address, quote=address, decided_on="rules"
+            )
+
+        persons = find_persons(joined)
+        if persons is not None:
+            answers["persons_involved"] = FieldAnswer(
+                label="persons_involved", value=persons, decided_on="rules"
+            )
+
+        incident, hits = _best_keyword_match(joined, _INCIDENT_KEYWORDS)
+        if incident:
+            answers["incident_type"] = FieldAnswer(
+                label="incident_type",
+                value=incident,
+                decided_on="rules",
+                notes=[f"{hits} keyword hit(s)"],
+            )
+
+        for hazard, terms in _HAZARD_KEYWORDS.items():
+            low = joined.lower()
+            hit = next((t for t in terms if t in low), None)
+            if hit:
+                answers[f"hazard_{hazard}"] = FieldAnswer(
+                    label=f"hazard_{hazard}", value=True, quote=hit, decided_on="rules"
+                )
+
+        return EngineResult(
+            answers=answers,
+            engine=self.name,
+            model="regex+keywords",
+            latency_ms=round((time.perf_counter() - started) * 1000, 2),
+            notes=["Deterministic extraction: exact patterns, no inference."],
+        )

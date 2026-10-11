@@ -1,0 +1,269 @@
+{
+  "session_id": "gas_smell_no_address_en",
+  "detected_language": "en",
+  "language_probability": 0.9970703125,
+  "transcript_original": "I can smell gas really strongly in the stairwell. I don't know the street number. I just moved in. I'm sorry. Nobody is hurt. You can reach me on 550192.",
+  "transcript_english": "I can smell gas really strongly in the stairwell. I don't know the street number. I just moved in. I'm sorry. Nobody is hurt. You can reach me on 550192.",
+  "predictions": [
+    {
+      "label": "incident_type",
+      "value": "gas_leak",
+      "score": 0.992,
+      "evidence": {
+        "text": "I can smell gas really strongly in the stairwell.",
+        "start": 0,
+        "end": 49,
+        "source": "original",
+        "match": "exact"
+      },
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": {
+        "structure_fire": 0.0173,
+        "medical": 0.0008,
+        "traffic_collision": 0.0016,
+        "crime_in_progress": 0.0022,
+        "gas_leak": 0.9196,
+        "water_rescue": 0.0024,
+        "other": 0.0561
+      },
+      "raw_probability": 0.9196,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "laya_original": 0.9196,
+        "asr_factor": 0.992,
+        "asr_confidence": "measured",
+        "cross_check": "unavailable",
+        "rule_check": "agree",
+        "final": 0.9916
+      }
+    },
+    {
+      "label": "injuries",
+      "value": "none",
+      "score": 0.871,
+      "evidence": {
+        "text": "Nobody is hurt.",
+        "start": 110,
+        "end": 125,
+        "source": "original",
+        "match": "exact"
+      },
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": {
+        "none": 0.8782,
+        "suspected": 0.0457,
+        "confirmed": 0.0761
+      },
+      "raw_probability": 0.8782,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "laya_original": 0.8782,
+        "asr_factor": 0.992,
+        "asr_confidence": "measured",
+        "cross_check": "unavailable",
+        "rule_check": "no_opinion",
+        "final": 0.8708
+      }
+    },
+    {
+      "label": "weapons_present",
+      "value": "no",
+      "score": 0.35,
+      "evidence": null,
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": {
+        "true": 0.0998,
+        "false": 0.9002
+      },
+      "raw_probability": 0.9002,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "laya_original": 0.9002,
+        "asr_factor": 0.992,
+        "asr_confidence": "measured",
+        "cross_check": "unavailable",
+        "rule_check": "no_opinion",
+        "final": 0.35,
+        "p_true": 0.0998,
+        "thresholds": "yes>=0.7 no<=0.3",
+        "uncorroborated": "no evidence span located and no independent agreement; score capped at 0.35"
+      }
+    },
+    {
+      "label": "caller_safe",
+      "value": "unknown",
+      "score": 0.0,
+      "evidence": null,
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": {
+        "trapped": 0.1623,
+        "evacuated": 0.1534
+      },
+      "raw_probability": null,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "composed_from": [
+          "caller_trapped",
+          "caller_evacuated"
+        ],
+        "p_trapped": 0.1623,
+        "p_evacuated": 0.1534,
+        "reason": "the call never says either way",
+        "asr_factor": 0.992,
+        "final": 0.0
+      }
+    },
+    {
+      "label": "hazards",
+      "value": [
+        "gas"
+      ],
+      "score": 0.839,
+      "evidence": {
+        "text": "I can smell gas really strongly in the stairwell.",
+        "start": 0,
+        "end": 49,
+        "source": "original",
+        "match": "exact"
+      },
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": {
+        "smoke": 0.2396,
+        "fire": 0.296,
+        "gas": 0.8389,
+        "weapon": 0.0896,
+        "water": 0.0471,
+        "electrical": 0.0784,
+        "vehicle": 0.3619
+      },
+      "raw_probability": null,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "per_hazard": {
+          "smoke": 0.2396,
+          "fire": 0.296,
+          "gas": 0.8389,
+          "weapon": 0.0896,
+          "water": 0.0471,
+          "electrical": 0.0784,
+          "vehicle": 0.3619
+        },
+        "threshold": 0.7,
+        "cross_check": "agree"
+      }
+    },
+    {
+      "label": "location_text",
+      "value": null,
+      "score": 0.0,
+      "evidence": null,
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": null,
+      "raw_probability": null,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "reason": "no pattern matched",
+        "extractor": "regex"
+      }
+    },
+    {
+      "label": "callback_number",
+      "value": null,
+      "score": 0.0,
+      "evidence": null,
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": null,
+      "raw_probability": null,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "reason": "no pattern matched",
+        "extractor": "regex"
+      }
+    },
+    {
+      "label": "persons_involved",
+      "value": null,
+      "score": 0.0,
+      "evidence": null,
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": null,
+      "raw_probability": null,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "reason": "no pattern matched",
+        "extractor": "regex"
+      }
+    }
+  ],
+  "suggested_form": {
+    "incident_type": "gas_leak",
+    "location_text": null,
+    "callback_number": null,
+    "injuries": "none",
+    "persons_involved": null,
+    "hazards": [
+      "gas"
+    ],
+    "weapons_present": "no",
+    "caller_safe": "unknown"
+  },
+  "suggested_action": "request_missing_critical_field",
+  "missing_fields": [
+    "location_text",
+    "callback_number"
+  ],
+  "requires_review": true,
+  "latency_ms": {
+    "asr": 567.4,
+    "translate": 0.0,
+    "decision": 67.7,
+    "tts": 0.0,
+    "server_total": 639.7,
+    "network": null,
+    "end_to_end": null
+  },
+  "engine": {
+    "decision": "laya",
+    "decision_model": "english",
+    "whisper_size": "small",
+    "whisper_device": "cuda",
+    "asr_confidence": "measured"
+  },
+  "notes": [
+    "Ask for the street number and street name, and repeat it back.",
+    "Ask for a number you can call back on.",
+    "Call was already English, so there is no second rendering to cross-check against. Scores rest on a single checkpoint.",
+    "Scores are raw model probabilities, not calibrated. Laya ships temperatures its own docs flag as invalid for these option counts (issue #394), so a 0.9 here does not mean 90% correct. Treat every field as needing review."
+  ],
+  "calibration_warning": "Scores are raw model probabilities, not calibrated. Laya ships temperatures its own docs flag as invalid for these option counts (issue #394), so a 0.9 here does not mean 90% correct. Treat every field as needing review.",
+  "_fixture": {
+    "exercises": "missing critical field: caller cannot give an address",
+    "language_expected": "en",
+    "input_mode": "audio",
+    "script": "I can smell gas really strongly in the stairwell. I don't know the street number, I just moved in, I am sorry. Nobody is hurt. You can reach me on 555 0192."
+  }
+}

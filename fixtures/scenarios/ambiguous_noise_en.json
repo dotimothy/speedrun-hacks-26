@@ -1,0 +1,253 @@
+{
+  "session_id": "ambiguous_noise_en",
+  "detected_language": "en",
+  "language_probability": 0.99267578125,
+  "transcript_original": "Hello, something is wrong, I can't really tell, please.",
+  "transcript_english": "Hello, something is wrong, I can't really tell, please.",
+  "predictions": [
+    {
+      "label": "incident_type",
+      "value": "unknown",
+      "score": 0.35,
+      "evidence": null,
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": {
+        "structure_fire": 0.001,
+        "medical": 0.0211,
+        "traffic_collision": 0.0004,
+        "crime_in_progress": 0.0007,
+        "gas_leak": 0.001,
+        "water_rescue": 0.0014,
+        "other": 0.9743
+      },
+      "raw_probability": 0.9743,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "laya_original": 0.9743,
+        "asr_factor": 0.976,
+        "asr_confidence": "measured",
+        "cross_check": "unavailable",
+        "rule_check": "no_opinion",
+        "final": 0.35,
+        "uncorroborated": "no evidence span located and no independent agreement; score capped at 0.35",
+        "abstained": "score < 0.55"
+      }
+    },
+    {
+      "label": "injuries",
+      "value": "unknown",
+      "score": 0.35,
+      "evidence": null,
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": {
+        "none": 0.0925,
+        "suspected": 0.8047,
+        "confirmed": 0.1028
+      },
+      "raw_probability": 0.8047,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "laya_original": 0.8047,
+        "asr_factor": 0.976,
+        "asr_confidence": "measured",
+        "cross_check": "unavailable",
+        "rule_check": "no_opinion",
+        "final": 0.35,
+        "uncorroborated": "no evidence span located and no independent agreement; score capped at 0.35",
+        "abstained": "score < 0.55"
+      }
+    },
+    {
+      "label": "weapons_present",
+      "value": "no",
+      "score": 0.35,
+      "evidence": null,
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": {
+        "true": 0.0001,
+        "false": 0.9999
+      },
+      "raw_probability": 0.9999,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "laya_original": 0.9999,
+        "asr_factor": 0.976,
+        "asr_confidence": "measured",
+        "cross_check": "unavailable",
+        "rule_check": "no_opinion",
+        "final": 0.35,
+        "p_true": 0.0001,
+        "thresholds": "yes>=0.7 no<=0.3",
+        "uncorroborated": "no evidence span located and no independent agreement; score capped at 0.35"
+      }
+    },
+    {
+      "label": "caller_safe",
+      "value": "unknown",
+      "score": 0.0,
+      "evidence": null,
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": {
+        "trapped": 0.3268,
+        "evacuated": 0.1257
+      },
+      "raw_probability": null,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "composed_from": [
+          "caller_trapped",
+          "caller_evacuated"
+        ],
+        "p_trapped": 0.3268,
+        "p_evacuated": 0.1257,
+        "reason": "the call never says either way",
+        "asr_factor": 0.976,
+        "final": 0.0
+      }
+    },
+    {
+      "label": "hazards",
+      "value": [],
+      "score": 0.0,
+      "evidence": null,
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": {
+        "smoke": 0.0001,
+        "fire": 0.0504,
+        "gas": 0.0774,
+        "weapon": 0.0202,
+        "water": 0.0969,
+        "electrical": 0.0723,
+        "vehicle": 0.0045
+      },
+      "raw_probability": null,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "per_hazard": {
+          "smoke": 0.0001,
+          "fire": 0.0504,
+          "gas": 0.0774,
+          "weapon": 0.0202,
+          "water": 0.0969,
+          "electrical": 0.0723,
+          "vehicle": 0.0045
+        },
+        "threshold": 0.7,
+        "cross_check": "agree"
+      }
+    },
+    {
+      "label": "location_text",
+      "value": null,
+      "score": 0.0,
+      "evidence": null,
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": null,
+      "raw_probability": null,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "reason": "no pattern matched",
+        "extractor": "regex"
+      }
+    },
+    {
+      "label": "callback_number",
+      "value": null,
+      "score": 0.0,
+      "evidence": null,
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": null,
+      "raw_probability": null,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "reason": "no pattern matched",
+        "extractor": "regex"
+      }
+    },
+    {
+      "label": "persons_involved",
+      "value": null,
+      "score": 0.0,
+      "evidence": null,
+      "verification_state": "unverified",
+      "conflict": false,
+      "evidence_unverified": false,
+      "probabilities": null,
+      "raw_probability": null,
+      "decided_on": "original",
+      "alternative": null,
+      "breakdown": {
+        "reason": "no pattern matched",
+        "extractor": "regex"
+      }
+    }
+  ],
+  "suggested_form": {
+    "incident_type": "unknown",
+    "location_text": null,
+    "callback_number": null,
+    "injuries": "unknown",
+    "persons_involved": null,
+    "hazards": [],
+    "weapons_present": "no",
+    "caller_safe": "unknown"
+  },
+  "suggested_action": "request_missing_critical_field",
+  "missing_fields": [
+    "incident_type",
+    "location_text",
+    "callback_number"
+  ],
+  "requires_review": true,
+  "latency_ms": {
+    "asr": 312.9,
+    "translate": 0.0,
+    "decision": 56.800000000000004,
+    "tts": 0.0,
+    "server_total": 373.1,
+    "network": null,
+    "end_to_end": null
+  },
+  "engine": {
+    "decision": "laya",
+    "decision_model": "english",
+    "whisper_size": "small",
+    "whisper_device": "cuda",
+    "asr_confidence": "measured"
+  },
+  "notes": [
+    "Ask the caller to describe what is happening right now.",
+    "Ask for the street number and street name, and repeat it back.",
+    "Ask for a number you can call back on.",
+    "Call was already English, so there is no second rendering to cross-check against. Scores rest on a single checkpoint.",
+    "Scores are raw model probabilities, not calibrated. Laya ships temperatures its own docs flag as invalid for these option counts (issue #394), so a 0.9 here does not mean 90% correct. Treat every field as needing review."
+  ],
+  "calibration_warning": "Scores are raw model probabilities, not calibrated. Laya ships temperatures its own docs flag as invalid for these option counts (issue #394), so a 0.9 here does not mean 90% correct. Treat every field as needing review.",
+  "_fixture": {
+    "exercises": "abstention: barely any information, most fields must stay unknown",
+    "language_expected": "en",
+    "input_mode": "audio",
+    "script": "Hello? Something is wrong. I... I can't really tell. Please."
+  }
+}

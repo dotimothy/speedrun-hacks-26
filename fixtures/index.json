@@ -1,0 +1,32 @@
+[
+  {
+    "id": "kitchen_fire_en",
+    "language": "en",
+    "exercises": "happy path: every critical field present, hazards, suspected injury",
+    "text": "Help, there is smoke coming from my kitchen and my son is coughing badly. I am at 418 Alameda Street, apartment 3B. My number is 555 0147. I got him out into the hallway."
+  },
+  {
+    "id": "gas_smell_no_address_en",
+    "language": "en",
+    "exercises": "missing critical field: caller cannot give an address",
+    "text": "I can smell gas really strongly in the stairwell. I don't know the street number, I just moved in, I am sorry. Nobody is hurt. You can reach me on 555 0192."
+  },
+  {
+    "id": "traffic_collision_es",
+    "language": "es",
+    "exercises": "multilingual end to end: Spanish original plus English translation",
+    "text": "Hubo un choque entre dos coches en la Avenida Juarez 250. Hay cuatro personas en el carro y uno esta sangrando. Mi numero es 555 0163. Estoy afuera, en la banqueta."
+  },
+  {
+    "id": "weapon_crime_es",
+    "language": "es",
+    "exercises": "escalation path: weapon indicated, caller not safe",
+    "text": "Alguien entro a mi casa y tiene un cuchillo. Estoy escondido adentro en el bano, no puedo salir. Calle Morelos 88. Mi numero es 555 0175."
+  },
+  {
+    "id": "ambiguous_noise_en",
+    "language": "en",
+    "exercises": "abstention: barely any information, most fields must stay unknown",
+    "text": "Hello? Something is wrong. I... I can't really tell. Please."
+  }
+]
