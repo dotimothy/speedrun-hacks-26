@@ -12,6 +12,9 @@ import {
 } from "./workspace/session";
 import Intake from "./workspace/Intake";
 import ScenarioDecisions from "./components/ScenarioDecisions";
+import SettingsMenu from "./components/SettingsMenu";
+import type { ModelInfo } from "./types";
+import { readModelPreferences, saveModelPreferences, type ModelPreferences } from "./workspace/modelPreferences";
 import {
   adaptSnapshot,
   wireFields,
@@ -19,6 +22,7 @@ import {
   ensureSession,
   readSession,
   reviewOperation,
+  setSessionEngine,
   type Snapshot,
 } from "./workspace/v2";
 import { useTranscriptNavigation } from "./workspace/useTranscriptNavigation";
@@ -131,6 +135,59 @@ export default function App() {
   const ownSessions = useRef<Set<string>>(new Set());
   const attached = useRef(false);
   const [inbound, setInbound] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [models, setModels] = useState<ModelInfo | null>(null);
+  const [modelPreferences, setModelPreferences] = useState<ModelPreferences>({ engine: "", whisperSize: "small" });
+  const [settingsBusy, setSettingsBusy] = useState(false);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [settingsLoad, setSettingsLoad] = useState(0);
+  const preferenceLoaded = useRef(false);
+  const selectedEngine = attached.current ? session.server?.decision_engine || "" : modelPreferences.engine;
+
+  useEffect(() => {
+    const abort = new AbortController();
+    let disposed = false;
+    setSettingsLoading(true);
+    setSettingsError(null);
+    fetch("/api/models", { signal: abort.signal })
+      .then(async response => {
+        if (!response.ok) throw new Error("Could not load available models.");
+        const data: ModelInfo = await response.json();
+        if (!Array.isArray(data.decision_engines) || !Array.isArray(data.whisper_sizes))
+          throw new Error("The backend returned an invalid model list.");
+        if (disposed) return;
+        setModels(data);
+        if (!preferenceLoaded.current) {
+          setModelPreferences(readModelPreferences(data));
+          preferenceLoaded.current = true;
+        }
+      })
+      .catch(error => {
+        if (!disposed) setSettingsError(error instanceof Error ? error.message : "Could not load models.");
+      })
+      .finally(() => { if (!disposed) setSettingsLoading(false); });
+    return () => { disposed = true; abort.abort(); };
+  }, [settingsLoad]);
+
+  async function chooseEngine(engine: string) {
+    if (settingsBusy) return;
+    setSettingsBusy(true);
+    setSettingsError(null);
+    const id = session.id;
+    try {
+      if (session.mode !== "demo") {
+        const snapshot = await setSessionEngine(id, engine, AbortSignal.timeout(90000));
+        if (currentSession.current.id !== id) return;
+        localDispatch({ type: "server", snapshot: adaptSnapshot(snapshot, session.mode) });
+      }
+      const next = { ...modelPreferences, engine };
+      setModelPreferences(next);
+      saveModelPreferences(next);
+    } catch (error) {
+      setSettingsError(error instanceof Error ? error.message : "Could not change the decision model.");
+    } finally { setSettingsBusy(false); }
+  }
 
   async function adopt(id: string) {
     ownSessions.current.add(id);
@@ -463,6 +520,7 @@ export default function App() {
         </a>
         <span className="workspace-name">Call-taking workspace</span>
         <div className="masthead-right">
+          <button type="button" onClick={() => setSettingsOpen(true)} aria-haspopup="dialog">Settings</button>
           <span className="demo-label">SIMULATED CAD</span>
           <span>
             Operator desk <b>01</b>
@@ -603,6 +661,8 @@ export default function App() {
             key={session.id}
             id={session.id}
             mode={session.mode}
+            decisionEngine={selectedEngine}
+            whisperSize={modelPreferences.whisperSize}
             onResult={dispatch}
             onActivity={setActiveCapture}
             onAudio={setAudioUrl}
@@ -636,7 +696,7 @@ export default function App() {
         )}
         {session.server && (
           <div className="server-status">
-            Server revision {session.revision} · Engine:{" "}
+            Server revision {session.revision} · Last result engine:{" "}
             {session.server.diagnostics.engine.decision || "No inference yet"}
             <details>
               <summary>Processing details</summary>
@@ -1370,6 +1430,24 @@ export default function App() {
           Open backend pipeline prototype <Icon name="arrow" size={13} />
         </a>
       </footer>
+      <SettingsMenu
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        models={models}
+        health={null}
+        engine={selectedEngine}
+        onEngine={engine => void chooseEngine(engine)}
+        whisperSize={modelPreferences.whisperSize}
+        onWhisperSize={whisperSize => {
+          const next = { ...modelPreferences, whisperSize };
+          setModelPreferences(next);
+          saveModelPreferences(next);
+        }}
+        loading={settingsLoading}
+        busy={settingsBusy || remoteBusy}
+        error={settingsError}
+        onRetry={() => setSettingsLoad(n => n + 1)}
+      />
     </div>
   );
 }
