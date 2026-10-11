@@ -51,7 +51,15 @@ export function LatencyPanel({
 
 // ------------------------------------------------------------------ reply
 
-export function ReplyBar({ phrases, language }: { phrases: ApprovedPhrase[]; language: string | null }) {
+export function ReplyBar({
+  phrases,
+  language,
+  sessionId,
+}: {
+  phrases: ApprovedPhrase[]
+  language: string | null
+  sessionId: string
+}) {
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState<string | null>(null)
 
@@ -64,7 +72,7 @@ export function ReplyBar({ phrases, language }: { phrases: ApprovedPhrase[]; lan
   const say = async (phrase: ApprovedPhrase) => {
     setError(null)
     try {
-      await speak(phrase.id)
+      await speak(phrase.id, sessionId)
       setSent(phrase.id)
     } catch (exception) {
       setError(String(exception instanceof Error ? exception.message : exception))

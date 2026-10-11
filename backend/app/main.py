@@ -29,11 +29,15 @@ from fastapi.staticfiles import StaticFiles
 
 from . import tts
 from .asr import whisper_engine
+from .live.router import router as live_router
+from .autoreply import decide as decide_auto_reply
 from .config import FIXTURES_DIR, settings
 from .confidence import resolve as resolve_confidence
 from .decision.laya_model import LayaEngine
+from .decision.registry import describe_all as describe_engines
 from .decision.rules import RuleEngine
 from .schemas import (
+    AutoReplySuggestion,
     LatencyBreakdown,
     ProcessRequest,
     ProcessResponse,
@@ -52,6 +56,11 @@ rule_engine = RuleEngine()
 # prototype that keeps dispatcher corrections in a database it cannot explain
 # is worse than one that forgets them when it restarts.
 SESSIONS: dict[str, dict[str, object]] = {}
+
+# Phrases autonomous mode has already spoken, per session. Kept server-side so
+# the no-repeat rule survives a page reload and cannot be reset by a client
+# that simply forgets.
+SPOKEN: dict[str, list[str]] = {}
 
 
 @asynccontextmanager
@@ -75,6 +84,7 @@ app = FastAPI(title="DispatchIQ", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=list(settings.cors_origins),
+    allow_origin_regex=settings.cors_origin_regex,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -113,6 +123,12 @@ async def _parse_request(request: Request) -> tuple[ProcessRequest, bytes | None
 # --------------------------------------------------------------------------
 # routes
 # --------------------------------------------------------------------------
+# Live sessions (API v2, issue #1) live in their own router so that mounting
+# them is a one-line change here -- a teammate's Dial adapter is editing this
+# same file on another branch.
+app.include_router(live_router)
+
+
 # The dashboard plays the committed fixture audio through the real pipeline,
 # so the WAVs and the recorded expectations are served from here. Synthetic
 # material only -- there is no real call audio in this repository.
@@ -143,6 +159,10 @@ def health() -> dict:
             "machine": platform.machine(),
             "python": platform.python_version(),
         },
+        "decision_engines": describe_engines(),
+        "inference_is_local": all(
+            e.get("is_local", True) for e in describe_engines() if e.get("ready")
+        ),
         "tts": tts.status(),
         "calibration_warning": settings.CALIBRATION_WARNING,
     }
@@ -155,8 +175,9 @@ def models() -> dict:
         "whisper_sizes": list(settings.whisper_sizes),
         "whisper_default": settings.whisper_default_size,
         "whisper_loaded": whisper_engine.loaded_sizes(),
-        "decision_engines": ["laya", "rules"],
-        "decision_default": "laya",
+        "decision_engines": describe_engines(),
+        "decision_default": settings.decision_engine,
+        "cloud_inference_enabled": settings.allow_cloud_inference,
         "laya_checkpoints": ["multilingual", "english", "typed-decisions"],
         "thresholds": {
             "choice_min_confidence": settings.choice_min_confidence,
@@ -177,7 +198,27 @@ def speak(req: SpeakRequest) -> dict:
     result = tts.speak(req.phrase_id)
     if result is None:
         raise HTTPException(status_code=404, detail="unknown phrase id")
+    if req.session_id:
+        # Recorded whether a human pressed the button or autonomous mode did,
+        # so the no-repeat rule covers both and the session has one audit list.
+        spoken = SPOKEN.setdefault(req.session_id, [])
+        spoken.append(req.phrase_id)
+        result["spoken_this_session"] = list(spoken)
     return result
+
+
+@app.get("/api/sessions/{session_id}/spoken")
+def spoken(session_id: str) -> dict:
+    """Everything that has been said aloud to this caller, in order."""
+    ids = SPOKEN.get(session_id, [])
+    return {
+        "session_id": session_id,
+        "phrases": [
+            {"id": pid, "language": tts.APPROVED[pid][0], "text": tts.APPROVED[pid][1]}
+            for pid in ids
+            if pid in tts.APPROVED
+        ],
+    }
 
 
 @app.post("/api/process", response_model=ProcessResponse)
@@ -276,6 +317,29 @@ async def process(request: Request) -> ProcessResponse:
         end_to_end=None,
     )
 
+    reply, quiet_reason = decide_auto_reply(
+        suggested_action=outcome.suggested_action.value,
+        predictions=outcome.predictions,
+        detected_language=language,
+        confirmed=confirmed,
+        already_asked=SPOKEN.get(req.session_id, []),
+    )
+    if reply is not None:
+        phrase = tts.APPROVED.get(reply.phrase_id)
+        auto_reply = AutoReplySuggestion(
+            phrase_id=reply.phrase_id,
+            language=reply.language,
+            text=phrase[1] if phrase else None,
+            reason=reply.reason,
+            target=reply.target,
+            allowed=True,
+        )
+    else:
+        auto_reply = AutoReplySuggestion(
+            reason=quiet_reason,
+            allowed=outcome.suggested_action.value not in ("escalate_to_human_now",),
+        )
+
     return ProcessResponse(
         session_id=req.session_id,
         detected_language=language,
@@ -297,6 +361,7 @@ async def process(request: Request) -> ProcessResponse:
         },
         notes=outcome.prompts + notes,
         calibration_warning=settings.CALIBRATION_WARNING,
+        auto_reply=auto_reply,
     )
 
 

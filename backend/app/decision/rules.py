@@ -47,6 +47,123 @@ _ADDRESS = re.compile(
     re.IGNORECASE,
 )
 
+# Intersections and named streets.
+#
+# The original address pattern requires a digit next to a street word, so it
+# matches "418 Alameda Street" and nothing else. It does not match "Oak and
+# Third" -- there is no number -- nor even "Third Street", because an ordinal
+# street name is a word, not a digit. That is most of how callers actually
+# give a location, and it is the exact example issue #1 is built around, so it
+# needs its own pattern rather than a looser version of the existing one.
+_ORDINAL = (
+    r"\d+(?:st|nd|rd|th)|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|"
+    r"eleventh|twelfth|thirteenth|fourteenth|fifteenth|sixteenth|seventeenth|eighteenth|"
+    r"nineteenth|twentieth|primera|segunda|tercera|cuarta|quinta"
+)
+# Case-insensitivity is applied per group, never to the whole pattern. A
+# global re.IGNORECASE makes [A-Z] match lowercase too, which silently
+# destroys the capitalisation test below -- measured: with the flag on, "is
+# coughing and bleeding" was extracted as an intersection.
+_ORDINAL_CI = rf"(?i:{_ORDINAL})"
+_CAP = r"[A-ZÀ-Ü][\w'à-ÿ-]+"
+# A street name: an ordinal, or one or two capitalised words.
+_NAME = rf"(?:{_ORDINAL_CI}|{_CAP}(?:\s+{_CAP})?)"
+_SEP = r"(?i:and|&|/|at|y|con)"
+_CORNER = r"(?i:corner\s+of|intersection\s+of|esquina\s+(?:de|con)|cruce\s+de|at|on|near)"
+
+# Two forms, because a bare pair of capitalised words is ambiguous -- "John
+# and Mary" is not a location. Either an explicit intersection cue precedes
+# it, or one side is an ordinal, which is a strong enough signal alone. This
+# is what keeps "coughing and bleeding" and "smoke and fire" out: both sides
+# there are ordinary lowercase words.
+_INTERSECTION = re.compile(
+    rf"(?:{_CORNER})\s+({_NAME})\s+{_SEP}\s+({_NAME})"
+    rf"|({_ORDINAL_CI}|{_CAP})\s+{_SEP}\s+({_ORDINAL_CI}|{_CAP})"
+)
+
+# "Third Street", "5th Avenue" -- an ordinal name plus a street type.
+_STREET_WITH_NAME = re.compile(
+    rf"\b(?:{_ORDINAL})\s+(?:{_STREET_WORDS})\b", re.IGNORECASE
+)
+
+_ORDINAL_ANCHORED = re.compile(rf"^(?:{_ORDINAL})", re.IGNORECASE)
+
+
+def _looks_like_intersection(match: "re.Match") -> bool:
+    """Reject a bare pair where neither side is an ordinal.
+
+    The cued form (groups 1 and 2) is trusted because "at", "corner of" or
+    "esquina de" has already said this is a place. The bare form (groups 3 and
+    4) is trusted only when an ordinal appears, which is what separates "Oak
+    and Third" from "John and Mary".
+    """
+    if match.group(1) and match.group(2):
+        return True
+    left, right = match.group(3), match.group(4)
+    if not (left and right):
+        return False
+    return bool(_ORDINAL_ANCHORED.match(left) or _ORDINAL_ANCHORED.match(right))
+
+
+def find_intersections(text: str, *, relaxed: bool = False) -> list[str]:
+    """Every intersection in the text, in order -- not just the first.
+
+    ``relaxed`` accepts a bare pair of capitalised words with no ordinal and
+    no cue -- "Pine and Main". It is off by default because in open text that
+    also matches "John and Mary". The caller layer turns it on only when the
+    surrounding context has already established that a location is being
+    given: an accepted location on file, plus a retraction in this very
+    segment. That is narrow enough to be safe and is the difference between
+    honouring "actually, Pine and Main" and silently dropping it.
+    """
+    found: list[str] = []
+    for match in _INTERSECTION.finditer(text):
+        if not (relaxed or _looks_like_intersection(match)):
+            continue
+        value = match.group(0).strip(" ,.")
+        # Drop a leading cue word so the stored value is the place itself.
+        value = re.sub(rf"^{_CORNER}\s+", "", value).strip(" ,.")
+        if value and value not in found:
+            found.append(value)
+    return found
+
+
+def find_all_locations(text: str, *, relaxed: bool = False) -> list[str]:
+    """All location candidates, in order of appearance.
+
+    Returning every match rather than the first is what lets the caller layer
+    notice that a transcript holds two different locations and raise a
+    conflict instead of silently picking one.
+
+    Worth being precise about the failure this avoids, because it is the
+    opposite of the obvious one: ``_ADDRESS.search`` returns the **first**
+    match, so re-running it over a growing transcript does not mean "the
+    newest statement wins" -- it means the oldest one does, forever, even
+    after the caller has corrected it.
+    """
+    found: list[str] = []
+    for pattern in (_ADDRESS, _STREET_WITH_NAME):
+        for match in pattern.finditer(text):
+            value = match.group(0).strip(" ,.")
+            if value and value not in found:
+                found.append(value)
+    for value in find_intersections(text, relaxed=relaxed):
+        if value not in found:
+            found.append(value)
+    return found
+
+
+def find_all_phones(text: str) -> list[str]:
+    found: list[str] = []
+    for match in _PHONE.finditer(text):
+        digits = re.sub(r"\D", "", match.group(0))
+        if 7 <= len(digits) <= 15:
+            value = match.group(0).strip()
+            if value not in found:
+                found.append(value)
+    return found
+
+
 _PERSONS = re.compile(
     r"\b(\d{1,3}|one|two|three|four|five|six|seven|eight|nine|ten"
     r"|un|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s+"
@@ -136,9 +253,19 @@ class RuleEngine:
     """Usable both as the cross-check and as a standalone fallback engine."""
 
     name = "rules"
+    # Runs on this machine.
+    is_local = True
 
     def ready(self) -> bool:
         return True
+
+    def describe(self) -> dict:
+        return {
+            "name": self.name,
+            "model": "regex+keywords",
+            "is_local": True,
+            "inference_location": "this machine",
+        }
 
     def extract(self, original: str, english: str, language: str | None) -> EngineResult:
         started = time.perf_counter()
@@ -149,16 +276,27 @@ class RuleEngine:
 
         answers: dict[str, FieldAnswer] = {}
 
-        phone = find_phone(joined)
+        # All candidates, not the first: the caller layer needs to see when a
+        # transcript holds two different locations rather than silently
+        # getting whichever one appeared earliest.
+        phone_candidates = find_all_phones(joined)
+        location_candidates = find_all_locations(haystack) or find_all_locations(joined)
+
+        phone = phone_candidates[0] if phone_candidates else None
         if phone:
             answers["callback_number"] = FieldAnswer(
                 label="callback_number", value=phone, quote=phone, decided_on="rules"
             )
 
-        address = find_address(haystack) or find_address(joined)
+        address = location_candidates[0] if location_candidates else None
         if address:
             answers["location_text"] = FieldAnswer(
-                label="location_text", value=address, quote=address, decided_on="rules"
+                label="location_text", value=address, quote=address, decided_on="rules",
+                notes=(
+                    [f"{len(location_candidates)} location candidates: "
+                     + "; ".join(location_candidates)]
+                    if len(location_candidates) > 1 else []
+                ),
             )
 
         persons = find_persons(joined)

@@ -11,6 +11,29 @@ FIXTURES_DIR = REPO_ROOT / "fixtures"
 VOICES_DIR = REPO_ROOT / "voices"
 
 
+def _load_dotenv() -> None:
+    """Read .env into the environment if it exists.
+
+    Hand-rolled rather than pulling in python-dotenv: it is fifteen lines, and
+    the point is that a key lives in a gitignored file instead of in the
+    source, which does not need a dependency. Existing environment variables
+    win, so a real deployment's configuration is never overridden by a file
+    somebody left behind.
+    """
+    path = REPO_ROOT / ".env"
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        name, _, value = line.partition("=")
+        os.environ.setdefault(name.strip(), value.strip().strip("\"'"))
+
+
+_load_dotenv()
+
+
 def _env(name: str, default: str) -> str:
     return os.environ.get(name, default).strip()
 
@@ -62,6 +85,35 @@ class Settings:
         "field as needing review."
     )
 
+    # --- Decision engine selection -----------------------------------------
+    # Which engine answers the typed questions. The swap point is the
+    # DecisionEngine protocol; see decision/registry.py.
+    decision_engine: str = _env("DISPATCHIQ_DECISION_ENGINE", "laya")
+
+    # Cloud inference is off unless switched on here, and cannot be enabled by
+    # a request parameter. Every other engine runs on this machine, and the
+    # project's pitch says so; an engine that sends a caller's words to a
+    # third party changes that claim, so turning it on should be a deliberate
+    # act recorded in configuration rather than a query string.
+    allow_cloud_inference: bool = _env("DISPATCHIQ_ALLOW_CLOUD", "0") == "1"
+    openai_api_key: str = _env("OPENAI_API_KEY", "")
+    openai_model: str = _env("DISPATCHIQ_OPENAI_MODEL", "gpt-4o-mini")
+    openai_timeout_s: float = float(_env("DISPATCHIQ_OPENAI_TIMEOUT", "20"))
+    # What a typed answer is worth before anything corroborates it, for
+    # engines that report no probability of their own. Deliberately middling:
+    # one model asserting something, with nothing agreeing with it yet, is
+    # neither strong nor worthless. Agreement and evidence move it from here.
+    typed_answer_prior: float = float(_env("DISPATCHIQ_TYPED_PRIOR", "0.6"))
+
+    # Jev / TypeSafe System-One. `jev_is_local` exists because locality here
+    # depends on where the endpoint is: a self-hosted deployment runs on your
+    # hardware, the hosted service does not, and the health report should not
+    # guess.
+    jev_endpoint: str = _env("DISPATCHIQ_JEV_ENDPOINT", "")
+    jev_api_key: str = _env("DISPATCHIQ_JEV_API_KEY", "")
+    jev_model: str = _env("DISPATCHIQ_JEV_MODEL", "")
+    jev_is_local: bool = _env("DISPATCHIQ_JEV_IS_LOCAL", "0") == "1"
+
     # --- Generative extractor (optional, secondary) ------------------------
     ollama_host: str = _env("OLLAMA_HOST", "http://127.0.0.1:11434")
     # Measured warm latency on this box: gemma3:latest is the fastest of the
@@ -85,6 +137,15 @@ class Settings:
     fuzzy_threshold: float = 0.9
 
     # --- TTS ---------------------------------------------------------------
+    # Piper's length_scale is seconds-per-phoneme: lower is faster. The
+    # default of 1.0 reads at an audiobook pace, which is wrong for this --
+    # a dispatcher asking "what is the address?" says it briskly, and in a
+    # demo every extra second of synthetic speech is a second nobody is
+    # watching the form fill in. 0.7 is noticeably quicker and still clear.
+    piper_length_scale: float = float(_env("DISPATCHIQ_TTS_SPEED", "0.7"))
+    # Slightly tighter than default prosody, which suits short questions.
+    piper_noise_scale: float = float(_env("DISPATCHIQ_TTS_NOISE", "0.55"))
+    piper_noise_w: float = float(_env("DISPATCHIQ_TTS_NOISE_W", "0.7"))
     piper_voices: dict[str, str] = field(
         default_factory=lambda: {
             "en": _env("DISPATCHIQ_VOICE_EN", "en_US-amy-medium"),
@@ -96,7 +157,24 @@ class Settings:
     cors_origins: tuple[str, ...] = (
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "https://localhost:5173",
+        "https://127.0.0.1:5173",
     )
+    # The dashboard may also be opened on a phone at the machine's LAN
+    # address, which cannot be known ahead of time. This allows private-range
+    # origins only -- the prototype is meant to run on a local network and
+    # nothing here should be exposed to the internet.
+    cors_origin_regex: str = _env(
+        "DISPATCHIQ_CORS_REGEX",
+        r"https?://(localhost|127\.0\.0\.1|\[::1\]|10\.\d+\.\d+\.\d+"
+        r"|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?",
+    )
+
+    # --- TLS ---------------------------------------------------------------
+    # Populated by scripts/make_cert.py. HTTPS matters because getUserMedia
+    # refuses to run in an insecure context, and a LAN address is one.
+    ssl_certfile: str = _env("DISPATCHIQ_SSL_CERT", "")
+    ssl_keyfile: str = _env("DISPATCHIQ_SSL_KEY", "")
     # Serve committed fixture responses instead of running models. Lets the
     # frontend be built before the backend is live, and is the documented
     # fallback if the GPU path fails during the demo.

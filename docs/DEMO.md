@@ -3,16 +3,15 @@
 ## Start it
 
 ```bash
-# backend  (first run downloads Whisper + Laya weights)
-python -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000
-
-# dashboard
-cd frontend && npm install && npm run dev     # http://localhost:5173
+python scripts/serve.py
 ```
 
-Check `http://127.0.0.1:8000/api/health` first. It should report a real device
-and `laya.ready: true`. Demo from `localhost` — microphone capture needs a
-secure context and a LAN IP is not one.
+Both servers, HTTPS, every interface. It prints the LAN address so you can
+open the console on a phone. Each device warns once about the self-signed
+certificate — accept it, or the microphone and the API both fail.
+
+Check `/api/health` first: it should report a real device and
+`laya.ready: true`.
 
 Before going on stage:
 
@@ -48,6 +47,39 @@ demoted to a note. Press an approved reply to hear Piper speak it in Spanish.
 which about 100ms is the decision engine. Say the honest version of the
 accuracy claim — see below.
 
+## Live microphone and playback
+
+Two things sit above the results, side by side.
+
+**Call audio** plays whatever the dashboard is currently showing — a fixture
+or something you just recorded — with a scrubber and a *save wav* link. Use it
+for the 15–40s beat so the room can actually hear the call rather than taking
+the transcript on trust. It is also the quickest way to tell a bad
+transcription from bad audio: play it back and listen.
+
+**Live microphone** records you, and with *update while speaking* ticked (the
+default) it re-transcribes the call every five seconds, so the form fills in
+while you are still talking. Watching the fields appear mid-sentence is a
+better demonstration of "live" than any still screenshot.
+
+A few things worth knowing before you rely on it on stage:
+
+- Use `localhost`. `getUserMedia` needs a secure context and a LAN IP is not
+  one; the panel says so if it is refused.
+- The first interim pass waits for three seconds of speech. Below that there
+  is not enough for Whisper to do anything but hallucinate filler.
+- Each pass re-sends the whole call rather than the newest slice, because
+  Whisper reads a complete utterance far better than a fragment cut mid-word.
+  On the 3090 that is well under a second; on a Mac, where ASR is on the CPU,
+  switch the Whisper model to `tiny` or `base` or untick live mode.
+- Overlapping passes are skipped rather than queued, so a slow machine
+  degrades to fewer updates rather than to a backlog of stale ones.
+- The microphone is routed to a silent gain node, not to the speakers, so an
+  open laptop mic will not feed back.
+
+If you want the mic beat but do not trust the room's audio, record a short
+call before the judges arrive — the result stays on screen.
+
 ## The scenarios, and what each is for
 
 | Button | Shows |
@@ -57,6 +89,31 @@ accuracy claim — see below.
 | Traffic collision (ES) | Multilingual end to end, cross-check disagreement on `injuries` |
 | Intruder with a knife (ES) | Escalation, and the deterministic extractor overruling two disagreeing model passes on `weapons_present` |
 | Barely anything said (EN) | Abstention — fields fall to `unknown` because nothing in the transcript supports them |
+
+## Autonomous mode
+
+Off by default, and the default is the honest setting: everything else in this
+product rests on nothing reaching the caller without a person.
+
+Switched on, it speaks one of the approved questions by itself when a field is
+missing — after a visible four-second countdown with a **Stop** button. The
+panel always shows what it is about to say and why.
+
+The thing to demonstrate is when it *refuses*. Run **Intruder with a knife
+(ES)** with autonomous mode on. The panel goes quiet and says so:
+
+> Holding. a weapon or a trapped caller was indicated; handing to a human
+> instead of speaking — **escalate to human now**.
+
+A machine talking over the worst moment of a call is the failure worth
+designing out, and this is the shape of designing it out. The rules, all
+tested: approved phrases only, never during an escalation, never the same
+question twice, never a promise that help is coming, and it cannot touch the
+form or clear `requires_review`.
+
+For the contrast, run **Gas smell, no address (EN)**: there it asks
+*"Can you repeat the street address for me?"* — the question the dispatcher
+was about to ask anyway.
 
 ## Say this, not that
 

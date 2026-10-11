@@ -78,11 +78,11 @@ export async function confirmFields(
   })
 }
 
-export async function speak(phraseId: string): Promise<void> {
+export async function speak(phraseId: string, sessionId?: string): Promise<string> {
   const response = await fetch('/api/speak', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phrase_id: phraseId }),
+    body: JSON.stringify({ phrase_id: phraseId, session_id: sessionId }),
   })
   const data = await response.json()
   if (!data.audio_wav_base64) {
@@ -91,6 +91,15 @@ export async function speak(phraseId: string): Promise<void> {
   }
   const audio = new Audio('data:audio/wav;base64,' + data.audio_wav_base64)
   await audio.play()
+  return data.text as string
+}
+
+export async function fetchSpoken(
+  sessionId: string,
+): Promise<Array<{ id: string; language: string; text: string }>> {
+  const response = await fetch('/api/sessions/' + encodeURIComponent(sessionId) + '/spoken')
+  if (!response.ok) return []
+  return (await response.json()).phrases
 }
 
 export async function fetchFixtureList(): Promise<string[]> {

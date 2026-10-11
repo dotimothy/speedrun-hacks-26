@@ -33,12 +33,14 @@ CACHE_DIR = VOICES_DIR / "_rendered"
 # the Spanish lines are what the demo's non-English scenario needs.
 APPROVED: dict[str, tuple[str, str]] = {
     "stay_on_line_en": ("en", "Please stay on the line with me."),
+    "what_happening_en": ("en", "Can you tell me what is happening right now?"),
     "repeat_address_en": ("en", "Can you repeat the street address for me?"),
     "ask_callback_en": ("en", "What number can we call you back on?"),
     "ask_injuries_en": ("en", "Is anyone hurt?"),
     "ask_safe_en": ("en", "Are you somewhere safe right now?"),
     "interpreter_en": ("en", "I am getting someone who speaks your language."),
     "stay_on_line_es": ("es", "Por favor, no cuelgue, quedese en la linea."),
+    "what_happening_es": ("es", "Puede decirme que esta pasando ahora mismo?"),
     "repeat_address_es": ("es", "Puede repetir la direccion, por favor?"),
     "ask_callback_es": ("es", "A que numero podemos llamarle?"),
     "ask_injuries_es": ("es", "Hay alguien herido?"),
@@ -91,7 +93,10 @@ def _get_voice(language: str):
 
 def _render(phrase_id: str, language: str, text: str) -> Path | None:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    out = CACHE_DIR / f"{phrase_id}.wav"
+    # The speed is part of the cache key: changing it must produce new audio
+    # rather than silently serving the previously rendered pace.
+    speed = str(settings.piper_length_scale).replace(".", "")
+    out = CACHE_DIR / f"{phrase_id}-s{speed}.wav"
     if out.exists():
         return out
 
@@ -101,8 +106,16 @@ def _render(phrase_id: str, language: str, text: str) -> Path | None:
     try:
         import wave
 
+        from piper import SynthesisConfig
+
+        # Faster than Piper's default. See config.piper_length_scale for why.
+        synthesis = SynthesisConfig(
+            length_scale=settings.piper_length_scale,
+            noise_scale=settings.piper_noise_scale,
+            noise_w_scale=settings.piper_noise_w,
+        )
         with wave.open(str(out), "wb") as handle:
-            voice.synthesize_wav(text, handle)
+            voice.synthesize_wav(text, handle, syn_config=synthesis)
     except Exception as exc:
         log.warning("piper synthesis failed for %s: %s", phrase_id, exc)
         out.unlink(missing_ok=True)
@@ -158,6 +171,7 @@ def speak(phrase_id: str) -> dict | None:
 
 def status() -> dict:
     rendered = sorted(p.stem for p in CACHE_DIR.glob("*.wav")) if CACHE_DIR.exists() else []
+    _ = rendered
     return {
         "engine": "piper",
         "voices_configured": settings.piper_voices,
@@ -167,6 +181,7 @@ def status() -> dict:
         },
         "phrases": len(APPROVED),
         "rendered": len(rendered),
+        "length_scale": settings.piper_length_scale,
         "free_text_synthesis": "not available by design",
         "error": _load_error,
     }

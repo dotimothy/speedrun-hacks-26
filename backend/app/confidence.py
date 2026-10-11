@@ -180,9 +180,17 @@ def _combine(
     asr_source: str,
 ) -> tuple[object, float, bool, object, dict[str, object]]:
     """Fold the three opinions into one value, score and conflict flag."""
-    score = float(primary.probability or 0.0)
+    # An engine that reports no confidence is not an engine reporting zero.
+    # OpenAI is asked only for the typed answer, so it arrives here with no
+    # number and gets a neutral prior that corroboration then moves.
+    if primary.probability is None:
+        score = settings.typed_answer_prior
+        reported = "none (typed answer, neutral prior applied)"
+    else:
+        score = float(primary.probability)
+        reported = round(score, 4)
     breakdown: dict[str, object] = {
-        "laya_original": round(score, 4),
+        "laya_original": reported,
         "asr_factor": round(asr_factor, 3),
         "asr_confidence": asr_source,
     }

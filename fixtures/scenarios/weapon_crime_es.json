@@ -259,11 +259,11 @@
   ],
   "requires_review": true,
   "latency_ms": {
-    "asr": 1002.7,
+    "asr": 983.7,
     "translate": 0.0,
-    "decision": 107.0,
+    "decision": 97.6,
     "tts": 0.0,
-    "server_total": 1115.7,
+    "server_total": 1086.0,
     "network": null,
     "end_to_end": null
   },
@@ -280,6 +280,14 @@
     "Scores are raw model probabilities, not calibrated. Laya ships temperatures its own docs flag as invalid for these option counts (issue #394), so a 0.9 here does not mean 90% correct. Treat every field as needing review."
   ],
   "calibration_warning": "Scores are raw model probabilities, not calibrated. Laya ships temperatures its own docs flag as invalid for these option counts (issue #394), so a 0.9 here does not mean 90% correct. Treat every field as needing review.",
+  "auto_reply": {
+    "phrase_id": null,
+    "language": null,
+    "text": null,
+    "reason": "a weapon or a trapped caller was indicated; handing to a human instead of speaking",
+    "target": null,
+    "allowed": false
+  },
   "_fixture": {
     "exercises": "escalation path: weapon indicated, caller not safe",
     "language_expected": "es",
