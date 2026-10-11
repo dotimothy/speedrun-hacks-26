@@ -38,13 +38,17 @@ which is a claim we can actually stand behind.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import re
 
 from .config import settings
+from .scenarios import DETAIL_LABELS
 from .decision.base import EngineResult, FieldAnswer
 from .decision.questions import EVIDENCE_TERMS
+from .decision.scenario_tasks import DECISIONS
 from .evidence import locate_term, resolve as resolve_evidence
 from .schemas import (
     ChiefComplaint,
+    EvidenceSpan,
     FireExtent,
     Hazard,
     IncidentForm,
@@ -53,6 +57,8 @@ from .schemas import (
     Occupancy,
     Prediction,
     Tristate,
+    FireOccupants, MedicalCourse, RoadBlockage, CrimePresence, CrimeActivity,
+    GasLocation, GasExposure, WaterVisibility, WaterMotion,
 )
 
 CHOICE_FIELDS = (
@@ -63,9 +69,10 @@ CHOICE_FIELDS = (
     "chief_complaint",
     "awake",
     "breathing",
+    *DECISIONS,
 )
 NOUL_FIELDS = ("weapons_present",)
-RULE_FIELDS = ("location_text", "callback_number", "persons_involved", "caller_name")
+RULE_FIELDS = ("location_text", "callback_number", "persons_involved", "caller_name", *DETAIL_LABELS)
 # A quoted phrase is the value. Laya abstaining does not hide "he is awake".
 SPOKEN_FIELDS = {
     "injuries",
@@ -97,6 +104,16 @@ _ENUMS = {
     "chief_complaint": ChiefComplaint,
     "awake": Tristate,
     "breathing": Tristate,
+    "fire_occupants": FireOccupants,
+    "medical_course": MedicalCourse,
+    "collision_entrapment": Tristate,
+    "collision_road_blockage": RoadBlockage,
+    "crime_presence": CrimePresence,
+    "crime_activity": CrimeActivity,
+    "gas_location": GasLocation,
+    "gas_exposure": GasExposure,
+    "water_visibility": WaterVisibility,
+    "water_motion": WaterMotion,
 }
 
 
@@ -144,6 +161,17 @@ def _evidence_for(label: str, quote: str | None, original: str, english: str):
     A miss means "nothing to highlight", never "the answer is wrong": Laya made
     no claim about the transcript, so there is no claim to falsify.
     """
+    if label in DECISIONS and not quote:
+        # Prefer the latest relevant sentence for scenario decisions. A
+        # correction must not be displayed beside the older statement.
+        for text, source in ((original, "original"), (english, "english")):
+            matches = [m for m in re.finditer(r"[^.!?\n]+[.!?]?", text or "")
+                       if any(term in m.group().lower() for term in EVIDENCE_TERMS[label])]
+            if matches:
+                match = matches[-1]
+                start = match.start() + len(match.group()) - len(match.group().lstrip())
+                return EvidenceSpan(text=match.group().strip(), start=start, end=start + len(match.group().strip()), source=source)
+        return None
     if quote:
         # A model-supplied quote is held to the strict standard: it must be
         # locatable as a quote, minimum length included, because its whole
@@ -276,6 +304,7 @@ def resolve(
     original: str,
     english: str,
     asr_confidence: float | None = None,
+    incident_context: str | None = None,
 ) -> Resolution:
     predictions: list[Prediction] = []
     form = IncidentForm()
@@ -329,8 +358,20 @@ def resolve(
         score, breakdown = _gate_on_evidence(span, score, breakdown)
 
         abstained = score < settings.choice_min_confidence
+        # A dedicated decision is a model interpretation with located context,
+        # not a free-form note. Invalid/unsupported answers stay unknown even
+        # if a provider returns a large probability.
+        if label in DECISIONS and (span is None or value not in {v.value for v in enum}):
+            abstained = True
+            breakdown["unsupported"] = "no located context or invalid scenario choice"
+        if label == "collision_entrapment" and span is not None and re.search(
+            r"(?:do not know|don't know|unsure|not sure|no s[eé]).{0,80}(?:get out|trapped|salir|atrap)", span.text, re.I
+        ):
+            abstained = True
+            breakdown["unsupported"] = "caller explicitly says entrapment is not known"
         if abstained:
-            breakdown["abstained"] = f"score < {settings.choice_min_confidence}"
+            breakdown["abstained"] = (f"score < {settings.choice_min_confidence}"
+                                      if score < settings.choice_min_confidence else breakdown.get("unsupported"))
             value = enum.UNKNOWN.value
 
         if (
@@ -507,6 +548,10 @@ def resolve(
             hazard_conflict = True
             continue  # disagreement means it does not go on the form
         if tri is Tristate.YES:
+            if _evidence_for(key, None, original, english) is None:
+                # A probability alone cannot invent a hazard that has no
+                # locatable context in the caller's words.
+                continue
             hazards.append(hazard)
 
     hazard_score = (
@@ -562,7 +607,7 @@ def resolve(
         )
         setattr(form, label, rule.value)
 
-    _keep_section_fields(predictions, form)
+    _keep_section_fields(predictions, form, incident_context)
 
     if laya is None:
         notes.append(
@@ -573,12 +618,15 @@ def resolve(
     return Resolution(predictions=predictions, form=form, notes=notes)
 
 
-def _keep_section_fields(predictions: list[Prediction], form: IncidentForm) -> None:
+def _keep_section_fields(predictions: list[Prediction], form: IncidentForm, incident_context: str | None = None) -> None:
     """A medical call does not record how big a fire is, and a fire does not record awake or breathing."""
     drop: list[tuple[str, type]] = []
-    if form.incident_type not in FIRE_NATURES:
+    incident = IncidentType(incident_context) if incident_context in {v.value for v in IncidentType} else form.incident_type
+    drop.extend((name, _ENUMS[name]) for name, spec in DECISIONS.items()
+                if incident != spec[0])
+    if incident not in FIRE_NATURES:
         drop.extend([("occupancy", Occupancy), ("fire_extent", FireExtent)])
-    if form.incident_type is not IncidentType.MEDICAL:
+    if incident is not IncidentType.MEDICAL:
         drop.extend([
             ("chief_complaint", ChiefComplaint),
             ("awake", Tristate),

@@ -1,0 +1,190 @@
+[
+  {
+    "id": "fire-trouble",
+    "turns": [
+      {
+        "speaker": "operator",
+        "text": "911, where is your emergency?"
+      },
+      {
+        "speaker": "caller",
+        "text": "Oh god, okay, okay, I'm outside, I got out, but there's smoke in the hallway and I think it's coming from 6B, the lady with the oxygen tank, I banged on her door and she didn't answer."
+      },
+      {
+        "speaker": "operator",
+        "text": "What's the address?"
+      },
+      {
+        "speaker": "caller",
+        "text": "It's the brick building on Birch, um, Birch Court, I always blank on the number, it's 1400, 1400 Birch Court, apartment… I'm in 6A, the fire is in 6B. The stairs are full of smoke. I can see flames in her window from out here."
+      },
+      {
+        "speaker": "operator",
+        "text": "Is anyone still inside?"
+      },
+      {
+        "speaker": "caller",
+        "text": "I don't know, I don't know. My roommate is out here with me, that's two of us. The guy in 6C came down with his kid. But Mrs. Ellison, I don't think she came out. Her door was hot. There's a propane grill on the landing too, I almost tripped on it."
+      },
+      {
+        "speaker": "operator",
+        "text": "Is anyone hurt?"
+      },
+      {
+        "speaker": "caller",
+        "text": "I'm coughing, my eyes are burning, nobody's burned that I can see. The kid is crying but he's okay."
+      },
+      {
+        "speaker": "operator",
+        "text": "Your name and a number we can call you back on?"
+      },
+      {
+        "speaker": "caller",
+        "text": "Denise. Denise Alvarez. My phone is 555… hold on, 555 0151. Please just send them, the smoke is coming out of the third floor now, it's not just her apartment anymore."
+      }
+    ],
+    "name": "The neighbor is still inside",
+    "source_expectation": "Structure fire, multi-unit, spreading past one apartment onto the third floor, 1400 Birch Court, caller Denise Alvarez, callback 555 0151, four people outside, one neighbor still unaccounted for, caller coughing, oxygen machine and a propane grill in the path."
+  },
+  {
+    "id": "medical-trouble",
+    "turns": [
+      {
+        "speaker": "operator",
+        "text": "911, what's the address of the emergency?"
+      },
+      {
+        "speaker": "caller",
+        "text": "She's on the floor, she was fine, she was making tea, and then I heard the cup break. Mom? Mom, can you hear me? She's looking at me but she's not talking right. The left side of her face is… it's drooping, and she grabbed her chest before she went down."
+      },
+      {
+        "speaker": "operator",
+        "text": "Is she awake? Is she breathing?"
+      },
+      {
+        "speaker": "caller",
+        "text": "Her eyes are open. She's breathing, but it's loud, like she can't get a full breath. She fell against the counter. There's blood on her eyebrow. I don't know if it's her heart or a stroke or she just hit her head. She's sixty-eight."
+      },
+      {
+        "speaker": "operator",
+        "text": "Where are you?"
+      },
+      {
+        "speaker": "caller",
+        "text": "I'm at her house, not mine, I almost said my apartment. 77 Willow Lane. The blue house with the ramp. The front door is unlocked."
+      },
+      {
+        "speaker": "operator",
+        "text": "Who else is there?"
+      },
+      {
+        "speaker": "caller",
+        "text": "Just me and my son. He's eight, he's in the living room, I told him to stay there. Nobody else is hurt. My name is Priya Shah. If you call back use my cell, 555 0129, the house phone doesn't work."
+      },
+      {
+        "speaker": "operator",
+        "text": "Stay with her."
+      },
+      {
+        "speaker": "caller",
+        "text": "I'm right here. Mom, they're coming. She just tried to sit up and she can't move her left arm."
+      }
+    ],
+    "name": "Fall, chest, and a stroke",
+    "source_expectation": "Medical, chest pain plus trouble breathing plus a head injury from the fall, awake, breathing, 77 Willow Lane, caller Priya Shah, callback 555 0129, two people on scene and only the mother hurt. The face, the arm, and the slurred speech are the part a short form has nowhere to put."
+  },
+  {
+    "id": "fire-location",
+    "turns": [
+      {
+        "speaker": "operator",
+        "text": "911, where is the emergency?"
+      },
+      {
+        "speaker": "caller",
+        "text": "The apartments. There's smoke in the hallway, I got out, but her door was hot and she didn't answer. I don't know the number. I always come in through the garage."
+      },
+      {
+        "speaker": "operator",
+        "text": "What city are you in, and what do you see from where you're standing?"
+      },
+      {
+        "speaker": "caller",
+        "text": "West side. I'm on the sidewalk. There's a car wash across the street, the blue one, and the building is gray. Flames are in a window up on the third floor. I'm not going back in."
+      },
+      {
+        "speaker": "operator",
+        "text": "Look for a street sign. You can walk away from the smoke to find one."
+      },
+      {
+        "speaker": "caller",
+        "text": "Okay. Okay. The sign on the corner says Birch Court. The other street is Holt Avenue. Birch Court and Holt."
+      },
+      {
+        "speaker": "operator",
+        "text": "Now the building. A number over the door, on the curb, anywhere you can read it."
+      },
+      {
+        "speaker": "caller",
+        "text": "It's dark. The man from down the hall is yelling that it's fourteen hundred. 1400. 1400 Birch Court. I live in 6A. The hot door was the one next to mine. That's 6B. The woman with the oxygen machine."
+      },
+      {
+        "speaker": "operator",
+        "text": "1400 Birch Court, apartment 6B. Is anyone still inside?"
+      },
+      {
+        "speaker": "caller",
+        "text": "Four of us are out. Me, my roommate, that man, and his little boy. She didn't come out. There's a propane grill on the landing. I'm coughing. Nobody's burned. My name is Denise Alvarez, my phone is 555 0151."
+      }
+    ],
+    "name": "She cannot remember the building",
+    "source_expectation": "The form starts with no address. It becomes an intersection, then 1400 Birch Court, and only at the end a unit: 6B, not the caller's own apartment. Structure fire, multi-unit, third floor, four people outside, one neighbor unaccounted for, caller Denise Alvarez, callback 555 0151."
+  },
+  {
+    "id": "medical-location",
+    "turns": [
+      {
+        "speaker": "operator",
+        "text": "911, where are you?"
+      },
+      {
+        "speaker": "caller",
+        "text": "She's on the kitchen floor. Mom? Her face is drooping and she grabbed her chest before she fell. I don't know the address. I just drive here."
+      },
+      {
+        "speaker": "operator",
+        "text": "Tell me where you live, and then tell me where you are right now. Those are two different places."
+      },
+      {
+        "speaker": "caller",
+        "text": "I live at 15 Harbor Apartments. That's not here. This is her house. It's blue, it has a wheelchair ramp, and you pass the elementary school and turn left."
+      },
+      {
+        "speaker": "operator",
+        "text": "What street did you turn onto?"
+      },
+      {
+        "speaker": "caller",
+        "text": "Willow. Willow Lane. Her eyes are open. She's breathing, but it's loud, and there's blood on her eyebrow. She can't lift her left arm."
+      },
+      {
+        "speaker": "operator",
+        "text": "Step onto the porch, or pick up a piece of mail. Read me whatever number is on it."
+      },
+      {
+        "speaker": "caller",
+        "text": "The plaque by the ramp says 77. There's a bill on the table. 77 Willow Lane. The front door is unlocked."
+      },
+      {
+        "speaker": "operator",
+        "text": "77 Willow Lane, the blue house with the ramp. Who is there with you?"
+      },
+      {
+        "speaker": "caller",
+        "text": "Me and my son. He's eight, he's in the living room. Nobody else is hurt. I'm Priya Shah. Call my cell, 555 0129. The house phone doesn't work. Mom, stay awake."
+      }
+    ],
+    "name": "She gives the wrong house",
+    "source_expectation": "The first address is the wrong one. The dispatcher separates where she lives from where she is, and the house number only shows up because she is told to go read it. Medical, 77 Willow Lane, awake, breathing with trouble, chest and a head injury, caller Priya Shah, callback 555 0129."
+  }
+]

@@ -183,7 +183,20 @@ class TestOverInferenceGuards:
             segment=segment(1, "There is another person in the second car"),
             base_revision=0, next_id=next_id,
         )
-        assert out.suggestions == []
+        assert not any(s.field == "persons_involved" for s in out.suggestions)
+        # The sentence does carry scenario detail -- a vehicle, and where a
+        # person is -- and those are quoted verbatim for review. What it must
+        # not produce is a number. Which detail cues fire is Codex's to
+        # extend; the guard is that none of them turns into a count.
+        assert {s.field for s in out.suggestions} <= {
+            "vehicle_details",
+            "person_whereabouts",
+            "people_accounted_for",
+        }
+        assert all(
+            s.proposed_value == "There is another person in the second car"
+            for s in out.suggestions
+        )
         assert len(out.unresolved) == 1
         assert out.unresolved[0].field == "persons_involved"
         assert any(f.kind is ReviewFlagKind.PERSON_COUNT_UNCERTAIN for f in out.flags)
@@ -264,7 +277,7 @@ def test_unsupported_weapon_denial_is_not_proposed(next_id):
         predictions=[Prediction(label="weapons_present", value="no", score=0.35)],
         segment=segment(1, "There is smoke in my kitchen"), base_revision=0, next_id=next_id,
     )
-    assert out.suggestions == []
+    assert not any(s.field == "weapons_present" for s in out.suggestions)
 
 
 def test_old_evidence_is_not_attached_to_new_segment():

@@ -70,7 +70,8 @@ def _schema() -> dict:
     for name, options in _CHOICE_FIELDS.items():
         properties[name] = {
             "type": "string",
-            "enum": [*options, "unknown"],
+            "enum": list(dict.fromkeys([*options, "unknown"])),
+            "description": ALL_QUESTIONS[name]["instructions"] + " Choices: " + json.dumps(ALL_QUESTIONS[name]["criteria"]),
         }
     for name in _NOUL_FIELDS:
         properties[name] = {"type": "string", "enum": ["yes", "no", "unknown"]}

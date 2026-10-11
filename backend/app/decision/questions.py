@@ -15,15 +15,15 @@ Note what is NOT here: no question asks how urgent the call is, how many units
 to send, or what the dispatcher should do. Those are human judgments and the
 model is never asked to make them.
 
-``unknown`` is deliberately absent from the ``choice`` criteria. Laya must pick
-among real options; ``unknown`` is produced downstream by the abstention
-threshold in ``confidence.py``, so it means "the model was not sure enough"
-rather than "the model picked a vague label".
+Scenario choices include ``unknown`` for information that the caller has not
+established. The confidence layer can also abstain independently of the
+model's selected option, and both paths preserve unanswered questions.
 """
 
 from __future__ import annotations
 
 from ..schemas import Hazard
+from .scenario_tasks import SCENARIO_QUESTIONS, DECISIONS
 
 STATE_FIELD = "transcript"
 
@@ -50,21 +50,23 @@ INCIDENT_QUESTIONS: dict[str, dict] = {
     },
     "chief_complaint": {
         "type": "choice",
-        "instructions": f"What medical problem does the caller in `{STATE_FIELD}` describe?",
+        "instructions": f"What medical problem does the caller in `{STATE_FIELD}` describe? A fall or collapse alone does not mean unconsciousness. Preserve uncertainty when no option fits; other observations are recorded separately.",
         "criteria": {
             "chest_pain": "chest pain or a heart attack",
             "trouble_breathing": "difficulty breathing, short of not breathing at all",
-            "unconscious": "someone has collapsed or is unconscious",
+            "unconscious": "the person is explicitly unconscious or unresponsive, not merely on the floor",
             "bleeding": "someone is bleeding",
             "seizure": "someone is having a seizure",
+            "unknown": "no specific complaint in these options is established",
         },
     },
     "awake": {
         "type": "choice",
         "instructions": f"Does `{STATE_FIELD}` say whether the person is awake?",
         "criteria": {
-            "yes": "the caller says the person is awake",
-            "no": "the caller says the person is unconscious, collapsed, or not awake",
+            "yes": "the person is awake, looking at the caller, or has their eyes open",
+            "no": "the person is explicitly unconscious or not awake; a fall alone is insufficient",
+            "unknown": "wakefulness is not established",
         },
     },
     "breathing": {
@@ -80,7 +82,7 @@ INCIDENT_QUESTIONS: dict[str, dict] = {
         "instructions": f"What kind of emergency does the caller in `{STATE_FIELD}` describe?",
         "criteria": {
             "structure_fire": "a building, room or its contents is burning, or filling with smoke",
-            "medical": "illness, injury or a medical emergency, with no fire or crime",
+            "medical": "illness or injury: chest symptoms, breathing difficulty, a fall, blood, a drooping face, difficulty speaking or moving an arm; no fire or crime",
             "traffic_collision": "a crash involving one or more vehicles",
             "crime_in_progress": "a crime is happening now or has just happened",
             "gas_leak": "a smell of gas or a suspected gas leak, with nothing yet burning",
@@ -150,7 +152,7 @@ HAZARD_QUESTIONS: dict[str, dict] = {
     ]
 }
 
-ALL_QUESTIONS: dict[str, dict] = {**INCIDENT_QUESTIONS, **HAZARD_QUESTIONS}
+ALL_QUESTIONS: dict[str, dict] = {**INCIDENT_QUESTIONS, **HAZARD_QUESTIONS, **SCENARIO_QUESTIONS}
 
 # Terms used only to locate a display span in the transcript for a field Laya
 # answered. Laya makes no claim about where in the text its answer came from,
@@ -167,18 +169,19 @@ EVIDENCE_TERMS: dict[str, tuple[str, ...]] = {
         "chest pain", "dolor de pecho", "breathing", "respir", "unconscious", "collapsed",
         "inconsciente", "bleeding", "sangrando", "seizure", "convulsion",
     ),
-    "awake": ("awake", "unconscious", "collapsed", "inconsciente"),
+    "awake": ("awake", "eyes", "looking", "unconscious", "collapsed", "inconsciente"),
     "breathing": ("breathing", "not breathing", "respira", "no respira"),
     "incident_type": (
         "smoke", "fire", "burning", "flames", "humo", "fuego", "incendio",
         "crash", "collision", "accident", "choque", "accidente",
         "gas", "leak", "fuga", "smell", "olor",
-        "drowning", "water", "agua", "ahogando",
+        "drowning", "water", "river", "current", "agua", "ahogando", "río",
+        "chest", "breath", "droop", "blood", "fell", "face", "medical",
         "knife", "gun", "weapon", "broke in", "broke into", "intruder", "robbery",
         "cuchillo", "arma", "pistola", "entro a mi casa", "ladron", "robo",
     ),
     "injuries": (
-        "hurt", "injured", "burned", "burnt", "burns", "bleeding", "coughing", "breathing", "unconscious", "pain",
+        "hurt", "injured", "burned", "burnt", "burns", "bleeding", "blood", "coughing", "breathing", "unconscious", "pain",
         "herido", "sangrando", "tosiendo", "respirar", "inconsciente", "dolor",
     ),
     "weapons_present": ("gun", "knife", "weapon", "shot", "arma", "pistola", "cuchillo"),
@@ -195,3 +198,4 @@ EVIDENCE_TERMS: dict[str, tuple[str, ...]] = {
     "hazard_electrical": ("wire", "electrical", "sparks", "cable", "electrico", "chispas"),
     "hazard_vehicle": ("car", "truck", "vehicle", "motorcycle", "coche", "carro", "camion", "vehiculo"),
 }
+EVIDENCE_TERMS.update({name: spec[4] for name, spec in DECISIONS.items()})

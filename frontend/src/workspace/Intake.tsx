@@ -8,10 +8,13 @@ import {
   type Utterance,
 } from "./v2";
 import type { Action, Mode } from "./session";
+import { detailedScenarios } from "./scenarios";
 
 type Props = {
   id: string;
   mode: Mode;
+  decisionEngine: string;
+  whisperSize: string;
   onResult: (action: Action) => void;
   onActivity: (active: boolean) => void;
   onAudio: (url: string | null) => void;
@@ -19,6 +22,8 @@ type Props = {
 export default function Intake({
   id,
   mode,
+  decisionEngine,
+  whisperSize,
   onResult,
   onActivity,
   onAudio,
@@ -39,6 +44,8 @@ export default function Intake({
   const [completed, setCompleted] = useState(false);
   const [speaker, setSpeaker] = useState<Speaker>("caller");
   const [draft, setDraft] = useState("");
+  const [sample, setSample] = useState(0);
+  const [sampleTurn, setSampleTurn] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [queued, setQueued] = useState(0);
   const [received, setReceived] = useState(0);
@@ -146,7 +153,7 @@ export default function Intake({
     }
   }
   function enqueue(input: Blob | string) {
-    queue.current.push({ input, clientId: crypto.randomUUID(), speaker });
+    queue.current.push({ input, clientId: crypto.randomUUID(), speaker, decisionEngine, whisperSize });
     setQueued(queue.current.length);
     void flush();
   }
@@ -296,6 +303,24 @@ export default function Intake({
           }}
         >
           <label htmlFor="transcript-input">New utterance</label>
+          <div className="scenario-samples">
+            <label htmlFor="sample-scenario">Detailed demo</label>
+            <select id="sample-scenario" value={sample} onChange={event => {
+              setSample(Number(event.target.value));
+              setSampleTurn(0);
+            }}>
+              {detailedScenarios.map((scenario, index) => <option key={scenario.name} value={index}>{scenario.name}</option>)}
+            </select>
+            <button type="button" disabled={busy || !!draft.trim() || sampleTurn >= detailedScenarios[sample].turns.length}
+              onClick={() => {
+                setDraft(detailedScenarios[sample].turns[sampleTurn]);
+                setSpeaker("caller");
+                setSampleTurn(turn => turn + 1);
+              }}>
+              Load statement {Math.min(sampleTurn + 1, detailedScenarios[sample].turns.length)}/{detailedScenarios[sample].turns.length}
+            </button>
+          </div>
+          <p>Use a new session for each scenario. Load, send, and review each statement before continuing.</p>
           <textarea
             id="transcript-input"
             rows={3}

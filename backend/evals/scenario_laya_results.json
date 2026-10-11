@@ -1,0 +1,1085 @@
+{
+  "engine": {
+    "name": "laya",
+    "model": "multilingual",
+    "device": "cuda",
+    "is_local": true,
+    "inference_location": "this machine"
+  },
+  "summary": {
+    "cases": 12,
+    "raw_passed": 27,
+    "raw_checked": 29,
+    "branches_passed": 6,
+    "branches_checked": 8
+  },
+  "question_sha256": "67ed4847eaae170708af0cf19221475e4591bda42ac10b27a5de836d169aa1df",
+  "cases": [
+    {
+      "id": "fire-accountability",
+      "text": "There is a fire in an apartment at 418 Alameda Street. I am outside and safe. I do not know whether my brother is still inside.",
+      "expected": {
+        "incident_type": "structure_fire",
+        "fire_occupants": "unaccounted"
+      },
+      "followup": "occupant_last_seen",
+      "raw": {
+        "incident_type": "structure_fire",
+        "fire_occupants": "unaccounted"
+      },
+      "resolved": {
+        "incident_type": "structure_fire",
+        "fire_occupants": "unknown"
+      },
+      "checks": {
+        "incident_type": true,
+        "fire_occupants": true
+      },
+      "followup_passed": false,
+      "latency_ms": 460.9,
+      "questions": [
+        {
+          "field": "callback_number",
+          "phrase_id": "ask_callback_en",
+          "text": "What number can we call you back on?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "injuries",
+          "phrase_id": "ask_injuries_en",
+          "text": "Is anyone hurt?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "caller_safe",
+          "phrase_id": "ask_safe_en",
+          "text": "Are you somewhere safe right now?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "persons_involved",
+          "phrase_id": "ask_persons_involved_en",
+          "text": "How many people are involved, as far as you know?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "fire_occupants",
+          "phrase_id": "ask_fire_occupants_en",
+          "text": "Is everyone out of the building, or is anyone still inside or unaccounted for?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "incident_timing",
+          "phrase_id": "ask_incident_timing_en",
+          "text": "When did this start, and what has changed since then?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "scene_hazards",
+          "phrase_id": "ask_scene_hazards_en",
+          "text": "What hazards have you already noticed nearby?",
+          "reason": "Not yet established"
+        }
+      ]
+    },
+    {
+      "id": "medical-course",
+      "text": "My father has chest pain at 220 Cedar Street. He is awake and breathing. His condition is getting worse now.",
+      "expected": {
+        "incident_type": "medical",
+        "medical_course": "worsening"
+      },
+      "followup": "symptom_changes",
+      "raw": {
+        "incident_type": "medical",
+        "medical_course": "worsening"
+      },
+      "resolved": {
+        "incident_type": "medical",
+        "medical_course": "worsening"
+      },
+      "checks": {
+        "incident_type": true,
+        "medical_course": true
+      },
+      "followup_passed": true,
+      "latency_ms": 125.4,
+      "questions": [
+        {
+          "field": "callback_number",
+          "phrase_id": "ask_callback_en",
+          "text": "What number can we call you back on?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "caller_safe",
+          "phrase_id": "ask_safe_en",
+          "text": "Are you somewhere safe right now?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "symptom_changes",
+          "phrase_id": "ask_medical_changes_en",
+          "text": "What changed in the symptoms, and when did that change happen?",
+          "reason": "Reported symptom course: worsening (review interpretation)"
+        },
+        {
+          "field": "patient_age",
+          "phrase_id": "ask_patient_age_en",
+          "text": "How old is the person, approximately?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "medical_history",
+          "phrase_id": "ask_medical_history_en",
+          "text": "What relevant medical conditions or medicines do you know about?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "incident_timing",
+          "phrase_id": "ask_incident_timing_en",
+          "text": "When did this start, and what has changed since then?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "access_notes",
+          "phrase_id": "ask_access_notes_en",
+          "text": "What entrance, floor, unit, or landmark identifies the location?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "scene_hazards",
+          "phrase_id": "ask_scene_hazards_en",
+          "text": "What hazards have you already noticed nearby?",
+          "reason": "Not yet established"
+        }
+      ]
+    },
+    {
+      "id": "collision-entrapment",
+      "text": "There has been a traffic collision at Oak and Third. Someone is trapped and cannot get out of a vehicle.",
+      "expected": {
+        "incident_type": "traffic_collision",
+        "collision_entrapment": "yes"
+      },
+      "followup": "trapped_vehicle_location",
+      "raw": {
+        "incident_type": "traffic_collision",
+        "collision_entrapment": "yes"
+      },
+      "resolved": {
+        "incident_type": "traffic_collision",
+        "collision_entrapment": "yes"
+      },
+      "checks": {
+        "incident_type": true,
+        "collision_entrapment": true
+      },
+      "followup_passed": true,
+      "latency_ms": 125.3,
+      "questions": [
+        {
+          "field": "callback_number",
+          "phrase_id": "ask_callback_en",
+          "text": "What number can we call you back on?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "injuries",
+          "phrase_id": "ask_injuries_en",
+          "text": "Is anyone hurt?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "trapped_vehicle_location",
+          "phrase_id": "ask_trapped_vehicle_en",
+          "text": "Which vehicle is the person unable to leave, and where are they in it?",
+          "reason": "Vehicle entrapment reported: yes (review interpretation)"
+        },
+        {
+          "field": "persons_involved",
+          "phrase_id": "ask_persons_involved_en",
+          "text": "How many people are involved, as far as you know?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "road_conditions",
+          "phrase_id": "ask_road_conditions_en",
+          "text": "Which direction or lanes are affected, and what road hazards have you seen?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "collision_road_blockage",
+          "phrase_id": "ask_collision_road_blockage_en",
+          "text": "Is any lane or part of the road blocked?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "incident_timing",
+          "phrase_id": "ask_incident_timing_en",
+          "text": "When did this start, and what has changed since then?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "access_notes",
+          "phrase_id": "ask_access_notes_en",
+          "text": "What entrance, floor, unit, or landmark identifies the location?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "location_context",
+          "phrase_id": "ask_location_context_en",
+          "text": "What street, building, or unit details do you already know?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "people_details",
+          "phrase_id": "ask_people_details_en",
+          "text": "Who is there, and where are they now?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "scene_hazards",
+          "phrase_id": "ask_scene_hazards_en",
+          "text": "What hazards have you already noticed nearby?",
+          "reason": "Not yet established"
+        }
+      ]
+    },
+    {
+      "id": "collision-obstruction",
+      "text": "There has been a traffic collision at Oak and Third. A lane is blocked. I am safe on the sidewalk.",
+      "expected": {
+        "incident_type": "traffic_collision",
+        "collision_road_blockage": "blocked"
+      },
+      "followup": "affected_lanes",
+      "raw": {
+        "incident_type": "traffic_collision",
+        "collision_road_blockage": "blocked"
+      },
+      "resolved": {
+        "incident_type": "traffic_collision",
+        "collision_road_blockage": "blocked"
+      },
+      "checks": {
+        "incident_type": true,
+        "collision_road_blockage": true
+      },
+      "followup_passed": true,
+      "latency_ms": 124.9,
+      "questions": [
+        {
+          "field": "callback_number",
+          "phrase_id": "ask_callback_en",
+          "text": "What number can we call you back on?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "injuries",
+          "phrase_id": "ask_injuries_en",
+          "text": "Is anyone hurt?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "caller_safe",
+          "phrase_id": "ask_safe_en",
+          "text": "Are you somewhere safe right now?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "affected_lanes",
+          "phrase_id": "ask_blocked_lanes_en",
+          "text": "Which lanes or direction are blocked, from what you already know?",
+          "reason": "Road obstruction reported: blocked (review interpretation)"
+        },
+        {
+          "field": "vehicle_details",
+          "phrase_id": "ask_vehicle_details_en",
+          "text": "How many vehicles are involved, and what do they look like?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "persons_involved",
+          "phrase_id": "ask_persons_involved_en",
+          "text": "How many people are involved, as far as you know?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "people_accounted_for",
+          "phrase_id": "ask_people_accounted_for_en",
+          "text": "Where are the people involved, and is anyone's location unknown?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "collision_entrapment",
+          "phrase_id": "ask_collision_entrapment_en",
+          "text": "Is anyone unable to get out of a vehicle?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "incident_timing",
+          "phrase_id": "ask_incident_timing_en",
+          "text": "When did this start, and what has changed since then?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "access_notes",
+          "phrase_id": "ask_access_notes_en",
+          "text": "What entrance, floor, unit, or landmark identifies the location?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "people_details",
+          "phrase_id": "ask_people_details_en",
+          "text": "Who is there, and where are they now?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "scene_hazards",
+          "phrase_id": "ask_scene_hazards_en",
+          "text": "What hazards have you already noticed nearby?",
+          "reason": "Not yet established"
+        }
+      ]
+    },
+    {
+      "id": "crime-departure",
+      "text": "I am reporting a break-in at 350 Pine Street. The intruder has left. The break-in has stopped.",
+      "expected": {
+        "incident_type": "crime_in_progress",
+        "crime_presence": "left",
+        "crime_activity": "ended"
+      },
+      "followup": "departure_direction",
+      "raw": {
+        "incident_type": "crime_in_progress",
+        "crime_presence": "left",
+        "crime_activity": "ended"
+      },
+      "resolved": {
+        "incident_type": "crime_in_progress",
+        "crime_presence": "unknown",
+        "crime_activity": "ended"
+      },
+      "checks": {
+        "incident_type": true,
+        "crime_presence": true,
+        "crime_activity": true
+      },
+      "followup_passed": false,
+      "latency_ms": 125.5,
+      "questions": [
+        {
+          "field": "callback_number",
+          "phrase_id": "ask_callback_en",
+          "text": "What number can we call you back on?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "injuries",
+          "phrase_id": "ask_injuries_en",
+          "text": "Is anyone hurt?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "caller_safe",
+          "phrase_id": "ask_safe_en",
+          "text": "Are you somewhere safe right now?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "suspect_location",
+          "phrase_id": "ask_suspect_location_en",
+          "text": "Where was the person last seen, and are they still there?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "weapons_present",
+          "phrase_id": "ask_weapons_present_en",
+          "text": "Has a weapon been seen or mentioned?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "suspect_description",
+          "phrase_id": "ask_suspect_description_en",
+          "text": "What description of the person do you already have?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "persons_involved",
+          "phrase_id": "ask_persons_involved_en",
+          "text": "How many people are involved, as far as you know?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "crime_presence",
+          "phrase_id": "ask_crime_presence_en",
+          "text": "Is the person still there, or have they left?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "incident_timing",
+          "phrase_id": "ask_incident_timing_en",
+          "text": "When did this start, and what has changed since then?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "access_notes",
+          "phrase_id": "ask_access_notes_en",
+          "text": "What entrance, floor, unit, or landmark identifies the location?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "people_details",
+          "phrase_id": "ask_people_details_en",
+          "text": "Who is there, and where are they now?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "scene_hazards",
+          "phrase_id": "ask_scene_hazards_en",
+          "text": "What hazards have you already noticed nearby?",
+          "reason": "Not yet established"
+        }
+      ]
+    },
+    {
+      "id": "crime-ongoing",
+      "text": "Someone is breaking into a shop at 350 Pine Street right now. The intruder is still here.",
+      "expected": {
+        "incident_type": "crime_in_progress",
+        "crime_presence": "present",
+        "crime_activity": "ongoing"
+      },
+      "followup": "person_whereabouts",
+      "raw": {
+        "incident_type": "crime_in_progress",
+        "crime_presence": "present",
+        "crime_activity": "ongoing"
+      },
+      "resolved": {
+        "incident_type": "crime_in_progress",
+        "crime_presence": "present",
+        "crime_activity": "ongoing"
+      },
+      "checks": {
+        "incident_type": true,
+        "crime_presence": true,
+        "crime_activity": true
+      },
+      "followup_passed": true,
+      "latency_ms": 123.3,
+      "questions": [
+        {
+          "field": "callback_number",
+          "phrase_id": "ask_callback_en",
+          "text": "What number can we call you back on?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "injuries",
+          "phrase_id": "ask_injuries_en",
+          "text": "Is anyone hurt?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "caller_safe",
+          "phrase_id": "ask_safe_en",
+          "text": "Are you somewhere safe right now?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "person_whereabouts",
+          "phrase_id": "ask_person_present_en",
+          "text": "Where is the person now, from what you already know?",
+          "reason": "Person's current presence: present (review interpretation)"
+        },
+        {
+          "field": "weapons_present",
+          "phrase_id": "ask_weapons_present_en",
+          "text": "Has a weapon been seen or mentioned?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "suspect_description",
+          "phrase_id": "ask_suspect_description_en",
+          "text": "What description of the person do you already have?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "persons_involved",
+          "phrase_id": "ask_persons_involved_en",
+          "text": "How many people are involved, as far as you know?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "incident_timing",
+          "phrase_id": "ask_incident_timing_en",
+          "text": "When did this start, and what has changed since then?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "access_notes",
+          "phrase_id": "ask_access_notes_en",
+          "text": "What entrance, floor, unit, or landmark identifies the location?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "people_details",
+          "phrase_id": "ask_people_details_en",
+          "text": "Who is there, and where are they now?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "scene_hazards",
+          "phrase_id": "ask_scene_hazards_en",
+          "text": "What hazards have you already noticed nearby?",
+          "reason": "Not yet established"
+        }
+      ]
+    },
+    {
+      "id": "gas-symptoms",
+      "text": "There is a gas smell inside the house at 610 Willow Road. One person says they feel unwell. I am safe outside.",
+      "expected": {
+        "incident_type": "gas_leak",
+        "gas_location": "indoors",
+        "gas_exposure": "symptoms_reported"
+      },
+      "followup": "reported_symptoms",
+      "raw": {
+        "incident_type": "gas_leak",
+        "gas_location": "indoors",
+        "gas_exposure": "symptoms_reported"
+      },
+      "resolved": {
+        "incident_type": "gas_leak",
+        "gas_location": "indoors",
+        "gas_exposure": "symptoms_reported"
+      },
+      "checks": {
+        "incident_type": true,
+        "gas_location": true,
+        "gas_exposure": true
+      },
+      "followup_passed": true,
+      "latency_ms": 124.3,
+      "questions": [
+        {
+          "field": "callback_number",
+          "phrase_id": "ask_callback_en",
+          "text": "What number can we call you back on?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "injuries",
+          "phrase_id": "ask_injuries_en",
+          "text": "Is anyone hurt?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "caller_safe",
+          "phrase_id": "ask_safe_en",
+          "text": "Are you somewhere safe right now?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "reported_symptoms",
+          "phrase_id": "ask_gas_symptoms_en",
+          "text": "What symptoms have been reported and by how many people?",
+          "reason": "Symptoms reported on gas call: symptoms reported (review interpretation)"
+        },
+        {
+          "field": "people_accounted_for",
+          "phrase_id": "ask_people_accounted_for_en",
+          "text": "Where are the people involved, and is anyone's location unknown?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "incident_timing",
+          "phrase_id": "ask_incident_timing_en",
+          "text": "When did this start, and what has changed since then?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "access_notes",
+          "phrase_id": "ask_access_notes_en",
+          "text": "What entrance, floor, unit, or landmark identifies the location?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "people_details",
+          "phrase_id": "ask_people_details_en",
+          "text": "Who is there, and where are they now?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "scene_hazards",
+          "phrase_id": "ask_scene_hazards_en",
+          "text": "What hazards have you already noticed nearby?",
+          "reason": "Not yet established"
+        }
+      ]
+    },
+    {
+      "id": "water-lost-sight",
+      "text": "A person is in trouble in the river near 80 River Road. I cannot see the person anymore. There is a strong current moving downstream.",
+      "expected": {
+        "incident_type": "water_rescue",
+        "water_visibility": "not_visible",
+        "water_motion": "moving"
+      },
+      "followup": "last_seen",
+      "raw": {
+        "incident_type": "water_rescue",
+        "water_visibility": "not_visible",
+        "water_motion": "moving"
+      },
+      "resolved": {
+        "incident_type": "water_rescue",
+        "water_visibility": "unknown",
+        "water_motion": "moving"
+      },
+      "checks": {
+        "incident_type": true,
+        "water_visibility": true,
+        "water_motion": true
+      },
+      "followup_passed": true,
+      "latency_ms": 123.5,
+      "questions": [
+        {
+          "field": "callback_number",
+          "phrase_id": "ask_callback_en",
+          "text": "What number can we call you back on?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "injuries",
+          "phrase_id": "ask_injuries_en",
+          "text": "Is anyone hurt?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "last_seen",
+          "phrase_id": "ask_last_seen_en",
+          "text": "Where was the person last seen in the water?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "persons_involved",
+          "phrase_id": "ask_persons_involved_en",
+          "text": "How many people are involved, as far as you know?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "people_accounted_for",
+          "phrase_id": "ask_people_accounted_for_en",
+          "text": "Where are the people involved, and is anyone's location unknown?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "water_visibility",
+          "phrase_id": "ask_water_visibility_en",
+          "text": "Can you still see the person, or are they out of the water now?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "incident_timing",
+          "phrase_id": "ask_incident_timing_en",
+          "text": "When did this start, and what has changed since then?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "access_notes",
+          "phrase_id": "ask_access_notes_en",
+          "text": "What entrance, floor, unit, or landmark identifies the location?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "location_context",
+          "phrase_id": "ask_location_context_en",
+          "text": "What street, building, or unit details do you already know?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "people_details",
+          "phrase_id": "ask_people_details_en",
+          "text": "Who is there, and where are they now?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "scene_hazards",
+          "phrase_id": "ask_scene_hazards_en",
+          "text": "What hazards have you already noticed nearby?",
+          "reason": "Not yet established"
+        }
+      ]
+    },
+    {
+      "id": "fire-caller-only",
+      "text": "There is a fire in the house at 418 Alameda Street. I got out and I am safe.",
+      "expected": {
+        "incident_type": "structure_fire",
+        "fire_occupants": "unknown"
+      },
+      "raw": {
+        "incident_type": "structure_fire",
+        "fire_occupants": "all_out"
+      },
+      "resolved": {
+        "incident_type": "structure_fire",
+        "fire_occupants": "unknown"
+      },
+      "checks": {
+        "incident_type": true,
+        "fire_occupants": false
+      },
+      "followup_passed": null,
+      "latency_ms": 123.9,
+      "questions": [
+        {
+          "field": "callback_number",
+          "phrase_id": "ask_callback_en",
+          "text": "What number can we call you back on?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "injuries",
+          "phrase_id": "ask_injuries_en",
+          "text": "Is anyone hurt?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "fire_extent",
+          "phrase_id": "ask_fire_extent_en",
+          "text": "What smoke or flames have you already seen, and where?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "persons_involved",
+          "phrase_id": "ask_persons_involved_en",
+          "text": "How many people are involved, as far as you know?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "fire_occupants",
+          "phrase_id": "ask_fire_occupants_en",
+          "text": "Is everyone out of the building, or is anyone still inside or unaccounted for?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "incident_timing",
+          "phrase_id": "ask_incident_timing_en",
+          "text": "When did this start, and what has changed since then?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "access_notes",
+          "phrase_id": "ask_access_notes_en",
+          "text": "What entrance, floor, unit, or landmark identifies the location?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "people_details",
+          "phrase_id": "ask_people_details_en",
+          "text": "Who is there, and where are they now?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "scene_hazards",
+          "phrase_id": "ask_scene_hazards_en",
+          "text": "What hazards have you already noticed nearby?",
+          "reason": "Not yet established"
+        }
+      ]
+    },
+    {
+      "id": "collision-seated",
+      "text": "Two cars crashed at Oak and Third. A person is sitting in the second car. I do not know whether they can get out.",
+      "expected": {
+        "incident_type": "traffic_collision",
+        "collision_entrapment": "unknown"
+      },
+      "raw": {
+        "incident_type": "traffic_collision",
+        "collision_entrapment": "yes"
+      },
+      "resolved": {
+        "incident_type": "traffic_collision",
+        "collision_entrapment": "unknown"
+      },
+      "checks": {
+        "incident_type": true,
+        "collision_entrapment": false
+      },
+      "followup_passed": null,
+      "latency_ms": 125.7,
+      "questions": [
+        {
+          "field": "callback_number",
+          "phrase_id": "ask_callback_en",
+          "text": "What number can we call you back on?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "injuries",
+          "phrase_id": "ask_injuries_en",
+          "text": "Is anyone hurt?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "caller_safe",
+          "phrase_id": "ask_safe_en",
+          "text": "Are you somewhere safe right now?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "persons_involved",
+          "phrase_id": "ask_persons_involved_en",
+          "text": "How many people are involved, as far as you know?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "people_accounted_for",
+          "phrase_id": "ask_people_accounted_for_en",
+          "text": "Where are the people involved, and is anyone's location unknown?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "road_conditions",
+          "phrase_id": "ask_road_conditions_en",
+          "text": "Which direction or lanes are affected, and what road hazards have you seen?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "collision_entrapment",
+          "phrase_id": "ask_collision_entrapment_en",
+          "text": "Is anyone unable to get out of a vehicle?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "collision_road_blockage",
+          "phrase_id": "ask_collision_road_blockage_en",
+          "text": "Is any lane or part of the road blocked?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "incident_timing",
+          "phrase_id": "ask_incident_timing_en",
+          "text": "When did this start, and what has changed since then?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "access_notes",
+          "phrase_id": "ask_access_notes_en",
+          "text": "What entrance, floor, unit, or landmark identifies the location?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "location_context",
+          "phrase_id": "ask_location_context_en",
+          "text": "What street, building, or unit details do you already know?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "people_details",
+          "phrase_id": "ask_people_details_en",
+          "text": "Who is there, and where are they now?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "scene_hazards",
+          "phrase_id": "ask_scene_hazards_en",
+          "text": "What hazards have you already noticed nearby?",
+          "reason": "Not yet established"
+        }
+      ]
+    },
+    {
+      "id": "gas-denial",
+      "text": "There is a gas smell outdoors at 610 Willow Road. Nobody has symptoms and everyone feels well.",
+      "expected": {
+        "incident_type": "gas_leak",
+        "gas_location": "outdoors",
+        "gas_exposure": "no_symptoms"
+      },
+      "raw": {
+        "incident_type": "gas_leak",
+        "gas_location": "outdoors",
+        "gas_exposure": "no_symptoms"
+      },
+      "resolved": {
+        "incident_type": "gas_leak",
+        "gas_location": "outdoors",
+        "gas_exposure": "no_symptoms"
+      },
+      "checks": {
+        "incident_type": true,
+        "gas_location": true,
+        "gas_exposure": true
+      },
+      "followup_passed": null,
+      "latency_ms": 123.2,
+      "questions": [
+        {
+          "field": "callback_number",
+          "phrase_id": "ask_callback_en",
+          "text": "What number can we call you back on?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "injuries",
+          "phrase_id": "ask_injuries_en",
+          "text": "Is anyone hurt?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "caller_safe",
+          "phrase_id": "ask_safe_en",
+          "text": "Are you somewhere safe right now?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "occupancy",
+          "phrase_id": "ask_occupancy_en",
+          "text": "What kind of building is it?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "people_accounted_for",
+          "phrase_id": "ask_people_accounted_for_en",
+          "text": "Where are the people involved, and is anyone's location unknown?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "persons_involved",
+          "phrase_id": "ask_persons_involved_en",
+          "text": "How many people are involved, as far as you know?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "incident_timing",
+          "phrase_id": "ask_incident_timing_en",
+          "text": "When did this start, and what has changed since then?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "access_notes",
+          "phrase_id": "ask_access_notes_en",
+          "text": "What entrance, floor, unit, or landmark identifies the location?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "location_context",
+          "phrase_id": "ask_location_context_en",
+          "text": "What street, building, or unit details do you already know?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "people_details",
+          "phrase_id": "ask_people_details_en",
+          "text": "Who is there, and where are they now?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "scene_hazards",
+          "phrase_id": "ask_scene_hazards_en",
+          "text": "What hazards have you already noticed nearby?",
+          "reason": "Not yet established"
+        }
+      ]
+    },
+    {
+      "id": "water-correction",
+      "text": "A person is in trouble in the river near 80 River Road. I can see them in the water. Correction: the person is now out of the water on the bank.",
+      "expected": {
+        "incident_type": "water_rescue",
+        "water_visibility": "out_of_water"
+      },
+      "raw": {
+        "incident_type": "water_rescue",
+        "water_visibility": "out_of_water"
+      },
+      "resolved": {
+        "incident_type": "water_rescue",
+        "water_visibility": "out_of_water"
+      },
+      "checks": {
+        "incident_type": true,
+        "water_visibility": true
+      },
+      "followup_passed": null,
+      "latency_ms": 139.1,
+      "questions": [
+        {
+          "field": "callback_number",
+          "phrase_id": "ask_callback_en",
+          "text": "What number can we call you back on?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "injuries",
+          "phrase_id": "ask_injuries_en",
+          "text": "Is anyone hurt?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "last_seen",
+          "phrase_id": "ask_last_seen_en",
+          "text": "Where was the person last seen in the water?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "persons_involved",
+          "phrase_id": "ask_persons_involved_en",
+          "text": "How many people are involved, as far as you know?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "people_accounted_for",
+          "phrase_id": "ask_people_accounted_for_en",
+          "text": "Where are the people involved, and is anyone's location unknown?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "water_motion",
+          "phrase_id": "ask_water_motion_en",
+          "text": "Is the water moving or still, from what you have already seen?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "incident_timing",
+          "phrase_id": "ask_incident_timing_en",
+          "text": "When did this start, and what has changed since then?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "access_notes",
+          "phrase_id": "ask_access_notes_en",
+          "text": "What entrance, floor, unit, or landmark identifies the location?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "location_context",
+          "phrase_id": "ask_location_context_en",
+          "text": "What street, building, or unit details do you already know?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "people_details",
+          "phrase_id": "ask_people_details_en",
+          "text": "Who is there, and where are they now?",
+          "reason": "Not yet established"
+        },
+        {
+          "field": "scene_hazards",
+          "phrase_id": "ask_scene_hazards_en",
+          "text": "What hazards have you already noticed nearby?",
+          "reason": "Not yet established"
+        }
+      ]
+    }
+  ]
+}

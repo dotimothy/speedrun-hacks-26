@@ -457,6 +457,7 @@ async def dial_socket(websocket: WebSocket, call_id: str) -> None:
         # speak -- so what the agent says and what the operator sees come
         # from one pass over one transcript.
         choose_reply=bridge.choose_reply,
+        should_end=bridge.should_end_call,
     )
     try:
         await loop.run(websocket.receive_text)

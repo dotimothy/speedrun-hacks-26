@@ -95,6 +95,65 @@ class VerificationState(str, Enum):
     CORRECTED = "corrected"    # a human replaced the model's value
 
 
+class FireOccupants(str, Enum):
+    ALL_OUT = "all_out"
+    PEOPLE_INSIDE = "people_inside"
+    UNACCOUNTED = "unaccounted"
+    UNKNOWN = "unknown"
+
+
+class MedicalCourse(str, Enum):
+    NEW = "new"
+    WORSENING = "worsening"
+    UNCHANGED = "unchanged"
+    IMPROVING = "improving"
+    UNKNOWN = "unknown"
+
+
+class RoadBlockage(str, Enum):
+    BLOCKED = "blocked"
+    CLEAR = "clear"
+    UNKNOWN = "unknown"
+
+
+class CrimePresence(str, Enum):
+    PRESENT = "present"
+    LEFT = "left"
+    UNKNOWN = "unknown"
+
+
+class CrimeActivity(str, Enum):
+    ONGOING = "ongoing"
+    ENDED = "ended"
+    UNKNOWN = "unknown"
+
+
+class GasLocation(str, Enum):
+    INDOORS = "indoors"
+    OUTDOORS = "outdoors"
+    BOTH = "both"
+    UNKNOWN = "unknown"
+
+
+class GasExposure(str, Enum):
+    SYMPTOMS_REPORTED = "symptoms_reported"
+    NO_SYMPTOMS = "no_symptoms"
+    UNKNOWN = "unknown"
+
+
+class WaterVisibility(str, Enum):
+    VISIBLE = "visible"
+    NOT_VISIBLE = "not_visible"
+    OUT_OF_WATER = "out_of_water"
+    UNKNOWN = "unknown"
+
+
+class WaterMotion(str, Enum):
+    MOVING = "moving"
+    STILL = "still"
+    UNKNOWN = "unknown"
+
+
 class SuggestedAction(str, Enum):
     """Note what is absent: there is no action that dispatches anything.
 
@@ -211,6 +270,40 @@ class IncidentForm(BaseModel):
     location_text: str | None = None
     callback_number: str | None = None
     caller_name: str | None = None
+    incident_timing: str | None = None
+    symptom_details: list[str] = Field(default_factory=list)
+    fire_observations: list[str] = Field(default_factory=list)
+    scene_hazards: list[str] = Field(default_factory=list)
+    location_context: list[str] = Field(default_factory=list)
+    people_details: list[str] = Field(default_factory=list)
+    access_notes: str | None = None
+    patient_age: str | None = None
+    medical_history: str | None = None
+    vehicle_details: str | None = None
+    road_conditions: str | None = None
+    people_accounted_for: str | None = None
+    suspect_description: str | None = None
+    suspect_location: str | None = None
+    gas_source: str | None = None
+    water_conditions: str | None = None
+    last_seen: str | None = None
+    occupant_last_seen: str | None = None
+    symptom_changes: str | None = None
+    trapped_vehicle_location: str | None = None
+    affected_lanes: str | None = None
+    departure_direction: str | None = None
+    person_whereabouts: str | None = None
+    reported_symptoms: str | None = None
+    fire_occupants: FireOccupants = FireOccupants.UNKNOWN
+    medical_course: MedicalCourse = MedicalCourse.UNKNOWN
+    collision_entrapment: Tristate = Tristate.UNKNOWN
+    collision_road_blockage: RoadBlockage = RoadBlockage.UNKNOWN
+    crime_presence: CrimePresence = CrimePresence.UNKNOWN
+    crime_activity: CrimeActivity = CrimeActivity.UNKNOWN
+    gas_location: GasLocation = GasLocation.UNKNOWN
+    gas_exposure: GasExposure = GasExposure.UNKNOWN
+    water_visibility: WaterVisibility = WaterVisibility.UNKNOWN
+    water_motion: WaterMotion = WaterMotion.UNKNOWN
     chief_complaint: ChiefComplaint = ChiefComplaint.UNKNOWN
     awake: Tristate = Tristate.UNKNOWN
     breathing: Tristate = Tristate.UNKNOWN

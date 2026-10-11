@@ -30,9 +30,10 @@ from fastapi.responses import JSONResponse
 from ..asr import whisper_engine
 from ..config import settings
 from ..confidence import resolve as resolve_confidence
-from ..decision.registry import get_engine
+from ..decision.registry import available, get_engine
 from ..decision.rules import RuleEngine
 from .diffing import DiffOutcome, build_suggestions
+from .followup import reviewed_incident
 from .models import (
     AppendSegmentRequest,
     Diagnostics,
@@ -45,6 +46,7 @@ from .models import (
     Speaker,
 )
 from . import narrative as narrative_builder
+from .dial_bridge import is_live
 from .store import SessionNotFound, StaleAction, store
 
 router = APIRouter(prefix="/api/v2", tags=["live"])
@@ -128,6 +130,21 @@ def create_session(payload: dict | None = None) -> dict:
     return json.loads(store.get(snapshot.session_id).model_dump_json())
 
 
+@router.post("/sessions/{session_id}/settings")
+def update_session_settings(session_id: str, payload: dict) -> dict:
+    _snapshot(session_id)
+    if "decision_engine" not in payload:
+        raise HTTPException(status_code=422, detail="decision_engine is required")
+    name = payload["decision_engine"]
+    if name is not None:
+        if not isinstance(name, str) or name not in available():
+            raise HTTPException(status_code=422, detail="Decision engine is not enabled for this deployment")
+        if not get_engine(name).ready():
+            raise HTTPException(status_code=409, detail="Decision engine is unavailable")
+    snapshot = store.set_decision_engine(session_id, name)
+    return {"snapshot": json.loads(snapshot.model_dump_json())}
+
+
 @router.get("/sessions")
 def list_sessions() -> dict:
     """Every call this process has seen, newest first.
@@ -162,6 +179,11 @@ def list_sessions() -> dict:
                 "opening_line": (
                     snapshot.segments[0].original_text[:90] if snapshot.segments else None
                 ),
+                # True while a phone call is still connected. The workspace
+                # takes a call on this, not on the segment count: a call that
+                # has connected but not yet said anything is exactly the
+                # moment an operator wants to be looking at it.
+                "live": is_live(session_id),
             }
         )
     summaries.sort(key=lambda item: item["created_at"], reverse=True)
@@ -267,7 +289,7 @@ async def append_segment(session_id: str, request: Request) -> dict:
         if s.speaker is Speaker.CALLER
     )
 
-    engine = get_engine(req.decision_engine)
+    engine = get_engine(req.decision_engine or snapshot.decision_engine)
     t0 = time.perf_counter()
     try:
         laya_result = engine.extract(caller_text, caller_english, language)
@@ -277,7 +299,8 @@ async def append_segment(session_id: str, request: Request) -> dict:
         raise HTTPException(status_code=502, detail=str(error)) from error
     rule_result = rule_engine.extract(caller_text, caller_english, language)
     resolution = resolve_confidence(
-        laya_result, rule_result, caller_text, caller_english, asr_confidence=word_confidence
+        laya_result, rule_result, caller_text, caller_english, asr_confidence=word_confidence,
+        incident_context=reviewed_incident(snapshot),
     )
     decision_ms = (time.perf_counter() - t0) * 1000
 

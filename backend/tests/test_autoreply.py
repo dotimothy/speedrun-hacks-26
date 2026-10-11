@@ -57,6 +57,12 @@ class TestItStaysQuietWhenItMust:
             SuggestedAction.REQUEST_HUMAN_CONFIRMATION,
             incident_type="medical", location_text="1 A St", callback_number="555-0100",
             injuries="none", caller_safe="yes",
+            chief_complaint="chest_pain", awake="yes", breathing="yes",
+            patient_age="67 years old", medical_history="history of asthma",
+            incident_timing="started earlier", access_notes="front entrance",
+            medical_course="new",
+            symptom_details=["Chest pain."], location_context=["1 A St"],
+            people_details=["One patient."], scene_hazards=["No other hazards reported."],
         )
         assert reply is None
         assert "nothing is missing" in reason
@@ -134,13 +140,46 @@ class TestItCanOnlySayApprovedThings:
         # "it cannot say anything unapproved" structural rather than a promise.
         assert not hasattr(reply, "text")
 
-    def test_no_approved_phrase_promises_help_is_coming(self):
-        # The phrases are questions and holding lines. None of them may imply
-        # that anything has been dispatched -- the prototype has no authority
-        # to say that, and autonomous mode makes it say these unprompted.
+    # Reassurance lives in exactly one phrase per language, said once, as the
+    # call is being closed. The product owner asked for it explicitly. It is
+    # scoped this narrowly because the original rule was the right one for
+    # every other phrase: a question or a holding line that implies something
+    # has been dispatched is a promise this prototype cannot keep, and
+    # autonomous mode plays those unprompted, mid-call, over and over.
+    REASSURANCE = {"wrap_up_en", "wrap_up_es"}
+
+    def test_no_question_or_holding_phrase_promises_help_is_coming(self):
         banned = ("on the way", "en camino", "dispatch", "help is coming",
                   "ayuda viene", "sending", "enviando", "minutes", "minutos")
         for phrase_id, (_, text) in APPROVED.items():
+            if phrase_id in self.REASSURANCE:
+                continue
             lowered = text.lower()
             for word in banned:
                 assert word not in lowered, f"{phrase_id}: {text}"
+
+    def test_no_phrase_commits_to_a_time_or_a_unit(self):
+        """The closing phrase may reassure. It still may not promise.
+
+        "Help is on the way" is a statement about a dispatcher's decision.
+        "Four minutes" or "an ambulance" would be a claim about a resource
+        this system never allocated, which is the line that does not move.
+        """
+        banned = ("minutes", "minutos", "ambulance", "ambulancia", "engine",
+                  "fire truck", "bomberos", "police", "polic", "units",
+                  "unidades", "eta")
+        for phrase_id, (_, text) in APPROVED.items():
+            lowered = text.lower()
+            for word in banned:
+                # ETA is an abbreviation, not the ending of Spanish "quieta".
+                import re
+                found = bool(re.search(r"\beta\b", lowered)) if word == "eta" else word in lowered
+                assert not found, f"{phrase_id}: {text}"
+
+    def test_the_reassurance_is_only_in_the_closing_phrase(self):
+        """One phrase per language, so it cannot be said at an arbitrary time."""
+        reassuring = {
+            pid for pid, (_, text) in APPROVED.items()
+            if "on the way" in text.lower() or "en camino" in text.lower()
+        }
+        assert reassuring == self.REASSURANCE

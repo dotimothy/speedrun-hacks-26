@@ -11,9 +11,13 @@ import {
   type Suggestion,
 } from "./workspace/session";
 import Intake from "./workspace/Intake";
+import ScenarioDecisions from "./components/ScenarioDecisions";
 import {
   adaptSnapshot,
+  wireFields,
   ApiConflict,
+  ensureSession,
+  readSession,
   reviewOperation,
   type Snapshot,
 } from "./workspace/v2";
@@ -117,6 +121,102 @@ export default function App() {
   const [note, setNote] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  // --- inbound calls -------------------------------------------------
+  //
+  // A session this workspace did not create is a call that arrived some
+  // other way -- today that means the phone. Without this the workspace sits
+  // on the empty session it made at mount while a real call fills a
+  // different one on the server, and the operator watches a blank screen
+  // through the whole conversation.
+  const ownSessions = useRef<Set<string>>(new Set());
+  const attached = useRef(false);
+  const [inbound, setInbound] = useState<string | null>(null);
+
+  async function adopt(id: string) {
+    ownSessions.current.add(id);
+    attached.current = true;
+    setInbound(null);
+    localDispatch({ type: "reset", mode: currentSession.current.mode, id });
+    try {
+      const snapshot = await ensureSession(id, new AbortController().signal);
+      localDispatch({
+        type: "server",
+        snapshot: adaptSnapshot(snapshot, currentSession.current.mode),
+      });
+      setNotice(`Call ${id} is live. Updates appear as the caller speaks.`);
+    } catch {
+      // The poll comes round again in two seconds.
+    }
+  }
+
+  useEffect(() => {
+    ownSessions.current.add(session.id);
+    let cancelled = false;
+    const controller = new AbortController();
+
+    const tick = async () => {
+      // Never fight an operator's own action for the same session.
+      if (remoteLock.current) return;
+      try {
+        if (attached.current) {
+          // readSession, not ensureSession: if the call has been cleared on
+          // the server, this desk lets go of it rather than recreating an
+          // empty session somebody deliberately deleted.
+          const snapshot = await readSession(
+            currentSession.current.id,
+            controller.signal,
+          );
+          if (cancelled) return;
+          if (snapshot === null) attached.current = false;
+          else
+            localDispatch({
+              type: "server",
+              snapshot: adaptSnapshot(snapshot, currentSession.current.mode),
+            });
+        }
+
+        const response = await fetch("/api/v2/sessions", {
+          signal: controller.signal,
+        });
+        if (!response.ok || cancelled) return;
+        const listed = (await response.json()).sessions ?? [];
+        // A connected phone call counts even before its first word -- that is
+        // the moment an operator wants to be looking at it. A session with no
+        // segments and no live call is a leftover, and taking one of those
+        // over would be worse than showing nothing.
+        const call = listed.find(
+          (entry: { session_id: string; segments: number; live?: boolean }) =>
+            (entry.live || entry.segments > 0) &&
+            !ownSessions.current.has(entry.session_id),
+        );
+        if (cancelled) return;
+        if (!call) {
+          setInbound(null);
+          return;
+        }
+        // Take the call outright when there is nothing to lose. Offer it
+        // when there is: a ringing phone should not wipe a record somebody
+        // is part-way through reviewing.
+        const idle =
+          currentSession.current.segments.length === 0 &&
+          !currentSession.current.published;
+        if (idle) await adopt(call.session_id);
+        else setInbound(call.session_id);
+      } catch {
+        // A failed poll is not worth putting on screen; it retries.
+      }
+    };
+
+    tick();
+    const timer = window.setInterval(tick, 2000);
+    return () => {
+      cancelled = true;
+      controller.abort();
+      window.clearInterval(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [notice, setNotice] = useState(
     "Ready for a new call. Accepted information is saved only after your review.",
   );
@@ -166,7 +266,9 @@ export default function App() {
   const audioPlayer = useRef<HTMLAudioElement>(null);
   const segments = session.segments;
   const demo = session.mode === "demo";
-  const visibleFields = demo ? fields.slice(0, 5) : fields;
+  const visibleFields = demo
+    ? fields.filter((field, index) => index < 5 || session.record[field] || session.suggestions.some(s => s.field === field))
+    : fields.filter(field => !session.server?.relevant_fields || session.server.relevant_fields.includes(wireFields[field]));
   const languageName = (() => {
     if (!session.language) return "Not identified";
     try {
@@ -367,6 +469,27 @@ export default function App() {
           </span>
         </div>
       </header>
+      {inbound && (
+        <div className="inbound-strip" role="alert">
+          <span>
+            <span className="inbound-dot" />
+            Incoming call <strong>{inbound.slice(-8).toUpperCase()}</strong> is
+            being transcribed. This desk has an open record.
+          </span>
+          <div>
+            <button onClick={() => void adopt(inbound)}>Take the call</button>
+            <button
+              className="ghost"
+              onClick={() => {
+                ownSessions.current.add(inbound);
+                setInbound(null);
+              }}
+            >
+              Leave for another desk
+            </button>
+          </div>
+        </div>
+      )}
       <div className="session-toolbar">
         <label htmlFor="input-mode">Input</label>
         <select
@@ -701,6 +824,21 @@ export default function App() {
                 </span>
               </header>
 
+              <ScenarioDecisions focus={session.server?.decision_focus} />
+              {!!session.server?.follow_up_questions?.length && (
+                <details className="follow-up-plan" open>
+                  <summary>Suggested follow-up questions ({session.server.follow_up_questions.length})</summary>
+                  <p>Based on what has been heard so far. Ask one at a time; review conflicting answers.</p>
+                  <ol>
+                    {session.server.follow_up_questions.map(question => (
+                      <li key={question.field}>
+                        <span>{question.text}</span>
+                        <small>{question.reason}</small>
+                      </li>
+                    ))}
+                  </ol>
+                </details>
+              )}
               <div className="record-fields">
                 {visibleFields.map((field, index) => {
                   const change = pending.find((s) => s.field === field);
@@ -748,8 +886,9 @@ export default function App() {
                           >
                             {labels[field]}
                           </label>
-                          <input
+                          <textarea
                             id={`manual-${field}`}
+                            rows={editValue.includes("\n") ? 4 : 2}
                             autoFocus
                             value={editValue}
                             disabled={remoteBusy}
@@ -807,7 +946,7 @@ export default function App() {
               <div className="record-note">
                 {session.server && (
                   <details className="narrative-preview">
-                    <summary>Generated narrative</summary>
+                    <summary>Detailed incident report ? draft</summary>
                     <p>
                       {session.server.narrative.text ||
                         "Accept information to draft a narrative."}
@@ -946,8 +1085,9 @@ export default function App() {
                           <label className="sr-only" htmlFor={`edit-${s.id}`}>
                             Edit {labels[s.field]}
                           </label>
-                          <input
+                          <textarea
                             id={`edit-${s.id}`}
+                            rows={editValue.includes("\n") ? 4 : 2}
                             autoFocus
                             value={editValue}
                             disabled={remoteBusy}

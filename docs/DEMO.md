@@ -210,3 +210,85 @@ That is the product.
 | Laya will not load | `/api/health` shows the error; the rule extractor still fills location, phone and persons |
 | Piper silent | The reply panel shows the phrase text to read aloud |
 | Everything is on fire | `DISPATCHIQ_MOCK=1` serves the committed `fixtures/scenarios/*.json` with no models at all |
+## Detailed scenario walkthrough
+
+In **Transcript** mode, start a new session and use **Detailed demo** to choose
+one of six incident types or one of the four **Provided call:** scripts from
+`demo-calls.html`. **Load statement**
+fills the editor; **Send utterance** runs that statement through the configured
+engine. Review suggestions, then load the next statement. Use a separate session
+for each scenario so facts from different calls are never mixed.
+
+The examples include onset, changing conditions, access information, uncertain
+people counts, and later corrections. The **Suggested follow-up questions** list
+adapts to the incident type and skips accepted values and pending answers. A
+conflicting incident classification returns to general clarification questions.
+Phone calls use the same question plan, with the existing language, repeat, and
+safety-flag controls. Fixed English and Spanish questions cover fire, medical,
+collision, crime, gas, and water scenarios; these are documentation prompts,
+not treatment or dispatch protocols.
+
+Accept a detail to include it in **Detailed incident report · draft**. Reports
+group incident/contact information, people, scenario details, and hazards; they
+also retain record revisions, unresolved items, and review flags. Pending
+suggestions never become accepted facts or enter the generated report. Sharing
+still requires an operator action, and earlier shared versions remain unchanged.
+
+Detailed notes are matched from explicit phrases and preserve the caller's
+wording, including negation and uncertainty. They can miss paraphrases or short
+answers; use the existing manual edit control when that happens. New phrases
+are synthesized on first use by Piper; `tts.prerender_all()` can warm the cache.
+
+### Dedicated model decisions
+
+| Scenario | Model interpretation | Example follow-up |
+| --- | --- | --- |
+| Fire | Extent, building type, occupant accountability | Where were the unaccounted occupants last seen? |
+| Medical | Complaint, awake/breathing, symptom course | What changed, and when? |
+| Collision | Vehicle entrapment and road obstruction | Which vehicle, or which lanes? |
+| Crime | Person still present or departed; activity ongoing or ended | Current whereabouts or direction of departure |
+| Gas | Indoor/outdoor location and reported symptoms | Symptoms described and people affected |
+| Water | Visibility and water movement | Last sighting or a visible landmark |
+
+These are typed choices in the shared model question batch. Scenario scope,
+confidence checks, and located context determine which suggestions can be
+offered; the operator reviews them. The scenario panel labels pending,
+accepted, conflicting, and unknown values. A typed decision changes the next
+question, while quoted observations retain symptoms, hazards, and location
+clues that do not fit a categorical field. Observations accumulate across
+utterances and retain revision history. They do not assert a diagnosis or
+derive a headcount from a list of relatives.
+
+### Replaying the supplied calls
+
+The caller and dispatcher turns from the provided local HTML are saved in
+`backend/evals/demo_call_cases.json`. Run:
+
+```powershell
+python scripts/replay_demo_calls.py --output backend/evals/demo_call_results.json
+```
+
+This runs local Laya through the v2 transcript API in isolated test sessions,
+including explicit scripted review and publication to the local receiving
+preview. It makes no phone call. The four calls passed 49 checks for contact
+fields, observations, address progression, and exclusion of dispatcher speech.
+Full suggestions, follow-ups, final records, and draft reports are in the
+output file.
+
+One script, **She gives the wrong house**, needs an operator to confirm the
+medical incident type when Laya abstains; the replay records that intervention
+under `reviewer_confirmations`. Confirmed incident type now keeps the relevant
+questions and fields available even when later model classification is unsure.
+The unaccounted neighbor is preserved in the caller's words; a missing model
+decision stays unknown and prompts clarification. These results do not measure
+audio transcription or live telephone behavior.
+
+The reusable six-scenario diagnostic is separate:
+
+```powershell
+python scripts/eval_scenario_decisions.py --output backend/evals/scenario_laya_results.json
+```
+
+Its results include model answers, post-policy values, and whether a conditional
+follow-up appeared. Low confidence can leave the broader clarification question
+active. This small synthetic diagnostic is not a calibrated accuracy benchmark.

@@ -478,6 +478,7 @@ h2 {
   font-size: 10px;
 }
 .field-value {
+  white-space: pre-wrap;
   font-size: 15px;
   font-weight: 500;
   line-height: 1.5;
@@ -761,7 +762,8 @@ textarea::placeholder {
   margin-top: 6px;
   color: #526980;
 }
-.suggestion input {
+.suggestion input,
+.suggestion textarea {
   width: 100%;
   background: white;
   border: 1px solid #bacce7;
@@ -1569,3 +1571,62 @@ textarea::placeholder {
   margin-top: 7px;
   line-height: 1.6;
 }
+
+/* An inbound call this desk has not taken yet. Loud on purpose: the
+   alternative is a phone ringing into a workspace that shows nothing. */
+.inbound-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.6rem 1.1rem;
+  background: color-mix(in srgb, var(--urgent, #b4381f) 12%, var(--surface, #fff));
+  border-bottom: 1px solid color-mix(in srgb, var(--urgent, #b4381f) 35%, transparent);
+  font-size: 0.82rem;
+}
+.inbound-strip > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.inbound-strip div {
+  display: inline-flex;
+  gap: 0.5rem;
+}
+.inbound-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--urgent, #b4381f);
+  animation: inbound-pulse 1.2s ease-in-out infinite;
+}
+@keyframes inbound-pulse {
+  50% { opacity: 0.25; }
+}
+.follow-up-plan {
+  margin: 12px 20px;
+  padding: 12px 14px;
+  border: 1px solid #d9dfdc;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.follow-up-plan summary { cursor: pointer; font-weight: 600; }
+.follow-up-plan p, .follow-up-plan small { color: #65736c; }
+.follow-up-plan ol { padding-left: 20px; margin-bottom: 0; }
+.follow-up-plan li { margin: 10px 0; }
+.follow-up-plan small { display: block; margin-top: 3px; }
+.narrative-preview p { white-space: pre-line; }
+.scenario-samples { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 8px 0; }
+.scenario-samples select { max-width: 100%; }
+.scenario-decisions { margin: 12px 20px; padding: 14px; background: #f5f7fb; border: 1px solid var(--line); border-radius: 8px; }
+.scenario-decisions h3 { margin: 0; font-size: 14px; }
+.scenario-decisions p { font-size: 12px; line-height: 1.5; color: var(--muted); }
+.scenario-decisions dl { margin: 10px 0; }
+.scenario-decisions dl > div { padding: 8px 0; border-top: 1px solid var(--line); }
+.scenario-decisions dt { font-size: 12px; }
+.scenario-decisions dd { margin: 4px 0 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 12px; }
+.scenario-decisions dd span { color: var(--muted); }
+.scenario-decisions dd button { margin-left: auto; }
+.scenario-decisions .decision-caption { margin-bottom: 0; }
+.follow-up-plan ol { max-height: 220px; overflow-y: auto; }

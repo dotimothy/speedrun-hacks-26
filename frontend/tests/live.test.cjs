@@ -21,6 +21,61 @@ function load(name) {
 const { initialSession, transition } = load("workspace/session.ts");
 const { requestSnapshot, parseResult } = load("workspace/backend.ts");
 const { Recorder, wavDuration } = load("audio/recorder.ts");
+const { adaptSnapshot } = load("workspace/v2.ts");
+
+test("scenario decisions and cumulative observations remain reviewable through the UI adapter", () => {
+  const focus = { scenario: "medical", title: "Medical", purpose: "Document changes", decisions: [
+    { field: "medical_course", value: "worsening", status: "pending_review", suggestion_id: "course" },
+  ] };
+  const raw = {
+    session_id: "detail", revision: 1, event_seq: 2, detected_language: "en", segments: [],
+    accepted_record: { symptom_details: { value: ["Her face is drooping.", "She cannot move her left arm."], presence: "stated", history: [] } },
+    suggestions: [
+      { id: "course", field: "medical_course", kind: "addition", proposed_value: "worsening", status: "pending", evidence: [], conflict_options: [] },
+      { id: "changes", field: "symptom_changes", kind: "addition", proposed_value: "Symptoms changed a minute ago.", status: "pending", evidence: [], conflict_options: [] },
+    ],
+    narrative: { text: "Draft", edited: false }, published: [], unresolved: [], review_flags: [], diagnostics: {},
+    decision_focus: focus, relevant_fields: ["medical_course", "symptom_details", "symptom_changes"],
+    follow_up_questions: [],
+  };
+  const s = adaptSnapshot(raw, "transcript");
+  assert.equal(s.record.symptom_details, "Her face is drooping.\nShe cannot move her left arm.");
+  assert.equal(s.record.medical_course, undefined);
+  assert.equal(s.suggestions[0].value, "worsening");
+  assert.equal(s.suggestions[1].field, "symptom_changes");
+  assert.deepEqual(s.server.decision_focus, focus);
+});
+
+test("all four supplied demo call scripts are available without changing caller wording", () => {
+  const { detailedScenarios } = load("workspace/scenarios.ts");
+  const cases = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../../backend/evals/demo_call_cases.json"), "utf8"));
+  for (const call of cases) {
+    const sample = detailedScenarios.find(s => s.name === "Provided call: " + call.name);
+    assert.deepEqual(sample.turns, call.turns.filter(t => t.speaker === "caller").map(t => t.text));
+  }
+});
+
+test("scenario details survive the adapter as reviewable fields and published facts", () => {
+  const raw = {
+    session_id: "medical", revision: 2, event_seq: 4, detected_language: "en",
+    segments: [{ id: "s1", speaker: "caller", original_text: "He is 67 years old.", translation: null }],
+    accepted_record: { patient_age: { value: "He is 67 years old.", presence: "stated", history: [] } },
+    suggestions: [{ id: "history", field: "medical_history", kind: "addition", proposed_value: "History of asthma.",
+      status: "pending", evidence: [], conflict_options: [] }],
+    narrative: { text: "Patient age: 67 years old.", edited: false, editor_text: null },
+    published: [{ revision: 2, record: { patient_age: "He is 67 years old." }, narrative: "Patient age: 67 years old.",
+      unresolved: [], open_flags: [] }],
+    unresolved: [], review_flags: [], diagnostics: {},
+    relevant_fields: ["patient_age", "medical_history"],
+    follow_up_questions: [{ field: "breathing", text: "What can you tell me about breathing?" }],
+  };
+  const session = adaptSnapshot(raw, "transcript");
+  assert.equal(session.record.patient_age, "He is 67 years old.");
+  assert.equal(session.record.medical_history, undefined);
+  assert.equal(session.suggestions[0].field, "medical_history");
+  assert.equal(session.published.record.patient_age, "He is 67 years old.");
+  assert.deepEqual(session.server.follow_up_questions, raw.follow_up_questions);
+});
 function result(
   values = { location_text: "124 Oak Street" },
   text = "At 124 Oak Street",

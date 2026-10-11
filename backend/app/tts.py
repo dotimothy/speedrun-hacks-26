@@ -24,6 +24,7 @@ from pathlib import Path
 
 from .config import VOICES_DIR, settings
 from .schemas import ApprovedPhrase
+from .scenarios import QUESTIONS
 
 log = logging.getLogger("dispatchiq.tts")
 
@@ -40,6 +41,16 @@ APPROVED: dict[str, tuple[str, str]] = {
     "ask_injuries_en": ("en", "Is anyone hurt?"),
     "ask_safe_en": ("en", "Are you somewhere safe right now?"),
     "interpreter_en": ("en", "I am getting someone who speaks your language."),
+    # Said once, when every scripted question has an answer, immediately
+    # before the line is closed. In this prototype nothing is dispatched, so
+    # the wording stays with what is actually true: a dispatcher has the
+    # record. A deployment that really did dispatch would say so here.
+    "wrap_up_en": (
+        "en",
+        "Thank you, I have what I need. A dispatcher has your information "
+        "and help is on the way. Please stay safe, and call back if anything "
+        "changes.",
+    ),
     "stay_on_line_es": ("es", "Por favor, no cuelgue, quedese en la linea."),
     "what_happening_es": ("es", "Puede decirme que esta pasando ahora mismo?"),
     "repeat_address_es": ("es", "Puede repetir la direccion, por favor?"),
@@ -47,7 +58,18 @@ APPROVED: dict[str, tuple[str, str]] = {
     "ask_injuries_es": ("es", "Hay alguien herido?"),
     "ask_safe_es": ("es", "Esta en un lugar seguro ahora?"),
     "interpreter_es": ("es", "Estoy buscando a alguien que hable su idioma."),
+    "wrap_up_es": (
+        "es",
+        "Gracias, ya tengo la informacion. Un despachador la tiene y la ayuda "
+        "va en camino. Cuidese, y vuelva a llamar si algo cambia.",
+    ),
 }
+
+APPROVED.update({
+    f"ask_{name}_{language}": (language, texts[index])
+    for name, texts in QUESTIONS.items()
+    for index, language in enumerate(("en", "es"))
+})
 
 _voices: dict[str, object] = {}
 _load_error: str | None = None

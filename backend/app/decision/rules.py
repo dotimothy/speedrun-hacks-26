@@ -17,6 +17,7 @@ keyword sets are bilingual because the product claim is multilingual.
 """
 
 from __future__ import annotations
+from ..scenarios import OBSERVATION_FIELDS, extract_details
 
 import re
 import time
@@ -35,15 +36,15 @@ _PHONE = re.compile(
 
 _STREET_WORDS = (
     r"street|st\.?|avenue|ave\.?|road|rd\.?|boulevard|blvd\.?|drive|dr\.?|lane|ln\.?|"
-    r"way|court|ct\.?|place|pl\.?|highway|hwy\.?|apartment|apt\.?|unit|floor|"
-    r"calle|avenida|carrera|callejon|piso|apartamento|numero"
+    r"way|court|ct\.?|place|pl\.?|highway|hwy\.?|"
+    r"calle|avenida|carrera|callejon"
 )
 
 # "418 Alameda Street", "Calle Alameda 418", "apt 3B" -- a number adjacent to a
 # street word, in either order, which is how addresses appear in both languages.
 _ADDRESS = re.compile(
     rf"(?:\b(?:{_STREET_WORDS})\b[\s,]*[\w'-]*[\s,]*\d+[\w-]*"
-    rf"|\b\d+[\w-]*[\s,]+(?:[\w'-]+[\s,]+){{0,3}}?(?:{_STREET_WORDS})\b)",
+    rf"|\b\d+[\w-]*[\s,]+(?:[A-Za-zÀ-ÿ][\w'-]*[\s,]+){{0,3}}?(?:{_STREET_WORDS})\b)",
     re.IGNORECASE,
 )
 
@@ -126,6 +127,10 @@ def find_intersections(text: str, *, relaxed: bool = False) -> list[str]:
     honouring "actually, Pine and Main" and silently dropping it.
     """
     found: list[str] = []
+    # A named street suffix supplies location context even without an ordinal:
+    # "Birch Court and Holt" is a place, while "John and Mary" is not.
+    for match in re.finditer(rf"\b{_NAME}\s+(?i:{_STREET_WORDS})\s+{_SEP}\s+{_NAME}(?:\s+(?i:{_STREET_WORDS}))?", text):
+        found.append(match.group().strip(" ,."))
     for match in _INTERSECTION.finditer(text):
         if not (relaxed or _looks_like_intersection(match)):
             continue
@@ -158,6 +163,9 @@ def find_all_locations(text: str, *, relaxed: bool = False) -> list[str]:
     for pattern in (_ADDRESS, _STREET_WITH_NAME):
         for match in pattern.finditer(text):
             value = match.group(0).strip(" ,.")
+            after = text[match.end():match.end() + 70]
+            if re.match(r"[.,\s]*(?:that(?:'s| is)|this(?:'s| is)|it(?:'s| is))\s+not\s+(?:here|the (?:address|location)|where)", after, re.I):
+                continue
             if value and value not in found:
                 found.append(value)
     for value in find_intersections(text, relaxed=relaxed):
@@ -199,6 +207,7 @@ _INCIDENT_KEYWORDS: dict[str, tuple[str, ...]] = {
                        "fuego", "humo", "incendio", "llamas", "quemando"),
     "medical": ("chest pain", "not breathing", "unconscious", "bleeding", "seizure",
                 "heart attack", "stroke", "overdose", "collapsed",
+                "face is drooping", "face is… it's drooping", "blood on", "grabbed her chest", "grabbed his chest",
                 "dolor de pecho", "no respira", "inconsciente", "sangrando",
                 "convulsion", "infarto", "desmayo"),
     "traffic_collision": ("crash", "collision", "accident", "hit by a car", "rear-ended",
@@ -208,8 +217,17 @@ _INCIDENT_KEYWORDS: dict[str, tuple[str, ...]] = {
                           "robo", "asalto", "apunalado", "disparo", "intruso"),
     "gas_leak": ("gas leak", "smell gas", "smells like gas", "gas smell", "propane",
                  "fuga de gas", "huele a gas", "olor a gas"),
+    # Most water-rescue calls name the water, not the emergency: nobody says
+    # "drowning" while watching someone go under in a river. Without these the
+    # model's water_rescue answer had nothing in the transcript corroborating
+    # it and the confidence policy abstained, which is the policy working from
+    # a keyword list that was too thin.
     "water_rescue": ("drowning", "in the water", "swept away", "under the ice",
-                     "ahogando", "en el agua", "se ahoga"),
+                     "in the river", "into the river", "in the lake",
+                     "into the lake", "in the canal", "fell in", "went under",
+                     "strong current", "pulled under",
+                     "ahogando", "en el agua", "se ahoga", "en el rio",
+                     "al rio", "en el lago", "se hundio", "corriente fuerte"),
 }
 
 _HAZARD_KEYWORDS: dict[str, tuple[str, ...]] = {
@@ -260,17 +278,24 @@ _CALLER_NAME = re.compile(
 def find_name(text: str) -> str | None:
     match = _CALLER_NAME.search(text)
     if not match:
+        # Two capitalised names after self-identification, or a first name
+        # immediately restated as a full name ("Alex. Alex Rivera.").
+        match = re.search(r"\b(?i:I'm|I am)\s+([A-Z][a-z'-]+\s+[A-Z][a-z'-]+)(?=[.,!?])", text)
+    if not match:
+        match = re.search(r"\b([A-Z][a-z'-]+)\.\s+(\1\s+[A-Z][a-z'-]+)\.", text)
+        if match:
+            return match.group(2)
         return None
     return " ".join(part.capitalize() for part in match.group(1).split())
 
 
 def find_extent(text: str) -> str | None:
     low = text.lower()
-    if any(phrase in low for phrase in ("spreading", "spread to", "se extiende")):
+    if any(phrase in low for phrase in ("spreading", "spread to", "se extiende")) or re.search(r"not just .{0,35}(?:apartment|room).{0,15}anymore", low):
         return "spreading"
     if any(phrase in low for phrase in ("whole building", "entire building", "todo el edificio")):
         return "whole_building"
-    if any(phrase in low for phrase in ("one floor", "the floor", "upstairs", "piso")):
+    if any(phrase in low for phrase in ("one floor", "the floor", "upstairs", "piso")) or re.search(r"\b(?:first|second|third|fourth|fifth|\d+(?:st|nd|rd|th)) floor\b", low):
         return "one_floor"
     if any(phrase in low for phrase in ("kitchen", "one room", "the room", "departamento", "apartment")):
         return "one_room"
@@ -316,6 +341,8 @@ def find_complaint(text: str) -> str | None:
 
 def find_awake(text: str) -> str | None:
     low = text.lower()
+    if "eyes are open" in low or "eyes open" in low:
+        return "yes"
     if any(phrase in low for phrase in ("unconscious", "not awake", "collapsed", "inconsciente")):
         return "no"
     if re.search(r"\bawake\b", low):
@@ -339,7 +366,7 @@ def find_injuries(text: str) -> str | None:
     low = text.lower()
     if any(phrase in low for phrase in (
         "not breathing", "isn't breathing", "is not breathing", "unconscious", "collapsed",
-        "bleeding", "sangrando", "esta herida", "está herida",
+        "bleeding", "blood on", "sangrando", "esta herida", "está herida",
     )):
         return "confirmed"
     if any(phrase in low for phrase in ("chest pain", "dolor de pecho", "coughing", "tosiendo")):
@@ -388,6 +415,12 @@ class RuleEngine:
         joined = "\n".join(t for t in (original, english) if t)
 
         answers: dict[str, FieldAnswer] = {}
+        details = extract_details(haystack)
+        for label, quote in extract_details(english).items():
+            details.setdefault(label, quote)
+        for label, quote in details.items():
+            answers[label] = FieldAnswer(label=label, value=[quote] if label in OBSERVATION_FIELDS else quote,
+                                         quote=quote, decided_on="rules")
 
         # All candidates, not the first: the caller layer needs to see when a
         # transcript holds two different locations rather than silently

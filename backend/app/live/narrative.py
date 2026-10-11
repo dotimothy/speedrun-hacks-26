@@ -17,26 +17,8 @@ it is.
 from __future__ import annotations
 
 from .models import FieldValue, Presence
-
-# Order is narrative order, not form order: what happened, then where, then
-# who, then how to get back in touch.
-_SENTENCES: tuple[tuple[str, str], ...] = (
-    ("incident_type", "Reported incident: {value}."),
-    ("caller_name", "Caller: {value}."),
-    ("chief_complaint", "Chief complaint: {value}."),
-    ("awake", "Awake: {value}."),
-    ("breathing", "Breathing: {value}."),
-    ("occupancy", "Occupancy: {value}."),
-    ("fire_extent", "Fire extent: {value}."),
-    ("location_text", "Location: {value}."),
-    ("access_notes", "Access: {value}."),
-    ("injuries", "Injuries: {value}."),
-    ("persons_involved", "People involved: {value}."),
-    ("hazards", "Hazards mentioned: {value}."),
-    ("weapons_present", "Weapon mentioned: {value}."),
-    ("caller_safe", "Caller away from the danger: {value}."),
-    ("callback_number", "Callback number: {value}."),
-)
+from ..scenarios import DETAIL_LABELS, question_plan
+from ..decision.scenario_tasks import DECISION_LABELS
 
 _LABELS = {
     "incident_type": "Reported incident",
@@ -55,6 +37,18 @@ _LABELS = {
     "caller_safe": "Caller away from the danger",
     "callback_number": "Callback number",
 }
+_LABELS.update(DETAIL_LABELS)
+_LABELS.update(DECISION_LABELS)
+
+_SECTIONS = (
+    ("Incident and contact", ("incident_type", "location_text", "caller_name", "callback_number", "incident_timing", "access_notes")),
+    ("People and reported conditions", ("persons_involved", "injuries", "caller_safe", "people_accounted_for")),
+    ("Caller observations", ("symptom_details", "fire_observations", "scene_hazards", "location_context", "people_details")),
+    ("Scenario details", ("chief_complaint", "awake", "breathing", "patient_age", "medical_history", "occupancy", "fire_extent", "vehicle_details", "road_conditions", "suspect_description", "suspect_location", "gas_source", "water_conditions", "last_seen")),
+    ("Hazards reported", ("hazards", "weapons_present")),
+    ("Reviewed scenario decisions", tuple(DECISION_LABELS)),
+    ("Decision follow-up details", ("occupant_last_seen", "symptom_changes", "trapped_vehicle_location", "affected_lanes", "departure_direction", "person_whereabouts", "reported_symptoms")),
+)
 
 
 def _render(value: object) -> str:
@@ -74,19 +68,33 @@ def render(
     """Build the draft from accepted values only."""
     lines: list[str] = []
 
-    for name, template in _SENTENCES:
-        value = accepted.get(name)
-        if value is None or value.presence is Presence.UNKNOWN:
-            # Named and marked, not dropped.
-            lines.append(f"{_LABELS[name]}: not stated.")
-            continue
-        if value.presence is Presence.STATED_ABSENT:
-            reason = value.note or "caller stated there is none"
-            lines.append(f"{_LABELS[name]}: none — {reason}.")
-            continue
-        lines.append(template.format(value=_render(value.value)))
+    incident = accepted.get("incident_type")
+    relevant = {name for name, _ in question_plan(incident.value if incident else "",
+                {name: item.value for name, item in accepted.items() if item.presence == Presence.STATED})}
+    for title, names in _SECTIONS:
+        section = []
+        for name in names:
+            value = accepted.get(name)
+            if title in {"Caller observations", "Scenario details", "Reviewed scenario decisions", "Decision follow-up details"} and name not in relevant and value is None:
+                continue
+            if value is None or value.presence is Presence.UNKNOWN:
+                section.append(f"{_LABELS[name]}: not stated.")
+            elif value.presence is Presence.STATED_ABSENT:
+                reason = value.note or "caller stated there is none"
+                section.append(f"{_LABELS[name]}: none — {reason}.")
+            else:
+                section.append(f"{_LABELS[name]}: {_render(value.value).rstrip('.')}.")
+        if section:
+            lines.append(title + "\n" + "\n".join(section))
+    body = "\n\n".join(lines)
 
-    body = " ".join(lines)
+    corrections = [
+        f"{_LABELS.get(name, name.replace('_', ' '))}: "
+        + " → ".join(_render(entry.value) for entry in item.history)
+        for name, item in accepted.items() if len(item.history) > 1
+    ]
+    if corrections:
+        body += "\n\nRecord revisions\n" + "\n".join(corrections)
 
     if unresolved:
         body += "\n\nStill unresolved: " + "; ".join(unresolved) + "."

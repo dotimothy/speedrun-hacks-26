@@ -85,8 +85,9 @@ export interface ModelInfo {
   whisper_sizes: string[]
   whisper_default: string
   whisper_loaded: string[]
-  decision_engines: string[]
+  decision_engines: (string | { name: string; model?: string; is_local?: boolean; ready?: boolean; error?: string; note?: string })[]
   decision_default: string
+  cloud_inference_enabled?: boolean
   thresholds: Record<string, number>
 }
 

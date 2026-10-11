@@ -10,6 +10,49 @@ export const wireFields: Record<Field, string> = {
   hazards: "hazards",
   weapons: "weapons_present",
   safety: "caller_safe",
+  caller_name: "caller_name",
+  chief_complaint: "chief_complaint",
+  awake: "awake",
+  breathing: "breathing",
+  occupancy: "occupancy",
+  fire_extent: "fire_extent",
+  incident_timing: "incident_timing",
+  patient_age: "patient_age",
+  medical_history: "medical_history",
+  vehicle_details: "vehicle_details",
+  road_conditions: "road_conditions",
+  people_accounted_for: "people_accounted_for",
+  suspect_description: "suspect_description",
+  suspect_location: "suspect_location",
+  gas_source: "gas_source",
+  water_conditions: "water_conditions",
+  last_seen: "last_seen",
+  fire_occupants: "fire_occupants",
+  medical_course: "medical_course",
+  collision_entrapment: "collision_entrapment",
+  collision_road_blockage: "collision_road_blockage",
+  crime_presence: "crime_presence",
+  crime_activity: "crime_activity",
+  gas_location: "gas_location",
+  gas_exposure: "gas_exposure",
+  water_visibility: "water_visibility",
+  water_motion: "water_motion",
+  symptom_details: "symptom_details",
+  fire_observations: "fire_observations",
+  scene_hazards: "scene_hazards",
+  location_context: "location_context",
+  people_details: "people_details",
+
+  occupant_last_seen: "occupant_last_seen",
+  symptom_changes: "symptom_changes",
+  trapped_vehicle_location: "trapped_vehicle_location",
+  affected_lanes: "affected_lanes",
+  departure_direction: "departure_direction",
+  person_whereabouts: "person_whereabouts",
+  reported_symptoms: "reported_symptoms",
+
+
+
 };
 const fieldFor = (name: string) =>
   (Object.keys(wireFields) as Field[]).find((f) => wireFields[f] === name);
@@ -37,6 +80,7 @@ interface WireSuggestion {
 }
 export interface Snapshot {
   session_id: string;
+  decision_engine?: string | null;
   revision: number;
   event_seq: number;
   detected_language: string | null;
@@ -58,6 +102,14 @@ export interface Snapshot {
     }
   >;
   suggestions: WireSuggestion[];
+  relevant_fields?: string[];
+  decision_focus?: {
+    scenario: string;
+    title: string;
+    purpose: string;
+    decisions: { field: string; label: string; value: unknown; status: string; suggestion_id: string | null }[];
+  } | null;
+  follow_up_questions?: { field: string; phrase_id: string; text: string; reason: string }[];
   narrative: { text: string; edited: boolean; editor_text: string | null };
   published: {
     id: string;
@@ -94,11 +146,12 @@ export function validateSnapshot(raw: unknown): Snapshot {
     throw new Error("The API did not return a v2 session snapshot.");
   return r;
 }
-function display(value: unknown): string {
+const observationFields = ["symptom_details", "fire_observations", "scene_hazards", "location_context", "people_details"];
+function display(value: unknown, field?: string): string {
   if (value == null) return "Not stated";
   if (Array.isArray(value))
     return value.length
-      ? value.map(String).join(", ").replace(/_/g, " ")
+      ? value.map(String).join(field && observationFields.includes(field) ? "\n" : ", ").replace(/_/g, " ")
       : "None stated";
   return String(value).replace(/_/g, " ");
 }
@@ -111,7 +164,7 @@ export function adaptSnapshot(raw: Snapshot, mode: Mode): Session {
       record[field] =
         item.presence === "stated_absent"
           ? "Stated absent"
-          : display(item.value);
+          : display(item.value, name);
     for (const entry of item.history ?? [])
       history.push({
         revision: entry.revision,
@@ -131,14 +184,14 @@ export function adaptSnapshot(raw: Snapshot, mode: Mode): Session {
         value:
           item.kind === "conflict"
             ? "Statements disagree"
-            : display(item.proposed_value),
+            : display(item.proposed_value, item.field),
         source: e ? sourceIndex(e.segment_id) : -1,
         kind: item.kind === "confirmation" ? "addition" : item.kind,
         status: item.status,
         rawValue: item.proposed_value,
         options: item.conflict_options.map((o) => ({
           id: o.option_id,
-          value: display(o.value),
+          value: display(o.value, item.field),
           statement: o.statement,
           source: sourceIndex(o.segment_id),
         })),
@@ -160,7 +213,7 @@ export function adaptSnapshot(raw: Snapshot, mode: Mode): Session {
   if (latest)
     for (const [name, value] of Object.entries(latest.record)) {
       const field = fieldFor(name);
-      if (field && value != null) publishedRecord[field] = display(value);
+      if (field && value != null) publishedRecord[field] = display(value, name);
     }
   return {
     id: raw.session_id,
@@ -255,6 +308,19 @@ function serialize<T>(id: string, task: () => Promise<T>): Promise<T> {
     .catch(() => undefined);
   return next;
 }
+/** Read a session, or null if it is gone. Never creates one. */
+export async function readSession(
+  id: string,
+  signal: AbortSignal,
+): Promise<Snapshot | null> {
+  const response = await fetch(`/api/v2/sessions/${encodeURIComponent(id)}`, {
+    signal,
+  });
+  if (response.status === 404) return null;
+  if (!response.ok)
+    throw new Error(`Could not load session (${response.status}).`);
+  return validateSnapshot(await response.json());
+}
 export async function ensureSession(
   id: string,
   signal: AbortSignal,
@@ -276,7 +342,17 @@ export type Utterance = {
   speaker: Speaker;
   startMs?: number;
   endMs?: number;
+  decisionEngine?: string;
+  whisperSize?: string;
 };
+export function setSessionEngine(id: string, engine: string, signal: AbortSignal): Promise<Snapshot> {
+  return serialize(id, async () => {
+    await ensureSession(id, signal);
+    const result = await request(`/sessions/${encodeURIComponent(id)}/settings`,
+      { decision_engine: engine || null }, "POST", signal);
+    return validateSnapshot(result.snapshot);
+  });
+}
 export function appendUtterance(
   id: string,
   utterance: Utterance,
@@ -289,7 +365,8 @@ export function appendUtterance(
       speaker: utterance.speaker,
       start_ms: utterance.startMs,
       end_ms: utterance.endMs,
-      whisper_size: "small",
+      whisper_size: utterance.whisperSize ?? "small",
+      decision_engine: utterance.decisionEngine || undefined,
       ...(typeof utterance.input === "string" ? { text: utterance.input } : {}),
     };
     let body: unknown = payload;
@@ -395,12 +472,14 @@ function typedValue(field: Field, value: string): unknown {
       throw new Error("People mentioned must be a non-negative whole number.");
     return count;
   }
+  if (observationFields.includes(field))
+    return value.split("\n").map(s => s.trim()).filter(Boolean);
   if (field === "hazards" || field === "access")
     return value
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
-  if (["incident", "injuries", "weapons", "safety"].includes(field))
+  if (["incident", "injuries", "weapons", "safety", "chief_complaint", "awake", "breathing", "occupancy", "fire_extent", "fire_occupants", "medical_course", "collision_entrapment", "collision_road_blockage", "crime_presence", "crime_activity", "gas_location", "gas_exposure", "water_visibility", "water_motion"].includes(field))
     return value.trim().replace(/ /g, "_");
   return value.trim();
 }

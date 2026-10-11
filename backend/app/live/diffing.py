@@ -81,7 +81,7 @@ def cp_to_utf16(text: str, index: int) -> int:
 # is multilingual and a Spanish correction must not read as a contradiction.
 _CORRECTION_CUE = re.compile(
     r"\b(sorry|sorry,|actually|i meant|i mean|no wait|wait,? no|scratch that|"
-    r"correction|not\s+\w+|rather|make that|"
+    r"correction|rather|make that|"
     r"perd[oó]n|disculpe|digo|quise decir|no es|mejor dicho|me equivoqu[eé])\b",
     re.IGNORECASE,
 )
@@ -258,6 +258,30 @@ def build_suggestions(
             outcome.suggestions.append(suggestion)
             handled.add(name)
 
+    # Supplement typed decisions with verbatim details from this utterance.
+    # These follow the same review/correction lifecycle as every other field.
+    from ..decision.scenario_tasks import DECISIONS
+    from ..scenarios import DETAIL_LABELS, OBSERVATION_FIELDS, extract_details
+    details = extract_details(segment.original_text)
+    if segment.translation:
+        for name, quote in extract_details(segment.translation).items():
+            details.setdefault(name, quote)
+    incident = next((p.value for p in predictions if p.label == "incident_type"), None)
+    if not incident or incident == "unknown":
+        incident = accepted.get("incident_type").value if accepted.get("incident_type") else None
+    # Quoted observations remain useful while classification is uncertain.
+    # Avoid unrelated structured slots (e.g. "Willow Lane" as road damage).
+    from ..scenarios import SCENARIO_FIELDS, DECISION_BRANCHES
+    if incident in SCENARIO_FIELDS:
+        scoped = {name for fields in SCENARIO_FIELDS.values() for name in fields}
+        scoped.update(target for _, _, target, _ in DECISION_BRANCHES)
+        allowed = set(SCENARIO_FIELDS[incident]) | OBSERVATION_FIELDS
+        allowed.update(target for decision, _, target, _ in DECISION_BRANCHES if DECISIONS[decision][0] == incident)
+        details = {name: quote for name, quote in details.items() if name not in scoped or name in allowed}
+    predictions = [p for p in predictions if p.label not in DETAIL_LABELS]
+    predictions += [Prediction(label=name, value=[quote] if name in OBSERVATION_FIELDS else quote, score=0.7,
+                               decided_on="rules") for name, quote in details.items()]
+
     for prediction in predictions:
         name = prediction.label
         if name in handled:
@@ -274,6 +298,18 @@ def build_suggestions(
 
         current = accepted.get(name)
         evidence = _evidence_for_prediction(prediction, segment)
+        if name in DECISIONS and evidence is None:
+            # A cumulative model interpretation cannot be attributed to an
+            # unrelated later utterance, or proposed without located context.
+            continue
+        if name in details:
+            evidence = _locate_in_segment(segment_text, details[name], segment)
+            if evidence is None:
+                # The value may join non-adjacent sentences. Cite the source
+                # utterance containing them all instead of claiming one is all.
+                body = (segment.original_text if name in extract_details(segment.original_text)
+                        else segment.translation or "")
+                evidence = _locate_in_segment(segment_text, body, segment)
         # The cumulative extractor may return the first address ever heard.
         # A single explicit value in this caller utterance must be the new
         # side of a conflict, not the old value paired with a new quotation.
@@ -300,15 +336,34 @@ def build_suggestions(
             continue
 
         # Rule 3: a list field gains items rather than being replaced.
-        if name in LIST_FIELDS and isinstance(value, list):
+        if name in LIST_FIELDS | OBSERVATION_FIELDS and isinstance(value, list):
+            existing = pending_by_field.get(name)
+            if name in OBSERVATION_FIELDS and cue and current is not None:
+                # A retraction is reviewable as a correction; do not silently
+                # merge a statement with the observation it retracts.
+                suggestion = _make(next_id, name, value, UpdateKind.CORRECTION,
+                                   base_revision, prediction, evidence, previous=current.value)
+                if _supersede_or_conflict(outcome, existing, suggestion, segment):
+                    outcome.suggestions.append(suggestion)
+                continue
             known = set(current.value or []) if current and isinstance(current.value, list) else set()
+            if existing and isinstance(existing.proposed_value, list):
+                known.update(existing.proposed_value)
             added = [item for item in value if item not in known]
             if not added:
                 continue
-            suggestion = _make(next_id, name, sorted(known | set(added)),
+            prior = list(current.value or []) if current and isinstance(current.value, list) else []
+            if existing and isinstance(existing.proposed_value, list):
+                prior.extend(existing.proposed_value)
+            combined = list(dict.fromkeys([*prior, *added]))
+            if name not in OBSERVATION_FIELDS:
+                combined = sorted(combined)
+            suggestion = _make(next_id, name, combined,
                                UpdateKind.ADDITION, base_revision, prediction, evidence,
                                previous=current.value if current else None)
-            if _supersede_or_conflict(outcome, pending_by_field.get(name), suggestion, segment):
+            if existing and name in OBSERVATION_FIELDS:
+                suggestion.evidence = [*existing.evidence, *suggestion.evidence]
+            if _supersede_or_conflict(outcome, existing, suggestion, segment):
                 outcome.suggestions.append(suggestion)
             continue
 

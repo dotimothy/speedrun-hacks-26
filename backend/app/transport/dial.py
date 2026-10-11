@@ -196,13 +196,13 @@ class DialSession:
             )
             self.rejected = True
             self.ended = True
-            return [json.dumps({"type": "end_call"})]
+            return [end_call_frame()]
         self.reconnect = bool(frame.get("reconnect", False))
         for name in (self.inbound_format, self.outbound_format):
             if name not in SUPPORTED_FORMATS:
                 log.error("call %s uses unsupported format %s", self.call_id, name)
                 self.ended = True
-                return [json.dumps({"type": "end_call"})]
+                return [end_call_frame()]
         return []
 
     def _media(self, raw: str, frame: dict) -> list[str]:
@@ -254,6 +254,11 @@ def reply_frames(wav_bytes: bytes, outbound_format: str = "mulaw_8000") -> list[
         )
         for i in range(0, len(data), chunk)
     ]
+
+
+def end_call_frame() -> str:
+    """Ask Dial to hang up. Used to reject a call and to close a finished one."""
+    return json.dumps({"type": "end_call"})
 
 
 def clear_frame() -> str:

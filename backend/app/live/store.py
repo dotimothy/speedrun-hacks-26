@@ -274,7 +274,11 @@ class SessionStore:
             presence=presence,
             revision=snapshot.revision,
             source_segment_ids=(
-                [e.segment_id for e in suggestion.evidence] if suggestion else []
+                list(dict.fromkeys([
+                    *(existing.source_segment_ids if existing and suggestion and
+                      suggestion.kind is UpdateKind.ADDITION and isinstance(value, list) else []),
+                    *([e.segment_id for e in suggestion.evidence] if suggestion else []),
+                ]))
             ),
             suggestion_id=suggestion.id if suggestion else None,
             edited=edited,
@@ -489,6 +493,13 @@ class SessionStore:
         snapshot.narrative.edited = True
         snapshot.narrative.editor_text = text
         snapshot.event_seq += 1
+        return snapshot
+
+    def set_decision_engine(self, session_id: str, engine: str | None) -> SessionSnapshot:
+        snapshot = self._state(session_id).snapshot
+        if snapshot.decision_engine != engine:
+            snapshot.decision_engine = engine
+            snapshot.event_seq += 1
         return snapshot
 
     def regenerate_narrative(self, session_id: str, text: str) -> None:

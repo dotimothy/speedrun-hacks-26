@@ -8,6 +8,9 @@ paced at 20 ms per frame. Two things make it more than a send loop:
 * **Decisions.** Every ``decide_every_s`` seconds of caller audio, the loop asks
   ``choose_reply`` whether to speak. That callback is where the pipeline plugs
   in. The loop itself only knows about approved phrases and their audio.
+* **Closing.** ``should_end`` lets the pipeline say the call is finished. The
+  loop still waits for the reply queue to drain before hanging up, so the last
+  thing the caller hears is a complete sentence rather than a cut-off one.
 
 Receiving never waits on sending: the sender runs as its own task, so a long
 reply cannot delay the caller's audio being read.
@@ -23,7 +26,7 @@ import struct
 import wave
 from typing import Awaitable, Callable
 
-from .dial import FRAME_MS, DialSession, clear_frame, reply_frames
+from .dial import FRAME_MS, DialSession, clear_frame, end_call_frame, reply_frames
 
 log = logging.getLogger("dispatchiq.dial")
 
@@ -31,6 +34,7 @@ Receive = Callable[[], Awaitable[str]]
 Send = Callable[[str], Awaitable[None]]
 Synthesize = Callable[[str], bytes | None]  # approved phrase id -> WAV bytes
 ChooseReply = Callable[[DialSession], Awaitable[str | None]]
+ShouldEnd = Callable[[], bool]
 
 
 def rms(pcm16: bytes) -> float:
@@ -49,6 +53,7 @@ class CallLoop:
         send: Send,
         synthesize: Synthesize,
         choose_reply: ChooseReply | None = None,
+        should_end: ShouldEnd | None = None,
         opening_phrase: str | None = None,
         barge_in_rms: float = 600.0,
         decide_every_s: float = 3.0,
@@ -57,6 +62,7 @@ class CallLoop:
         self.session = session
         self.synthesize = synthesize
         self.choose_reply = choose_reply
+        self.should_end = should_end
         self.opening_phrase = opening_phrase
         self.barge_in_rms = barge_in_rms
         self.decide_every_s = decide_every_s
@@ -100,6 +106,8 @@ class CallLoop:
                 if heard and self.speaking and rms(heard) >= self.barge_in_rms:
                     await self._barge_in()
                 await self._maybe_decide()
+                if await self._maybe_hang_up():
+                    break
         finally:
             sender.cancel()
             with contextlib.suppress(asyncio.CancelledError):
@@ -115,6 +123,20 @@ class CallLoop:
         phrase_id = await self.choose_reply(self.session)
         if phrase_id is not None:
             self._speak(phrase_id)
+
+    async def _maybe_hang_up(self) -> bool:
+        """Close the call once the pipeline is done and the line is quiet.
+
+        Waiting on ``speaking`` matters: hanging up the moment the closing
+        phrase is queued would cut the caller off mid-reassurance, which is
+        worse than not saying it at all.
+        """
+        if self.should_end is None or self.speaking or not self.should_end():
+            return False
+        log.info("call %s: pipeline finished, ending the call", self.session.call_id)
+        self.session.ended = True
+        await self._send(end_call_frame())
+        return True
 
     def _speak(self, phrase_id: str) -> None:
         """Queue an approved phrase's audio. A bad or missing reply is skipped."""

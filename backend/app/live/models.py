@@ -39,7 +39,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 
 def utcnow() -> str:
@@ -419,6 +419,8 @@ class SessionSnapshot(BaseModel):
     event_seq: int = 0
     created_at: str = Field(default_factory=utcnow)
     closed: bool = False
+    # Per-session override. None follows the deployment default.
+    decision_engine: str | None = None
 
     segments: list[Segment] = Field(default_factory=list)
     accepted_record: dict[str, FieldValue] = Field(default_factory=dict)
@@ -433,6 +435,31 @@ class SessionSnapshot(BaseModel):
     language_probability: float | None = None
 
     diagnostics: Diagnostics = Field(default_factory=Diagnostics)
+
+    @computed_field
+    @property
+    def follow_up_questions(self) -> list[dict]:
+        from .followup import follow_up_questions
+        return follow_up_questions(self)
+
+    @computed_field
+    @property
+    def decision_focus(self) -> dict | None:
+        from .followup import decision_focus
+        return decision_focus(self)
+
+    @computed_field
+    @property
+    def relevant_fields(self) -> list[str]:
+        from .followup import observed
+        from ..scenarios import question_plan
+        values = observed(self)
+        return list(dict.fromkeys([
+            "location_text", "callback_number", "incident_type", "caller_name",
+            "persons_involved", "access_notes", "injuries", "hazards", "caller_safe",
+            *(name for name, _ in question_plan(values.get("incident_type"), values)),
+            *self.accepted_record, *(s.field for s in self.pending),
+        ]))
 
     @property
     def pending(self) -> list[Suggestion]:

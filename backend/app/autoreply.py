@@ -34,6 +34,7 @@ from dataclasses import dataclass
 
 from .schemas import SuggestedAction
 from .workflow import is_unknown
+from .scenarios import BASE_QUESTIONS, known, question_plan
 
 # Actions during which the system stays silent, and why.
 SILENT_ACTIONS: dict[str, str] = {
@@ -50,13 +51,7 @@ SILENT_ACTIONS: dict[str, str] = {
 
 # Which question to ask for a missing field, in the order we would ask them.
 # Location first: it is the field a call cannot do without.
-FIELD_PHRASES: tuple[tuple[str, str], ...] = (
-    ("location_text", "repeat_address"),
-    ("incident_type", "what_happening"),
-    ("callback_number", "ask_callback"),
-    ("injuries", "ask_injuries"),
-    ("caller_safe", "ask_safe"),
-)
+FIELD_PHRASES = BASE_QUESTIONS
 
 SUPPORTED_LANGUAGES = ("en", "es")
 
@@ -106,8 +101,11 @@ def decide(
 
     by_label = {getattr(p, "label", None): p for p in predictions}
 
-    for field, base in FIELD_PHRASES:
-        if field in confirmed:
+    incident = confirmed.get("incident_type", getattr(by_label.get("incident_type"), "value", None))
+    values = {name: getattr(prediction, "value", None) for name, prediction in by_label.items()}
+    values.update(confirmed)
+    for field, base in question_plan(incident, values):
+        if field in confirmed and known(confirmed[field]):
             continue
         prediction = by_label.get(field)
         if prediction is None or is_unknown(getattr(prediction, "value", None)):
