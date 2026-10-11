@@ -35,6 +35,11 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+# Line-buffered: this script's whole job is to print an address and a phone
+# number, and a block-buffered pipe means neither appears until it exits --
+# which it does not, because it waits for Ctrl+C.
+sys.stdout.reconfigure(line_buffering=True)
+
 REPO = Path(__file__).resolve().parents[1]
 API = "https://api.getdial.ai/api/v1"
 USER_AGENT = "dispatchiq-dial-demo/1.0"
@@ -127,8 +132,18 @@ def backend_is_up() -> bool:
 def start_tunnel() -> tuple[subprocess.Popen, str]:
     """Open a quick tunnel to the backend and return its public hostname."""
     target = backend_url() or f"http://127.0.0.1:{BACKEND_PORT}"
+
+    # cloudflared verifies the ORIGIN's certificate, and ours is the
+    # self-signed one from scripts/make_cert.py. Without this the tunnel
+    # comes up, Dial connects to it happily, and every request dies at the
+    # last hop -- a call that rings and then hears nothing, with the failure
+    # two layers away from anything the dashboard can show.
+    command = [cloudflared_path(), "tunnel", "--url", target, "--no-autoupdate"]
+    if target.startswith("https://"):
+        command.insert(2, "--no-tls-verify")
+
     process = subprocess.Popen(
-        [cloudflared_path(), "tunnel", "--url", target, "--no-autoupdate"],
+        command,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,

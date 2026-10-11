@@ -11,3 +11,6 @@ voices/
 !.env.example
 certs/
 frontend/tsconfig.tsbuildinfo
+
+# Personal Claude Code settings (may grant local capabilities)
+.claude/settings.local.json
