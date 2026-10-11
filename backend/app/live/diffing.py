@@ -275,6 +275,17 @@ def build_suggestions(
 
         current = accepted.get(name)
         evidence = _evidence_for_prediction(prediction, segment)
+        # The cumulative extractor may return the first address ever heard.
+        # A single explicit value in this caller utterance must be the new
+        # side of a conflict, not the old value paired with a new quotation.
+        if name in {"location_text", "callback_number"}:
+            from ..decision.rules import find_all_locations, find_all_phones
+            candidates = (find_all_locations(segment_text) if name == "location_text"
+                          else find_all_phones(segment_text))
+            candidates = list(dict.fromkeys(candidates))
+            if len(candidates) == 1:
+                value = candidates[0]
+                evidence = _locate_in_segment(segment_text, value, segment)
 
         # Rule 2: already accepted and unchanged -- strengthen, do not restate.
         if current is not None and current.value == value:
@@ -321,7 +332,7 @@ def build_suggestions(
             suggestion.conflict_options = [
                 ConflictOption(option_id="accepted", value=current.value,
                                statement=str(current.value),
-                               segment_id=(current.source_segment_ids or [segment.id])[0]),
+                               segment_id=(current.source_segment_ids or [""])[0]),
                 ConflictOption(option_id="new", value=value, statement=segment_text,
                                segment_id=segment.id, evidence=evidence),
             ]

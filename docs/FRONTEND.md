@@ -1,8 +1,8 @@
 # Call-taking workspace
 
-Run `npm ci` and `npm run dev` in `frontend`. The default route opens a self-contained scripted rehearsal. The input selector also offers **Microphone / WAV** and **Transcript** modes connected to the current `/api/process` endpoint. `?view=pipeline` keeps the original pipeline inspector available.
+Run `npm ci` and `npm run dev` in `frontend`. The default workspace uses live microphone input; `?input=transcript` opens typed utterance input. Both use `/api/v2`. Scripted rehearsal remains an explicitly selected development fixture. `?view=pipeline` opens the older v1 inspector.
 
-The API defaults to `http://127.0.0.1:8000`. To connect a teammate's API, copy `frontend/.env.example` to `frontend/.env.local`, set `DISPATCHIQ_API_TARGET`, and restart Vite. The development proxy keeps frontend requests same-origin. Deployment needs equivalent `/api` routing.
+The API defaults to `http://127.0.0.1:8000`. To connect a teammate's API, copy `frontend/.env.example` to `frontend/.env.local`, set `DISPATCHIQ_API_TARGET`, and restart Vite. Deployment needs equivalent `/api` routing. On a backend with models installed, start it using the repository setup instructions. The default decision engine is Laya; the frontend follows deployment configuration rather than silently choosing an alternative.
 
 The design uses one connected workspace: a white accepted incident record, a dark slate bilingual conversation panel, and a pale blue review column. Blue identifies review actions; green is reserved for accepted status. The header shows accepted location and publication state. Source inspection expands original Spanish and illustrative English inline; corrections separate the current record from the proposed replacement. Amber marks caller corrections. Desktop keeps all three visible; narrow layouts stack them. Source selection persists and is keyboard accessible. Status is communicated with words, not only color. Typography uses DM Sans and IBM Plex Mono when the Google Fonts request succeeds, with system fallbacks.
 
@@ -18,34 +18,38 @@ The design uses one connected workspace: a white accepted incident record, a dar
 
 Play scenario advances the scripted text every 6.5 seconds. Displayed timestamps are source-script timestamps, not measured latency or wall-clock call duration. The scripted rehearsal has no audio; switch input mode for microphone capture or WAV playback. Translation is illustrative, not interpreter-verified. Accepted means operator-reviewed; it does not assert translation verification or dispatch clearance.
 
-## Backend integration boundary
+## V2 integration
 
-`src/workspace/session.ts` owns review state and converts full API responses into proposals. `backend.ts` validates responses and handles transport. `Intake.tsx` owns capture, upload, transcript submission, serialized requests, retry, timeout, and resource cleanup.
+`workspace/v2.ts` handles server snapshots, typed field mapping, serialized writes, stable operation IDs, and 409 conflict recovery. The browser renders server state; accept/edit/reject, manual entry, conflict resolution, narratives, and publication go through the v2 API. Incoming snapshots use `event_seq` to prevent older responses rolling back the screen. Scripted rehearsal still uses the local reducer.
 
 ### Live workflow
 
-1. Switch input to Microphone / WAV and start capture or upload a synthetic WAV (maximum 30 MB). Microphone access requires localhost or HTTPS. A level meter shows input; completed recordings have native playback controls.
-2. Capture sends the accumulated recording every five seconds when no request is active. Stop closes the microphone, waits for any in-flight request, then submits one final snapshot under the **same session ID**. This is polling, not streaming transcription; model processing can take longer than five seconds.
-3. Transcript mode accepts the full conversation so far and repeated revisions, bypassing speech recognition and translation.
-4. Changed transcripts are immutable snapshots. The API provides neither speaker attribution nor utterance timestamps. Labels describe capture/update time; evidence cannot seek to an exact audio moment.
-5. Returned fields become proposals. Identical passes do not recreate reviewed proposals. Changed values supersede pending proposals without overwriting accepted values. Missing/unknown predictions withdraw pending proposals without clearing the record. Stale sequences and wrong-session responses are ignored.
-6. Accept, edit, dismiss, or manually enter information. Source context distinguishes original from English and labels keyword evidence as context, not a model explanation. Incoming snapshots do not move the transcript while an older source is selected.
-7. Publish a local snapshot. Receiving desk, Copy brief, and Download record use this version. Later results, decisions, or notes cannot change it without another publication. Unresolved items are frozen with the version.
-8. New session clears memory, asks before discarding work, and is disabled during capture/processing. Refresh does not persist state.
+1. Start microphone capture, select the speaker before recording, and press **Send utterance** at a natural pause. Capture continues while the submitted utterance is processed. **Stop recording** sends only the remaining audio. The full recording remains available for local playback.
+2. Each audio sample is submitted once, rather than repeatedly sending the accumulated call. Failed utterances stay queued and retry with their original client IDs. A WAV upload is treated as one utterance; use single-speaker synthetic input.
+3. Transcript mode sends only the next statement. The backend maintains conversation context. Attribution is manual; caller, call taker, interpreter, and mixed/unknown input are distinguished. Only caller input creates proposals.
+4. Inspect original or translated evidence; accept/edit/dismiss proposals. Conflicts require an explicit choice between statements. Reviews don't rerun model inference. An edit interrupted by a superseding proposal stays visible as a manual-entry draft.
+5. Inspect the generated narrative or enter a full replacement. Publish sends the reviewed record to the server receiving inbox; the frontend reads that inbox after publication. Copy/download uses the published record.
+6. Server records survive switching to another call in the browser, but not a backend restart. Call-history/resume UI and automatic multi-client refresh are not wired yet. Browser refresh currently opens a new call. Browser audio is memory-only.
 
-Mapped API fields: location, callback, incident type, people, injuries, hazards, weapons, and caller safety. Access/whereabouts remains manual until the backend exposes it. Rule and model results receive the same human review flow.
+Mapped fields include location, callback, incident type, people, access notes, injuries, hazards, weapons, and caller safety. Input attribution is not diarization. The frontend labels segments by utterance order: the backend's audio offsets are not yet sufficiently aligned with full-recording playback for source seeking. Continuous automatic utterance segmentation remains future work.
 
-### Remaining backend boundary
+### Backend fixes found during integration
 
-Human review, generated suggestion IDs, history, and publication are **local browser state**. No `/api/confirm` calls are made, keeping extraction separate from reviewed values. Issue #1 still defines the desired durable session API: stable source/suggestion IDs, authoritative revisions, review operations, and publication snapshots. This adapter does not implement server persistence, multi-operator coordination, or reconnect recovery. Existing pipeline `api.ts` remains unchanged. Autonomous replies from the newer backend are outside this documentation workflow.
+- Reject stale publication revisions instead of silently sharing a newer record.
+- Use a fresh explicit address/phone in a caller utterance when constructing conflict choices; the cumulative rule extractor otherwise returns the first value in the call.
+- Exclude operator/interpreter/unknown segments from suggestion diffing, including correction-cue detection.
 
-The workspace has no CAD vendor connection, unit assignments, escalation advice, or emergency response actions. No measured time-saving claim is displayed.
+The workspace has no CAD vendor connection or unit-dispatch actions. Autonomous replies are outside the operator documentation flow.
 
 ## Validation
 
-`npm test` covers scripted/live correction protection, repeated proposals, rejected/edited decisions, wrong-session and stale results, withdrawals, publication isolation, malformed API responses, transcript/WAV request contracts, microphone permission denial, late permission grants, and final-capture cleanup. Microphone tests use mocked Web Audio; they do not verify real device behavior. `npm run build` checks TypeScript and produces the Vite build.
+`npm test` covers state transitions, publication protection, transport errors, and mocked microphone lifecycle, including non-overlapping utterance extraction. `npm run build` checks TypeScript and the Vite bundle.
 
-Browser visual/interaction QA and end-to-end model processing remain unverified. The host is below the user's 20 GiB free-space threshold, so no automated browser was launched. Scripted rehearsal runs without a backend; other modes require the configured API.
+Run the backend session suites with `PYTHONPATH=backend python -m pytest backend/tests/test_live_api.py backend/tests/test_live_store.py backend/tests/test_live_diffing.py`. They do not require model weights.
+
+`PYTHONPATH=backend V2_PYTHON=/path/to/python node frontend/tests/v2.integration.cjs` starts a temporary API, exercises real HTTP through the frontend adapter, and terminates the API afterward. It checks create, append, deduplication, accept, caller correction, operator exclusion, publication/inbox, stale publication rejection, and conflict resolution. It uses real rules/session state, not Laya or Whisper. The Python environment needs FastAPI, uvicorn, pydantic, python-multipart, httpx, and pytest.
+
+Actual microphone/ASR/Laya execution and browser interaction QA remain unverified. Browser testing is blocked by the user's 20 GiB disk-space safeguard.
 
 ## Design exclusions
 

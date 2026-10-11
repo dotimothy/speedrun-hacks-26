@@ -87,6 +87,7 @@ export class Recorder {
   private meterBuffer: Float32Array = new Float32Array(0);
   private startedAt = 0;
   private generation = 0;
+  private sentChunks = 0;
 
   get recording(): boolean {
     return this.context !== null;
@@ -115,6 +116,7 @@ export class Recorder {
   async start(): Promise<void> {
     const generation = ++this.generation;
     this.chunks = [];
+    this.sentChunks = 0;
     try {
       this.context = createAudioContext();
       if (this.context.state === "suspended") await this.context.resume();
@@ -190,6 +192,21 @@ export class Recorder {
     const samples = this.collect();
     if (samples.length === 0) return null;
     return encodeWav(downsample(samples, this.context.sampleRate), 16000);
+  }
+
+  /** Consume only audio captured since the last submitted utterance. */
+  takeUtterance(): Blob | null {
+    if (!this.context || this.sentChunks === this.chunks.length) return null;
+    const fresh = this.chunks.slice(this.sentChunks);
+    this.sentChunks = this.chunks.length;
+    const length = fresh.reduce((sum, chunk) => sum + chunk.length, 0);
+    const joined = new Float32Array(length);
+    let offset = 0;
+    for (const chunk of fresh) {
+      joined.set(chunk, offset);
+      offset += chunk.length;
+    }
+    return encodeWav(downsample(joined, this.context.sampleRate), 16000);
   }
 
   async stop(): Promise<Blob> {

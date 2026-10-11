@@ -238,7 +238,7 @@ export default function App() {
                 engine={result.engine}
                 cold={callCount <= 1}
               />
-              <ReplyBar phrases={phrases} language={result.detected_language} />
+              <ReplyBar phrases={phrases} language={result.detected_language} sessionId={result.session_id} />
             </div>
           </div>
 

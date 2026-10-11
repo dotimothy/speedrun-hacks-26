@@ -1,3 +1,4 @@
+import type { Snapshot } from "./v2";
 import type { ProcessResponse } from "../types";
 // Fixture adapter: UI consumes these session transitions independently of transport.
 // Values are synthetic; accepted means operator-reviewed, not translation-verified.
@@ -27,7 +28,12 @@ export const labels: Record<Field, string> = {
 export type Segment = {
   id: number;
   at: string;
-  speaker: "Caller" | "Call taker" | "Unattributed audio" | "Transcript input";
+  speaker:
+    | "Caller"
+    | "Call taker"
+    | "Unattributed audio"
+    | "Transcript input"
+    | "Interpreter";
   snapshot?: boolean;
   language?: string;
   original: string;
@@ -38,7 +44,9 @@ export type Suggestion = {
   field: Field;
   value: string;
   source: number;
-  kind: "addition" | "correction" | "change";
+  kind: "addition" | "correction" | "change" | "conflict";
+  rawValue?: unknown;
+  options?: { id: string; value: string; statement: string; source: number }[];
   evidence?: {
     text: string;
     source: "original" | "english";
@@ -54,6 +62,7 @@ export type Publication = {
 };
 export type Mode = "demo" | "live" | "transcript";
 export type Session = {
+  server?: Snapshot;
   id: string;
   mode: Mode;
   segments: Segment[];
@@ -179,6 +188,7 @@ export function initialSession(mode: Mode = "demo", id = "DQ–1024"): Session {
   };
 }
 export type Action =
+  | { type: "server"; snapshot: Session }
   | { type: "manual"; field: Field; value: string }
   | { type: "next" }
   | { type: "reset"; mode?: Mode; id?: string }
@@ -197,6 +207,11 @@ export type Action =
     }
   | { type: "publish"; note: string };
 export function transition(state: Session, action: Action): Session {
+  if (action.type === "server")
+    return action.snapshot.id === state.id &&
+      action.snapshot.lastSequence >= state.lastSequence
+      ? action.snapshot
+      : state;
   if (action.type === "reset") return initialSession(action.mode, action.id);
   if (action.type === "result") return ingestResult(state, action);
   if (action.type === "manual") {

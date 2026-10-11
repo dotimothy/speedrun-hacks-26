@@ -506,6 +506,12 @@ class SessionStore:
             return replayed, replayed.published[-1]
 
         snapshot = state.snapshot
+        if base_revision != snapshot.revision:
+            raise StaleAction(
+                reason="The reviewed record changed before publication; inspect it and publish again.",
+                code="stale_publication",
+                current_revision=snapshot.revision,
+            )
         previous = snapshot.published[-1] if snapshot.published else None
         record = {name: value.value for name, value in snapshot.accepted_record.items()}
         changed = sorted(

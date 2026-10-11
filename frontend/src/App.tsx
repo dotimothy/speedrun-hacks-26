@@ -6,10 +6,17 @@ import {
   fixtureSegments,
   unresolvedItems,
   type Mode,
+  type Action,
   transition,
   type Suggestion,
 } from "./workspace/session";
 import Intake from "./workspace/Intake";
+import {
+  adaptSnapshot,
+  ApiConflict,
+  reviewOperation,
+  type Snapshot,
+} from "./workspace/v2";
 import { useTranscriptNavigation } from "./workspace/useTranscriptNavigation";
 import { useFeedback } from "./workspace/useFeedback";
 
@@ -42,9 +49,66 @@ function Icon({ name, size = 18 }: { name: string; size?: number }) {
   );
 }
 export default function App() {
-  const [session, dispatch] = useReducer(transition, undefined, () =>
-    initialSession(),
+  const [session, localDispatch] = useReducer(transition, undefined, () =>
+    initialSession(
+      new URLSearchParams(location.search).get("input") === "transcript"
+        ? "transcript"
+        : "live",
+      `call-${crypto.randomUUID()}`,
+    ),
   );
+  const [remoteBusy, setRemoteBusy] = useState(false);
+  const [remoteError, setRemoteError] = useState<string | null>(null);
+  const remoteLock = useRef(false);
+  const remoteRetry = useRef<(() => Promise<Snapshot>) | null>(null);
+  const currentSession = useRef(session);
+  currentSession.current = session;
+  async function runRemote(task: () => Promise<Snapshot>): Promise<boolean> {
+    if (remoteLock.current) return false;
+    const id = session.id;
+    remoteLock.current = true;
+    remoteRetry.current = task;
+    setRemoteBusy(true);
+    setRemoteError(null);
+    try {
+      const snapshot = await task();
+      if (currentSession.current.id !== id) return false;
+      localDispatch({
+        type: "server",
+        snapshot: adaptSnapshot(snapshot, session.mode),
+      });
+      remoteRetry.current = null;
+      return true;
+    } catch (e) {
+      if (currentSession.current.id !== id) return false;
+      if (e instanceof ApiConflict) {
+        localDispatch({
+          type: "server",
+          snapshot: adaptSnapshot(e.snapshot, session.mode),
+        });
+        remoteRetry.current = null;
+      }
+      setRemoteError(
+        e instanceof Error
+          ? e.message
+          : "Could not save the action. Your draft is preserved.",
+      );
+      return false;
+    } finally {
+      remoteLock.current = false;
+      setRemoteBusy(false);
+    }
+  }
+  async function dispatch(action: Action): Promise<boolean> {
+    if (
+      session.mode === "demo" ||
+      ["reset", "server", "next"].includes(action.type)
+    ) {
+      localDispatch(action);
+      return true;
+    }
+    return runRemote(reviewOperation(session, action));
+  }
   const [selected, setSelected] = useState<number | null>(null);
   const [sourceOpen, setSourceOpen] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -54,7 +118,7 @@ export default function App() {
   const [editing, setEditing] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [notice, setNotice] = useState(
-    "Synthetic call loaded. Two suggestions ready for review.",
+    "Ready for a new call. Accepted information is saved only after your review.",
   );
   const transcript = useRef<HTMLDivElement>(null);
   const desk = useRef<HTMLDivElement>(null);
@@ -118,14 +182,19 @@ export default function App() {
   const currentUnresolved = unresolvedItems(session);
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
-      if (activeCapture || Object.keys(session.record).length || note.trim()) {
+      if (
+        activeCapture ||
+        remoteBusy ||
+        Object.keys(session.record).length ||
+        note.trim()
+      ) {
         event.preventDefault();
         event.returnValue = "";
       }
     };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [activeCapture, session.record, note]);
+  }, [activeCapture, remoteBusy, session.record, note]);
   const pending = session.suggestions.filter((s) => s.status === "pending");
   const retainedDraft = session.suggestions.find(
     (s) => s.id === editing && s.status !== "pending",
@@ -137,9 +206,21 @@ export default function App() {
     fields.some(
       (field) => session.record[field] !== session.published?.record[field],
     ) ||
-    note.trim() !== session.published.note ||
-    JSON.stringify(currentUnresolved) !==
-      JSON.stringify(session.published.unresolved);
+    (demo
+      ? note.trim() !== session.published.note ||
+        JSON.stringify(currentUnresolved) !==
+          JSON.stringify(session.published.unresolved)
+      : (!!note.trim() && note.trim() !== session.published.note) ||
+        (!!session.server &&
+          (session.revision !==
+            session.server.published[session.server.published.length - 1]
+              ?.revision ||
+            JSON.stringify([
+              ...session.server.unresolved.map((x) => x.text),
+              ...session.server.review_flags
+                .filter((f) => f.status === "open")
+                .map((f) => f.text),
+            ]) !== JSON.stringify(session.published.unresolved))));
   const acceptedCount = Object.keys(session.record).length;
   useEffect(() => {
     if (!playing || done) return;
@@ -154,7 +235,7 @@ export default function App() {
     setSourceOpen(opening ? id : null);
     setSelected(opening ? source : null);
   }
-  function review(
+  async function review(
     s: Suggestion,
     decision: "accept" | "reject",
     value?: string,
@@ -166,8 +247,9 @@ export default function App() {
     }
     if (s.status !== "pending" && decision === "accept") {
       if (!value?.trim()) return;
-      dispatch({ type: "manual", field: s.field, value });
-    } else dispatch({ type: "review", id: s.id, decision, value });
+      if (!(await dispatch({ type: "manual", field: s.field, value }))) return;
+    } else if (!(await dispatch({ type: "review", id: s.id, decision, value })))
+      return;
     setEditing(null);
     setSourceOpen(null);
     setSelected(null);
@@ -176,13 +258,15 @@ export default function App() {
     );
   }
   function reset(mode: Mode = session.mode) {
-    if (activeCapture) return;
+    if (activeCapture || remoteLock.current) return;
     if (
       (session.history.length ||
         note.trim() ||
         (session.mode !== "demo" && segments.length)) &&
       !window.confirm(
-        "Start a new session? This clears the current record, recording and local publication.",
+        demo
+          ? "Start a new session? This clears the current rehearsal."
+          : "Start a new session? This leaves the current call and clears its browser recording. Saved server records remain until the backend restarts.",
       )
     )
       return;
@@ -191,6 +275,8 @@ export default function App() {
       mode,
       id: mode === "demo" ? "DQ–1024" : `call-${crypto.randomUUID()}`,
     });
+    setRemoteError(null);
+    remoteRetry.current = null;
     setPlaying(false);
     setView("operator");
     setSelected(null);
@@ -201,7 +287,7 @@ export default function App() {
     setNotice(
       mode === "demo"
         ? "Synthetic scenario loaded."
-        : "New session ready. Review and publication state is local to this workspace.",
+        : "New session ready. Reviews and publication will be saved to the v2 API.",
     );
   }
   async function copyPublication() {
@@ -245,10 +331,12 @@ export default function App() {
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
-  function publish() {
-    dispatch({ type: "publish", note });
+  async function publish() {
+    if (!(await dispatch({ type: "publish", note }))) return;
     setNotice(
-      "Reviewed record published to the local receiving preview. No external system was contacted.",
+      demo
+        ? "Reviewed record published to the local receiving preview."
+        : "Reviewed record published to the server receiving inbox. No units were dispatched.",
     );
   }
   return (
@@ -284,15 +372,19 @@ export default function App() {
         <select
           id="input-mode"
           value={session.mode}
-          disabled={activeCapture}
+          disabled={activeCapture || remoteBusy}
           onChange={(e) => reset(e.target.value as Mode)}
         >
           <option value="demo">Scripted rehearsal</option>
           <option value="live">Microphone / WAV</option>
           <option value="transcript">Transcript</option>
         </select>
-        <span>Review state stays in this browser session</span>
-        <button disabled={activeCapture} onClick={() => reset()}>
+        <span>
+          {demo
+            ? "Rehearsal state stays in this browser"
+            : "Reviews saved to the session API"}
+        </span>
+        <button disabled={activeCapture || remoteBusy} onClick={() => reset()}>
           New session
         </button>
       </div>
@@ -393,6 +485,58 @@ export default function App() {
             onAudio={setAudioUrl}
           />
         )}
+        {remoteError && (
+          <div className="intake-error" role="alert">
+            <p>{remoteError}</p>
+            {remoteRetry.current && (
+              <button
+                disabled={remoteBusy}
+                onClick={async () => {
+                  if (
+                    remoteRetry.current &&
+                    (await runRemote(remoteRetry.current))
+                  ) {
+                    setEditing(null);
+                    setNotice("Action saved to the session.");
+                  }
+                }}
+              >
+                Retry save
+              </button>
+            )}
+          </div>
+        )}
+        {remoteBusy && (
+          <p className="server-status" role="status">
+            Saving to session…
+          </p>
+        )}
+        {session.server && (
+          <div className="server-status">
+            Server revision {session.revision} · Engine:{" "}
+            {session.server.diagnostics.engine.decision || "No inference yet"}
+            <details>
+              <summary>Processing details</summary>
+              <p>{session.server.diagnostics.engine.decision_model}</p>
+              {session.server.diagnostics.notes.map((n, i) => (
+                <p key={i}>{n}</p>
+              ))}
+            </details>
+            {session.server.review_flags.filter((f) => f.status === "open")
+              .length > 0 && (
+              <details>
+                <summary>Review flags</summary>
+                <ul>
+                  {session.server.review_flags
+                    .filter((f) => f.status === "open")
+                    .map((f) => (
+                      <li key={f.id}>{f.text}</li>
+                    ))}
+                </ul>
+              </details>
+            )}
+          </div>
+        )}
         <nav className="workspace-tabs" aria-label="Workspace views">
           <button
             aria-current={view === "operator" ? "page" : undefined}
@@ -469,7 +613,7 @@ export default function App() {
                     <h3>No transcript yet</h3>
                     <p>
                       {session.mode === "live"
-                        ? "Start the microphone or upload a WAV. Transcript snapshots will appear here."
+                        ? "Start the microphone or upload a WAV. New utterances will appear here."
                         : "Process a transcript above to begin reviewing suggestions."}
                     </p>
                   </div>
@@ -494,7 +638,7 @@ export default function App() {
                     <p
                       lang={
                         s.language ||
-                        (s.speaker === "Caller" ? "es" : undefined)
+                        (demo && s.speaker === "Caller" ? "es" : undefined)
                       }
                     >
                       {s.original}
@@ -528,7 +672,7 @@ export default function App() {
                   ? "Scripted text playback · No live audio"
                   : session.mode === "transcript"
                     ? "Text input · No audio translation"
-                    : "Whole-call snapshots · Speakers not identified"}
+                    : "Utterances · Speaker assigned at input"}
                 <div>
                   {demo
                     ? "Translation is illustrative and not interpreter-verified."
@@ -584,13 +728,16 @@ export default function App() {
                               cancelEdit();
                             }
                           }}
-                          onSubmit={(e) => {
+                          onSubmit={async (e) => {
                             e.preventDefault();
-                            dispatch({
-                              type: "manual",
-                              field,
-                              value: editValue,
-                            });
+                            if (
+                              !(await dispatch({
+                                type: "manual",
+                                field,
+                                value: editValue,
+                              }))
+                            )
+                              return;
                             cancelEdit();
                             setNotice(`${labels[field]} updated by operator.`);
                           }}
@@ -605,9 +752,12 @@ export default function App() {
                             id={`manual-${field}`}
                             autoFocus
                             value={editValue}
+                            disabled={remoteBusy}
                             onChange={(e) => setEditValue(e.target.value)}
                           />
-                          <button type="submit">Save</button>
+                          <button type="submit" disabled={remoteBusy}>
+                            Save
+                          </button>
                           <button type="button" onClick={cancelEdit}>
                             Cancel
                           </button>
@@ -625,6 +775,7 @@ export default function App() {
                           </div>
                           <button
                             id={`record-edit-${field}`}
+                            disabled={remoteBusy}
                             aria-label={`Edit record: ${labels[field]}`}
                             onClick={(e) => {
                               editTrigger.current = e.currentTarget.id;
@@ -654,14 +805,28 @@ export default function App() {
                 })}
               </div>
               <div className="record-note">
+                {session.server && (
+                  <details className="narrative-preview">
+                    <summary>Generated narrative</summary>
+                    <p>
+                      {session.server.narrative.text ||
+                        "Accept information to draft a narrative."}
+                    </p>
+                  </details>
+                )}
                 <label htmlFor="handoff-note">
-                  Operator note <span>Optional</span>
+                  {demo ? "Operator note" : "Narrative override"}{" "}
+                  <span>Optional</span>
                 </label>
                 <textarea
                   id="handoff-note"
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  placeholder="Add context for the receiving dispatcher…"
+                  placeholder={
+                    demo
+                      ? "Add context for the receiving dispatcher…"
+                      : "Leave blank to use the server narrative from accepted fields."
+                  }
                   rows={2}
                 />
               </div>
@@ -677,12 +842,18 @@ export default function App() {
                   <span>
                     {pending.length
                       ? `${pending.length} pending · Partial sharing allowed`
-                      : "Local preview only"}
+                      : demo
+                        ? "Local preview only"
+                        : "Server receiving inbox"}
                   </span>
                 </div>
                 <button
                   className="primary-button publication-feedback"
-                  disabled={!Object.keys(session.record).length || !unpublished}
+                  disabled={
+                    remoteBusy ||
+                    !Object.keys(session.record).length ||
+                    !unpublished
+                  }
                   onClick={publish}
                 >
                   {session.published && !unpublished ? (
@@ -735,11 +906,13 @@ export default function App() {
                     >
                       <div className="suggestion-top">
                         <span>
-                          {s.kind === "correction"
-                            ? "Caller correction"
-                            : s.kind === "change"
-                              ? "Model proposes a change"
-                              : "New detail"}
+                          {s.kind === "conflict"
+                            ? "Conflicting statements"
+                            : s.kind === "correction"
+                              ? "Caller correction"
+                              : s.kind === "change"
+                                ? "Model proposes a change"
+                                : "New detail"}
                         </span>
                         <time>{segments[s.source]?.at || ""}</time>
                       </div>
@@ -777,12 +950,13 @@ export default function App() {
                             id={`edit-${s.id}`}
                             autoFocus
                             value={editValue}
+                            disabled={remoteBusy}
                             onChange={(e) => setEditValue(e.target.value)}
                           />
                           <div className="suggestion-actions">
                             <button
                               className="accept-button"
-                              disabled={!editValue.trim()}
+                              disabled={remoteBusy || !editValue.trim()}
                             >
                               {s.status === "pending"
                                 ? "Save & accept"
@@ -842,7 +1016,7 @@ export default function App() {
                                 <>
                                   <span>No supporting span returned</span>
                                   <p>
-                                    Inspect the full snapshot in the
+                                    Inspect the source utterance in the
                                     conversation pane. This proposal has no
                                     linked evidence.
                                   </p>
@@ -857,8 +1031,36 @@ export default function App() {
                               )}
                             </div>
                           )}
+                          {s.kind === "conflict" && (
+                            <div className="conflict-options">
+                              <p>
+                                Choose the statement established with the
+                                caller.
+                              </p>
+                              {s.options?.map((option) => (
+                                <div key={option.id}>
+                                  <blockquote>{option.statement}</blockquote>
+                                  <button
+                                    disabled={remoteBusy}
+                                    onClick={() =>
+                                      void runRemote(
+                                        reviewOperation(session, {
+                                          type: "resolve",
+                                          id: s.id,
+                                          option: option.id,
+                                        }),
+                                      )
+                                    }
+                                  >
+                                    Use {option.value}
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                           <div className="suggestion-actions">
                             <button
+                              disabled={remoteBusy || s.kind === "conflict"}
                               className="accept-button"
                               onClick={() => review(s, "accept")}
                             >
@@ -868,6 +1070,7 @@ export default function App() {
                             </button>
                             <button
                               id={`suggestion-edit-${s.id}`}
+                              disabled={remoteBusy || s.kind === "conflict"}
                               onClick={(e) => {
                                 editTrigger.current = e.currentTarget.id;
                                 setEditing(s.id);
@@ -878,6 +1081,7 @@ export default function App() {
                             </button>
                             <button
                               className="dismiss-button"
+                              disabled={remoteBusy}
                               onClick={() => review(s, "reject")}
                             >
                               Dismiss
@@ -899,7 +1103,11 @@ export default function App() {
                   ? `Call ${demo ? session.id : session.id.slice(-8).toUpperCase()}`
                   : "No record published"}
               </h2>
-              <p>This view receives only explicitly published information.</p>
+              <p>
+                {demo
+                  ? "This view receives only explicitly published information."
+                  : "Published record from the server receiving inbox. Working edits remain private until published."}
+              </p>
             </header>
             {session.published ? (
               <>
@@ -996,7 +1204,7 @@ export default function App() {
                     setSourceOpen(null);
                   }}
                 >
-                  Inspect snapshot
+                  Inspect source
                 </button>
               </div>
             ))}

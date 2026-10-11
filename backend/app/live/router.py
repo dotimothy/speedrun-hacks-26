@@ -32,7 +32,7 @@ from ..config import settings
 from ..confidence import resolve as resolve_confidence
 from ..decision.registry import get_engine
 from ..decision.rules import RuleEngine
-from .diffing import build_suggestions
+from .diffing import DiffOutcome, build_suggestions
 from .models import (
     AppendSegmentRequest,
     Diagnostics,
@@ -283,7 +283,7 @@ async def append_segment(session_id: str, request: Request) -> dict:
         segment=segment,
         base_revision=snapshot.revision,
         next_id=lambda prefix: store.next_id(session_id, prefix),
-    )
+    ) if segment.speaker is Speaker.CALLER else DiffOutcome()
 
     diagnostics = Diagnostics(
         last_asr_ms=round(asr_ms, 1),

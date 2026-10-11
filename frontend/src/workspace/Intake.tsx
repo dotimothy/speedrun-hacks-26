@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Recorder } from "../audio/recorder";
-import { clock, requestSnapshot } from "./backend";
+import { clock } from "./backend";
+import {
+  adaptSnapshot,
+  appendUtterance,
+  type Speaker,
+  type Utterance,
+} from "./v2";
 import type { Action, Mode } from "./session";
 
 type Props = {
@@ -19,222 +25,202 @@ export default function Intake({
 }: Props) {
   const recorder = useRef(new Recorder());
   const alive = useRef(true);
-  const sequence = useRef(0);
+  const lock = useRef(false);
+  const processing = useRef(false);
+  const queue = useRef<Utterance[]>([]);
   const controller = useRef<AbortController | null>(null);
-  const inFlight = useRef<Promise<void> | null>(null);
-  const objectURL = useRef<string | null>(null);
-  const lastInput = useRef<Blob | string | null>(null);
+  const audio = useRef<string | null>(null);
   const callbacks = useRef({ onResult, onActivity, onAudio });
   callbacks.current = { onResult, onActivity, onAudio };
+  const [connection, setConnection] = useState("Checking session API…");
   const [recording, setRecording] = useState(false);
   const [starting, setStarting] = useState(false);
-  const [finishing, setFinishing] = useState(false);
-  const [completed, setCompleted] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [completed, setCompleted] = useState(false);
+  const [speaker, setSpeaker] = useState<Speaker>("caller");
+  const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [health, setHealth] = useState("Checking backend…");
+  const [queued, setQueued] = useState(0);
+  const [received, setReceived] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const [level, setLevel] = useState(0);
-  const [draft, setDraft] = useState("");
-  const [updates, setUpdates] = useState(0);
-  const [fileName, setFileName] = useState("");
-  const [readingFile, setReadingFile] = useState(false);
-  const captureLock = useRef(false);
-  const busyRef = useRef(false);
-
   useEffect(() => {
-    alive.current = true;
     let disposed = false;
-    const healthController = new AbortController();
-    const timeout = setTimeout(() => healthController.abort(), 6000);
-    fetch("/api/health", { signal: healthController.signal })
-      .then(async (r) => {
-        if (!r.ok) throw new Error();
-        const data = await r.json();
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), 6000);
+    fetch("/api/health", { signal: abort.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error();
+        const data = await response.json();
         if (!disposed)
-          setHealth(
+          setConnection(
             data.mock_mode
-              ? "Backend in mock mode"
-              : data.laya?.ready
-                ? "Backend connected"
-                : "Backend connected · extraction model unavailable",
+              ? "Development API · Model/ASR readiness not verified"
+              : "API connected · Configured decision engine",
           );
       })
       .catch(() => {
         if (!disposed)
-          setHealth("Backend unavailable · check the configured API");
+          setConnection("API unavailable · Check the configured backend");
       })
-      .finally(() => clearTimeout(timeout));
+      .finally(() => clearTimeout(timer));
     return () => {
       disposed = true;
-      alive.current = false;
-      healthController.abort();
-      clearTimeout(timeout);
-      controller.current?.abort();
-      recorder.current.dispose();
-      if (objectURL.current) URL.revokeObjectURL(objectURL.current);
-      callbacks.current.onActivity(false);
-      callbacks.current.onAudio(null);
+      abort.abort();
+      clearTimeout(timer);
     };
   }, []);
-
-  function attachAudio(blob: Blob) {
-    if (objectURL.current) URL.revokeObjectURL(objectURL.current);
-    objectURL.current = URL.createObjectURL(blob);
-    callbacks.current.onAudio(objectURL.current);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      controller.current?.abort();
+      recorder.current.dispose();
+      if (audio.current) URL.revokeObjectURL(audio.current);
+      callbacks.current.onAudio(null);
+      callbacks.current.onActivity(false);
+    };
+  }, []);
+  useEffect(() => {
+    onActivity(recording || starting || busy);
+  }, [recording, starting, busy, onActivity]);
+  useEffect(() => {
+    if (!recording) return;
+    const timer = setInterval(() => {
+      setElapsed(recorder.current.elapsed);
+      setLevel(recorder.current.level());
+    }, 150);
+    return () => clearInterval(timer);
+  }, [recording]);
+  function attach(blob: Blob) {
+    if (audio.current) URL.revokeObjectURL(audio.current);
+    audio.current = URL.createObjectURL(blob);
+    callbacks.current.onAudio(audio.current);
   }
-  async function perform(input: Blob | string, at: string) {
-    lastInput.current = input;
-    const request = ++sequence.current;
-    const abort = new AbortController();
-    controller.current = abort;
-    const timeout = setTimeout(() => abort.abort(), 90000);
+  async function flush() {
+    if (processing.current || !alive.current) return;
+    processing.current = true;
     setBusy(true);
     setError(null);
     try {
-      const result = await requestSnapshot(id, input, abort.signal);
-      if (alive.current) {
-        callbacks.current.onResult({
-          type: "result",
-          id,
-          sequence: request,
-          at,
-          response: result,
-        });
-        setUpdates((n) => n + 1);
-        setHealth("Backend connected");
+      while (queue.current.length && alive.current) {
+        const item = queue.current[0];
+        const abort = new AbortController();
+        controller.current = abort;
+        const timer = setTimeout(() => abort.abort(), 90000);
+        try {
+          const snapshot = await appendUtterance(id, item, abort.signal);
+          if (!alive.current) return;
+          callbacks.current.onResult({
+            type: "server",
+            snapshot: adaptSnapshot(snapshot, mode),
+          });
+          queue.current.shift();
+          setQueued(queue.current.length);
+          setReceived((n) => n + 1);
+        } finally {
+          clearTimeout(timer);
+        }
       }
     } catch (e) {
       if (alive.current)
         setError(
-          abort.signal.aborted
-            ? "Processing timed out. Retry the captured input."
-            : e instanceof Error
-              ? e.message
-              : "Processing failed. Your accepted record is unchanged.",
+          e instanceof Error && e.name !== "AbortError"
+            ? e.message
+            : "Processing timed out. Input is retained; retry safely.",
         );
     } finally {
-      clearTimeout(timeout);
+      processing.current = false;
       if (alive.current) setBusy(false);
     }
   }
-  async function send(input: Blob | string, at: string) {
-    if (busyRef.current || !alive.current) return;
-    busyRef.current = true;
-    const task = perform(input, at);
-    inFlight.current = task;
-    try {
-      await task;
-    } finally {
-      busyRef.current = false;
-      inFlight.current = null;
-    }
+  function enqueue(input: Blob | string) {
+    queue.current.push({ input, clientId: crypto.randomUUID(), speaker });
+    setQueued(queue.current.length);
+    void flush();
   }
-  useEffect(() => {
-    if (!recording) return;
-    const meter = setInterval(() => {
-      setElapsed(recorder.current.elapsed);
-      setLevel(recorder.current.level());
-    }, 150);
-    const poll = setInterval(() => {
-      if (busyRef.current) return;
-      const wav = recorder.current.snapshot();
-      if (wav) void send(wav, clock(recorder.current.elapsed));
-    }, 5000);
-    return () => {
-      clearInterval(meter);
-      clearInterval(poll);
-    };
-  }, [recording]);
   async function start() {
-    if (captureLock.current || busyRef.current) return;
-    captureLock.current = true;
+    if (lock.current) return;
+    lock.current = true;
     setStarting(true);
     setError(null);
-    callbacks.current.onActivity(true);
     try {
       await recorder.current.start();
-      if (!alive.current) {
-        recorder.current.dispose();
-        return;
-      }
-      setRecording(true);
+      if (alive.current) setRecording(true);
+      else recorder.current.dispose();
     } catch (e) {
-      if (alive.current) {
-        setError(e instanceof Error ? e.message : "Microphone unavailable.");
-        callbacks.current.onActivity(false);
-      }
+      if (alive.current)
+        setError(e instanceof Error ? e.message : "Microphone unavailable");
     } finally {
-      captureLock.current = false;
+      lock.current = false;
       if (alive.current) setStarting(false);
     }
   }
   async function stop() {
-    if (captureLock.current) return;
-    captureLock.current = true;
-    const at = clock(recorder.current.elapsed);
+    if (lock.current) return;
+    lock.current = true;
+    const last = recorder.current.takeUtterance();
+    const full = await recorder.current.stop();
+    lock.current = false;
+    if (!alive.current) return;
     setRecording(false);
-    setFinishing(true);
+    setCompleted(true);
     setLevel(0);
-    try {
-      const wav = await recorder.current.stop();
-      if (!alive.current) return;
-      attachAudio(wav);
-      // Wait for the existing pass. A final response can never race an older pass.
-      await inFlight.current;
-      if (!alive.current) return;
-      await send(wav, at);
-    } finally {
-      captureLock.current = false;
-      if (alive.current) {
-        setFinishing(false);
-        setCompleted(true);
-        callbacks.current.onActivity(false);
-      }
-    }
+    attach(full);
+    if (last) enqueue(last);
   }
-  async function upload(file: File | undefined) {
-    if (!file || captureLock.current || busyRef.current) return;
-    captureLock.current = true;
-    setReadingFile(true);
+  async function upload(file?: File) {
+    if (!file || lock.current) return;
+    lock.current = true;
+    setStarting(true);
     setError(null);
-    callbacks.current.onActivity(true);
     try {
       if (file.size > 30 * 1024 * 1024)
-        throw new Error("Choose a WAV under 30 MB for this prototype.");
-      const signature = new DataView(await file.slice(0, 12).arrayBuffer());
+        throw new Error("Choose a WAV under 30 MB.");
+      const bytes = new DataView(await file.slice(0, 12).arrayBuffer());
       if (
-        signature.byteLength < 12 ||
-        signature.getUint32(0) !== 0x52494646 ||
-        signature.getUint32(8) !== 0x57415645
+        bytes.byteLength < 12 ||
+        bytes.getUint32(0) !== 0x52494646 ||
+        bytes.getUint32(8) !== 0x57415645
       )
-        throw new Error("This file is not a RIFF/WAVE recording.");
+        throw new Error("Choose a RIFF/WAVE recording.");
       if (!alive.current) return;
-      setFileName(file.name);
-      attachAudio(file);
+      attach(file);
       setCompleted(true);
-      await send(file, "Full recording");
-    } catch (error) {
+      enqueue(file);
+    } catch (e) {
       if (alive.current)
-        setError(
-          error instanceof Error
-            ? error.message
-            : "Could not read this recording.",
-        );
+        setError(e instanceof Error ? e.message : "Could not read recording");
     } finally {
-      captureLock.current = false;
-      if (alive.current) {
-        setReadingFile(false);
-        callbacks.current.onActivity(false);
-      }
+      lock.current = false;
+      if (alive.current) setStarting(false);
     }
   }
   return (
     <section className="intake" aria-label="Call input">
       <div className="intake-top">
-        <span className="backend-status">{health}</span>
+        <span>{connection}</span>
+        <span role="status">
+          {busy
+            ? `Processing · ${queued} queued`
+            : `${received} utterances received`}
+        </span>
+      </div>
+      <div className="speaker-control">
+        <label htmlFor="speaker">This input contains</label>
+        <select
+          id="speaker"
+          value={speaker}
+          disabled={recording || starting || busy}
+          onChange={(e) => setSpeaker(e.target.value as Speaker)}
+        >
+          <option value="caller">Caller speech</option>
+          <option value="operator">Call taker speech</option>
+          <option value="interpreter">Interpreter speech</option>
+          <option value="unknown">Unattributed / mixed speech</option>
+        </select>
         <span>
-          {busy ? "Processing snapshot…" : `${updates} snapshots received`}
+          Attribution is manual. Only caller speech drives extraction.
         </span>
       </div>
       {mode === "live" ? (
@@ -242,25 +228,28 @@ export default function Intake({
           <div className="capture-controls">
             <button
               className={recording ? "stop-button" : "primary-button"}
+              disabled={starting || completed || (busy && !recording)}
               onClick={() => (recording ? void stop() : void start())}
-              disabled={
-                starting ||
-                readingFile ||
-                finishing ||
-                completed ||
-                (busy && !recording)
-              }
             >
               {starting
-                ? "Requesting microphone…"
-                : finishing
-                  ? "Finishing call…"
-                  : recording
-                    ? "Stop recording"
-                    : completed
-                      ? "Recording complete"
-                      : "Start microphone"}
+                ? "Opening input…"
+                : recording
+                  ? "Stop recording"
+                  : completed
+                    ? "Recording complete"
+                    : "Start microphone"}
             </button>
+            {recording && (
+              <button
+                disabled={busy || !!error}
+                onClick={() => {
+                  const wav = recorder.current.takeUtterance();
+                  if (wav) enqueue(wav);
+                }}
+              >
+                Send utterance
+              </button>
+            )}
             <meter
               min={0}
               max={1}
@@ -268,81 +257,63 @@ export default function Intake({
               aria-label="Microphone input level"
             />
             <span className="capture-time">{clock(elapsed)}</span>
-            {!recording && !starting && !finishing && !completed && (
+            {!recording && !completed && (
               <label className="file-input">
                 Upload WAV
                 <input
                   type="file"
                   accept=".wav,audio/wav"
-                  disabled={busy || readingFile}
+                  disabled={starting || busy}
                   onChange={(e) => void upload(e.target.files?.[0])}
                 />
               </label>
             )}
-            {fileName && <span className="file-name">{fileName}</span>}
           </div>
           <p>
-            {completed
-              ? "Recording stopped. Review the record or start a new session."
-              : "Microphone audio is sent to the configured backend every five seconds. Use a synthetic call."}{" "}
-            <span>
-              Browser recording stays in memory; backend processing uses a
-              temporary audio file.
-            </span>
+            Send each completed utterance while recording continues. Stop sends
+            any remaining audio. Use a single-speaker synthetic recording; mixed
+            speech cannot be attributed automatically.
           </p>
         </>
       ) : (
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (busyRef.current || !draft.trim()) return;
-            callbacks.current.onActivity(true);
-            void send(draft, `Update ${sequence.current + 1}`).finally(
-              () => alive.current && callbacks.current.onActivity(false),
-            );
+            if (!draft.trim() || busy || queue.current.length) return;
+            enqueue(draft.trim());
+            setDraft("");
           }}
         >
-          <label htmlFor="transcript-input">Full conversation so far</label>
+          <label htmlFor="transcript-input">New utterance</label>
           <textarea
             id="transcript-input"
+            rows={3}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="Paste a synthetic transcript. Append new statements or correct the text, then process again."
-            rows={3}
+            placeholder="Enter only the next statement, not the full conversation."
           />
           <div className="transcript-submit">
             <p>
-              This input bypasses speech recognition and translation. Keep the
-              full conversation for context.
+              The server retains earlier utterances. Text input bypasses speech
+              recognition and translation.
             </p>
-            <button className="primary-button" disabled={busy || !draft.trim()}>
-              Process transcript
+            <button
+              className="primary-button"
+              disabled={busy || !!queued || !draft.trim()}
+            >
+              Send utterance
             </button>
           </div>
         </form>
       )}
       {error && (
         <div className="intake-error" role="alert">
-          <p>{error}</p>
-          {lastInput.current && (
-            <button
-              disabled={
-                busy || readingFile || starting || recording || finishing
-              }
-              onClick={() => {
-                if (busyRef.current) return;
-                callbacks.current.onActivity(true);
-                void send(
-                  lastInput.current!,
-                  mode === "live"
-                    ? clock(elapsed)
-                    : `Retry ${sequence.current + 1}`,
-                ).finally(() => {
-                  if (alive.current) callbacks.current.onActivity(false);
-                });
-              }}
-            >
-              Retry last input
+          <p>
+            {error} {queued > 0 && `${queued} unsent utterance(s) retained.`}
+          </p>
+          {queued > 0 && (
+            <button disabled={busy} onClick={() => void flush()}>
+              Retry retained input
             </button>
           )}
         </div>

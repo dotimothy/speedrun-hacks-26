@@ -1507,3 +1507,65 @@ textarea::placeholder {
 .previous-value p {
   text-decoration: none;
 }
+.speaker-control {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+  font-size: 12px;
+  color: #435d7e;
+}
+.speaker-control select {
+  font: inherit;
+  padding: 7px;
+  border: 1px solid #c9d5e4;
+  border-radius: 3px;
+  background: white;
+}
+.speaker-control span {
+  font-size: 11px;
+  color: #687f9a;
+}
+.server-status {
+  font-size: 12px;
+  color: #526980;
+  padding: 10px 0;
+}
+.server-status li {
+  padding: 5px 0;
+}
+.conflict-options {
+  margin: 12px 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.conflict-options > div {
+  padding: 10px 0;
+  border-top: 1px solid #e5d9c0;
+}
+.conflict-options blockquote {
+  margin: 0 0 8px;
+}
+.conflict-options button {
+  border: 1px solid #c39c51;
+}
+.narrative-preview {
+  font-size: 12px;
+  color: #526980;
+  margin-bottom: 16px;
+  line-height: 1.7;
+}
+.narrative-preview summary {
+  cursor: pointer;
+}
+.narrative-preview p {
+  margin-top: 8px;
+}
+.server-status details {
+  margin-top: 8px;
+}
+.server-status details p {
+  margin-top: 7px;
+  line-height: 1.6;
+}

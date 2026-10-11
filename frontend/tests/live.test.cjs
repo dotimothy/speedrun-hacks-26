@@ -320,3 +320,21 @@ test("saving a retained edit manually leaves the newer proposal available for re
   assert.equal(s.suggestions.at(-1).value, "142 Oak Street");
   assert.equal(review(s).record.location, "142 Oak Street");
 });
+
+test("utterance capture drains new audio once while preserving the full recording", async (t) => {
+  const contexts = audioEnvironment(t, async () => ({
+    getTracks: () => [{ stop() {} }],
+  }));
+  const recorder = new Recorder();
+  await recorder.start();
+  const feed = () =>
+    contexts[0].processor.onaudioprocess({
+      inputBuffer: { getChannelData: () => new Float32Array(48000).fill(0.2) },
+    });
+  feed();
+  assert.equal(await wavDuration(recorder.takeUtterance()), 1);
+  assert.equal(recorder.takeUtterance(), null);
+  feed();
+  assert.equal(await wavDuration(recorder.takeUtterance()), 1);
+  assert.equal(await wavDuration(await recorder.stop()), 2);
+});
