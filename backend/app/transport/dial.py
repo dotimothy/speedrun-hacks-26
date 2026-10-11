@@ -1,6 +1,6 @@
 """Dial Self-Hosted audio transport.
 
-Dial opens one WebSocket per call to our server, at ``/dial/{call_id}``. Each
+Dial opens one WebSocket per call to our server, at ``/dispatchiq/audio/{call_id}``. Each
 connection carries an ``X-Dial-Signature: t=<unix>,v1=<hex>`` header, where the
 hex digest is HMAC-SHA256(secret, "<t>.<call_id>").
 
@@ -12,6 +12,7 @@ session can be exercised with recorded frames before Dial access is granted.
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import hmac
 import json
@@ -19,7 +20,13 @@ import logging
 import time
 from dataclasses import dataclass, field
 
-from .audio import b64decode, mulaw_to_pcm16, resample_pcm16
+from .audio import (
+    b64decode,
+    mulaw_to_pcm16,
+    pcm16_to_mulaw,
+    resample_pcm16,
+    wav_to_pcm16,
+)
 
 log = logging.getLogger("dispatchiq.dial")
 
@@ -35,6 +42,9 @@ SUPPORTED_FORMATS: dict[str, tuple[str, int]] = {
 # plan.md only says "base64 in media frames"; confirm the exact field name
 # against Dial's audio protocol before live testing and change it here.
 PAYLOAD_FIELD = "payload"
+
+# Audio is sent in 20 ms frames, the cadence Dial uses for caller audio.
+FRAME_MS = 20
 
 
 def parse_signature(header: str | None) -> tuple[int, str] | None:
@@ -151,3 +161,39 @@ class DialSession:
 
     def buffered_seconds(self) -> float:
         return len(self.pcm16k) / 2 / 16000
+
+
+def reply_frames(wav_bytes: bytes, outbound_format: str = "mulaw_8000") -> list[str]:
+    """Turn a synthesized reply WAV into outbound media frames.
+
+    Each frame holds ``FRAME_MS`` of audio in the call's outbound format. The
+    caller paces them, one frame every 20 ms, so Dial's playback buffer is not
+    flooded and a barge-in can stop the rest.
+    """
+    if outbound_format not in SUPPORTED_FORMATS:
+        raise ValueError(f"unsupported outbound format {outbound_format}")
+    encoding, rate = SUPPORTED_FORMATS[outbound_format]
+    pcm, source_rate = wav_to_pcm16(wav_bytes)
+    pcm = resample_pcm16(pcm, source_rate, rate)
+    data = pcm16_to_mulaw(pcm) if encoding == "mulaw" else pcm
+
+    bytes_per_sample = 1 if encoding == "mulaw" else 2
+    chunk = rate * FRAME_MS // 1000 * bytes_per_sample
+    return [
+        json.dumps(
+            {
+                "type": "media",
+                PAYLOAD_FIELD: base64.b64encode(data[i : i + chunk]).decode("ascii"),
+            }
+        )
+        for i in range(0, len(data), chunk)
+    ]
+
+
+def clear_frame() -> str:
+    """Stop Dial's queued playback. Sent when the caller barges in.
+
+    ASSUMPTION: the frame is type-only. Confirm the shape against Dial's
+    protocol before live testing.
+    """
+    return json.dumps({"type": "clear"})

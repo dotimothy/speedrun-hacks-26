@@ -80,5 +80,23 @@ def pcm16_to_wav(pcm: bytes, sample_rate: int = ASR_RATE) -> bytes:
     return buf.getvalue()
 
 
+def wav_to_pcm16(wav_bytes: bytes) -> tuple[bytes, int]:
+    """Read a 16-bit WAV as mono PCM. Returns the samples and their rate.
+
+    Piper writes mono 16-bit WAV, so anything else is refused rather than
+    silently mangled. A stereo file keeps its left channel.
+    """
+    with wave.open(io.BytesIO(wav_bytes)) as wav:
+        if wav.getsampwidth() != 2:
+            raise ValueError("expected 16-bit WAV audio")
+        frames = wav.readframes(wav.getnframes())
+        rate = wav.getframerate()
+        if wav.getnchannels() == 2:
+            frames = b"".join(frames[i : i + 2] for i in range(0, len(frames), 4))
+        elif wav.getnchannels() != 1:
+            raise ValueError("expected mono or stereo WAV audio")
+    return frames, rate
+
+
 def b64decode(payload: str) -> bytes:
     return base64.b64decode(payload, validate=True)

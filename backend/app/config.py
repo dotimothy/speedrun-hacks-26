@@ -130,7 +130,7 @@ class Settings:
 
     # --- Dial audio transport (optional) -----------------------------------
     # Signing secret from GET /api/v1/self-hosted/secret?mode=audio. The
-    # /dial/{call_id} socket refuses every connection while this is empty.
+    # /dispatchiq/audio/{call_id} socket refuses every connection while this is empty.
     dial_signing_secret: str = _env("DIAL_SIGNING_SECRET", "")
     # Frames older than this are rejected, which stops a captured handshake
     # from being replayed later.

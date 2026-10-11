@@ -16,6 +16,7 @@ The pipeline, in order:
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import platform
@@ -42,7 +43,9 @@ from .schemas import (
     SpeakRequest,
 )
 from .timing import StageTimer
+from .transport.audio import pcm16_to_wav
 from .transport.dial import DialSession, verify_signature
+from .transport.dial_call import CallLoop
 from .workflow import apply as apply_workflow
 
 logging.basicConfig(level=logging.INFO)
@@ -211,13 +214,23 @@ def spoken(session_id: str) -> dict:
 
 @app.post("/api/process", response_model=ProcessResponse)
 async def process(request: Request) -> ProcessResponse:
-    timer = StageTimer()
     req, audio_bytes = await _parse_request(request)
 
     if settings.mock_mode:
         fixture = _fixture_response(req.session_id)
         if fixture is not None:
             return ProcessResponse(**fixture)
+
+    return await _run_pipeline(req, audio_bytes)
+
+
+async def _run_pipeline(req: ProcessRequest, audio_bytes: bytes | None) -> ProcessResponse:
+    """ASR, decisions, workflow and reply for one request.
+
+    Shared by the HTTP endpoint and the Dial socket, so a call's audio goes
+    through exactly the same path as an uploaded WAV.
+    """
+    timer = StageTimer()
 
     if not audio_bytes and not (req.transcript or "").strip():
         raise HTTPException(status_code=400, detail="provide either audio or transcript")
@@ -374,15 +387,30 @@ def reset_session(session_id: str) -> dict:
     return {"session_id": session_id, "confirmed": {}}
 
 
-@app.websocket("/dial/{call_id}")
+# Finished Dial calls, keyed by call id. In-process like SESSIONS: a demo
+# result does not need to outlive a restart.
+DIAL_RESULTS: dict[str, ProcessResponse] = {}
+
+
+def _dial_reply_audio(phrase_id: str) -> bytes | None:
+    """WAV bytes for an approved phrase, or None if Piper is unavailable."""
+    result = tts.speak(phrase_id)
+    if not result or not result.get("spoken"):
+        return None
+    return base64.b64decode(result["audio_wav_base64"])
+
+
+
+
+@app.websocket("/dispatchiq/audio/{call_id}")
 async def dial_socket(websocket: WebSocket, call_id: str) -> None:
     """Dial Self-Hosted audio socket. Refuses every connection until a signing
     secret is configured.
 
-    The signature is checked before the handshake is accepted. For now the
-    session echoes caller audio back when the formats match, which is the echo
-    test from plan.md. The ASR hand-off reads ``session.pcm16k`` once the call
-    ends.
+    The signature is checked before the handshake is accepted. The call then
+    runs through ``CallLoop``: caller audio is buffered, approved replies are
+    spoken with barge-in, and the buffered audio goes through the pipeline once
+    the call ends.
     """
     if not settings.dial_signing_secret:
         await websocket.close(code=1008)
@@ -398,12 +426,15 @@ async def dial_socket(websocket: WebSocket, call_id: str) -> None:
         return
 
     await websocket.accept()
-    session = DialSession(call_id=call_id, echo=True)
+    session = DialSession(call_id=call_id)
+    loop = CallLoop(
+        session,
+        send=websocket.send_text,
+        synthesize=_dial_reply_audio,
+        opening_phrase="greeting_en",
+    )
     try:
-        while not session.ended:
-            raw = await websocket.receive_text()
-            for outgoing in session.on_message(raw):
-                await websocket.send_text(outgoing)
+        await loop.run(websocket.receive_text)
     except WebSocketDisconnect:
         pass
     log.info(
@@ -411,3 +442,29 @@ async def dial_socket(websocket: WebSocket, call_id: str) -> None:
         call_id,
         session.buffered_seconds(),
     )
+    if session.pcm16k:
+        await _analyse_dial_call(call_id, bytes(session.pcm16k))
+
+
+async def _analyse_dial_call(call_id: str, pcm16k: bytes) -> None:
+    """Run a finished call's audio through the normal pipeline and keep it.
+
+    The result is stored in memory, keyed by call id, for the dashboard to
+    fetch. A failure is logged and leaves no result behind, so the GET endpoint
+    returns 404 rather than a partial answer.
+    """
+    req = ProcessRequest(session_id=call_id)
+    try:
+        DIAL_RESULTS[call_id] = await _run_pipeline(req, pcm16_to_wav(pcm16k))
+    except HTTPException as exc:
+        log.warning("Dial call %s: pipeline refused the audio (%s)", call_id, exc.detail)
+    except Exception:
+        log.exception("Dial call %s: pipeline failed", call_id)
+
+
+@app.get("/api/dispatchiq/calls/{call_id}", response_model=ProcessResponse)
+def dial_call_result(call_id: str) -> ProcessResponse:
+    result = DIAL_RESULTS.get(call_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="no result for this call yet")
+    return result
