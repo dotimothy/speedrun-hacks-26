@@ -47,6 +47,31 @@ class LayaEngine:
     def __init__(self) -> None:
         self._router = None
         self._load_error: str | None = None
+        self._device: str | None = None
+
+    @staticmethod
+    def _resolve_device() -> str:
+        """Choose the accelerator explicitly rather than leaving it to chance.
+
+        Laya autodetects in the order CUDA, MPS, XPU, CPU, which would land in
+        the right place anyway -- but naming it means ``/api/health`` can state
+        what is actually in use. On an Apple Silicon Mac this is ``mps``, and
+        it matters there: Whisper is stuck on the CPU because CTranslate2 has
+        no Metal backend, so the decision stage is the part that can still use
+        the GPU.
+        """
+        if settings.laya_device:
+            return settings.laya_device
+        try:
+            import torch
+
+            if torch.cuda.is_available():
+                return "cuda"
+            if torch.backends.mps.is_available():
+                return "mps"
+        except Exception:  # pragma: no cover - probe guard
+            pass
+        return "cpu"
 
     # ------------------------------------------------------------------
     # lifecycle
@@ -61,9 +86,10 @@ class LayaEngine:
             log.warning(self._load_error)
             return None
         try:
+            self._device = self._resolve_device()
             self._router = laya.Router(
                 default=settings.laya_default_checkpoint,
-                device=settings.laya_device or None,
+                device=self._device,
                 max_loaded=settings.laya_max_loaded,
                 preload=settings.laya_preload,
             )
@@ -80,6 +106,10 @@ class LayaEngine:
     def load_error(self) -> str | None:
         self._get_router()
         return self._load_error
+
+    @property
+    def device(self) -> str:
+        return self._device or self._resolve_device()
 
     def warmup(self) -> None:
         """Pay the checkpoint download and load cost before the first call."""

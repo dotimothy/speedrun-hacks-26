@@ -6,6 +6,11 @@
 //
 // getUserMedia needs a secure context: http://localhost:5173 qualifies, a LAN
 // IP does not. Demo from localhost.
+//
+// Safari matters here because half the team is on a Mac: it still exposes the
+// constructor as webkitAudioContext, and it refuses to start an AudioContext
+// that was not created inside a user gesture, so the context is built in the
+// click handler and resumed explicitly.
 
 export function downsample(input: Float32Array, inRate: number, outRate = 16000): Float32Array {
   if (outRate >= inRate) return input
@@ -54,6 +59,14 @@ export function encodeWav(samples: Float32Array, sampleRate = 16000): Blob {
   return new Blob([view], { type: 'audio/wav' })
 }
 
+function createAudioContext(): AudioContext {
+  const Ctor =
+    window.AudioContext ??
+    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+  if (!Ctor) throw new Error('this browser has no Web Audio support')
+  return new Ctor()
+}
+
 export class Recorder {
   private context: AudioContext | null = null
   private stream: MediaStream | null = null
@@ -69,7 +82,9 @@ export class Recorder {
     this.stream = await navigator.mediaDevices.getUserMedia({
       audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
     })
-    this.context = new AudioContext()
+    this.context = createAudioContext()
+    // Safari starts contexts suspended unless they were created in a gesture.
+    if (this.context.state === 'suspended') await this.context.resume()
     const source = this.context.createMediaStreamSource(this.stream)
 
     // ScriptProcessor is deprecated but universally present and synchronous,

@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import logging
+import platform
 import os
 import tempfile
 from contextlib import asynccontextmanager
@@ -134,7 +135,13 @@ def health() -> dict:
         "laya": {
             "ready": laya_engine.ready(),
             "checkpoint": settings.laya_default_checkpoint,
+            "device": laya_engine.device,
             "error": laya_engine.load_error,
+        },
+        "platform": {
+            "system": platform.system(),
+            "machine": platform.machine(),
+            "python": platform.python_version(),
         },
         "tts": tts.status(),
         "calibration_warning": settings.CALIBRATION_WARNING,

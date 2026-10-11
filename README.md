@@ -129,16 +129,21 @@ plan.md     team execution plan and sprint timeline
 ## Running it
 
 ```bash
-pip install -r backend/requirements.txt
-python -m piper.download_voices en_US-amy-medium es_MX-ald-medium --data-dir voices
-python scripts/make_fixtures.py          # synthesises the demo call audio
-
+python scripts/setup.py --install    # macOS/Linux: python3
 python -m uvicorn app.main:app --app-dir backend --port 8000
-cd frontend && npm install && npm run dev        # http://localhost:5173
+cd frontend && npm run dev           # http://localhost:5173
 ```
 
-First run downloads Whisper and Laya weights. Check `/api/health` — it reports
-the resolved device, so you can tell a GPU run from a CPU fallback.
+`setup.py` installs the dependencies, fetches the Piper voices, generates the
+demo audio and runs `npm install`; run it without `--install` any time to
+check the environment. Full per-platform notes in
+[`docs/SETUP.md`](./docs/SETUP.md).
+
+Runs on Windows, macOS and Linux, though not on the same hardware: Whisper
+uses CUDA where there is an NVIDIA card and CPU int8 otherwise — CTranslate2
+has no Metal backend, so that is the only option on a Mac. Laya is PyTorch and
+does use MPS there, so the decision stage stays fast and it is speech
+recognition that pays. `/api/health` reports what was actually resolved.
 
 ```bash
 python -m pytest -q        # 67 contract tests, no GPU required
