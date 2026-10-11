@@ -34,6 +34,7 @@ from .autoreply import decide as decide_auto_reply
 from .config import FIXTURES_DIR, settings
 from .confidence import resolve as resolve_confidence
 from .decision.laya_model import LayaEngine
+from .decision.registry import describe_all as describe_engines
 from .decision.rules import RuleEngine
 from .schemas import (
     AutoReplySuggestion,
@@ -158,6 +159,10 @@ def health() -> dict:
             "machine": platform.machine(),
             "python": platform.python_version(),
         },
+        "decision_engines": describe_engines(),
+        "inference_is_local": all(
+            e.get("is_local", True) for e in describe_engines() if e.get("ready")
+        ),
         "tts": tts.status(),
         "calibration_warning": settings.CALIBRATION_WARNING,
     }

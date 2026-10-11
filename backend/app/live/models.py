@@ -463,6 +463,10 @@ class AppendSegmentRequest(BaseModel):
     start_ms: int | None = None
     end_ms: int | None = None
     whisper_size: str = "small"
+    # Which decision engine answers. A request may only name one this
+    # deployment has enabled; asking for a disabled cloud engine silently
+    # falls back to a local one rather than quietly sending the audio away.
+    decision_engine: str | None = None
     final: bool = True
 
 

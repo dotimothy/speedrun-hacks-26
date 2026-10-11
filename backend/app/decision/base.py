@@ -55,9 +55,17 @@ class EngineResult:
 @runtime_checkable
 class DecisionEngine(Protocol):
     name: str
+    # Whether inference happens on this machine. Not decoration: the product
+    # claims local inference, and an engine that sends a caller's words to a
+    # third party makes that claim false. The flag is what lets /api/health
+    # and every response say which is actually true right now.
+    is_local: bool
 
     def ready(self) -> bool:
         """True when the engine can answer without a long cold start."""
+
+    def describe(self) -> dict:
+        """Name, model and locality, for health and for the audit trail."""
 
     def extract(self, original: str, english: str, language: str | None) -> EngineResult:
         """Answer every field question about one call transcript."""

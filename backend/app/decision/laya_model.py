@@ -43,6 +43,8 @@ log = logging.getLogger("dispatchiq.laya")
 
 class LayaEngine:
     name = "laya"
+    # Runs on this machine.
+    is_local = True
 
     def __init__(self) -> None:
         self._router = None
@@ -110,6 +112,15 @@ class LayaEngine:
     @property
     def device(self) -> str:
         return self._device or self._resolve_device()
+
+    def describe(self) -> dict:
+        return {
+            "name": self.name,
+            "model": settings.laya_default_checkpoint,
+            "device": self.device,
+            "is_local": True,
+            "inference_location": "this machine",
+        }
 
     def warmup(self) -> None:
         """Pay the checkpoint download and load cost before the first call."""

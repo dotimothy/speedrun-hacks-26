@@ -11,6 +11,29 @@ FIXTURES_DIR = REPO_ROOT / "fixtures"
 VOICES_DIR = REPO_ROOT / "voices"
 
 
+def _load_dotenv() -> None:
+    """Read .env into the environment if it exists.
+
+    Hand-rolled rather than pulling in python-dotenv: it is fifteen lines, and
+    the point is that a key lives in a gitignored file instead of in the
+    source, which does not need a dependency. Existing environment variables
+    win, so a real deployment's configuration is never overridden by a file
+    somebody left behind.
+    """
+    path = REPO_ROOT / ".env"
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        name, _, value = line.partition("=")
+        os.environ.setdefault(name.strip(), value.strip().strip("\"'"))
+
+
+_load_dotenv()
+
+
 def _env(name: str, default: str) -> str:
     return os.environ.get(name, default).strip()
 
@@ -61,6 +84,30 @@ class Settings:
         "(issue #394), so a 0.9 here does not mean 90% correct. Treat every "
         "field as needing review."
     )
+
+    # --- Decision engine selection -----------------------------------------
+    # Which engine answers the typed questions. The swap point is the
+    # DecisionEngine protocol; see decision/registry.py.
+    decision_engine: str = _env("DISPATCHIQ_DECISION_ENGINE", "laya")
+
+    # Cloud inference is off unless switched on here, and cannot be enabled by
+    # a request parameter. Every other engine runs on this machine, and the
+    # project's pitch says so; an engine that sends a caller's words to a
+    # third party changes that claim, so turning it on should be a deliberate
+    # act recorded in configuration rather than a query string.
+    allow_cloud_inference: bool = _env("DISPATCHIQ_ALLOW_CLOUD", "0") == "1"
+    openai_api_key: str = _env("OPENAI_API_KEY", "")
+    openai_model: str = _env("DISPATCHIQ_OPENAI_MODEL", "gpt-4o-mini")
+    openai_timeout_s: float = float(_env("DISPATCHIQ_OPENAI_TIMEOUT", "20"))
+
+    # Jev / TypeSafe System-One. `jev_is_local` exists because locality here
+    # depends on where the endpoint is: a self-hosted deployment runs on your
+    # hardware, the hosted service does not, and the health report should not
+    # guess.
+    jev_endpoint: str = _env("DISPATCHIQ_JEV_ENDPOINT", "")
+    jev_api_key: str = _env("DISPATCHIQ_JEV_API_KEY", "")
+    jev_model: str = _env("DISPATCHIQ_JEV_MODEL", "")
+    jev_is_local: bool = _env("DISPATCHIQ_JEV_IS_LOCAL", "0") == "1"
 
     # --- Generative extractor (optional, secondary) ------------------------
     ollama_host: str = _env("OLLAMA_HOST", "http://127.0.0.1:11434")

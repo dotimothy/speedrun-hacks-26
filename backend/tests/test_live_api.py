@@ -20,13 +20,20 @@ from app.main import app
 @pytest.fixture(autouse=True)
 def quiet_laya(monkeypatch):
     """Stub Laya: these tests are about state transitions, not inference."""
-    monkeypatch.setattr(
-        live_router.laya_engine,
-        "extract",
-        lambda original, english, language: EngineResult(
-            answers={}, engine="laya-stub", model="stub", notes=[]
-        ),
-    )
+    class _Stub:
+        name = "laya-stub"
+        is_local = True
+
+        def ready(self):
+            return True
+
+        def describe(self):
+            return {"name": self.name, "is_local": True, "inference_location": "stub"}
+
+        def extract(self, original, english, language):
+            return EngineResult(answers={}, engine="laya-stub", model="stub", notes=[])
+
+    monkeypatch.setattr(live_router, "get_engine", lambda name=None: _Stub())
 
 
 @pytest.fixture
@@ -106,7 +113,7 @@ class TestReviewActionsRunNoModel:
         def explode(*args, **kwargs):
             raise AssertionError("a review action must never run inference")
 
-        monkeypatch.setattr(live_router.laya_engine, "extract", explode)
+        monkeypatch.setattr(live_router, "get_engine", explode)
         monkeypatch.setattr(live_router.whisper_engine, "transcribe_and_translate", explode)
 
         accepted = client.post(

@@ -253,9 +253,19 @@ class RuleEngine:
     """Usable both as the cross-check and as a standalone fallback engine."""
 
     name = "rules"
+    # Runs on this machine.
+    is_local = True
 
     def ready(self) -> bool:
         return True
+
+    def describe(self) -> dict:
+        return {
+            "name": self.name,
+            "model": "regex+keywords",
+            "is_local": True,
+            "inference_location": "this machine",
+        }
 
     def extract(self, original: str, english: str, language: str | None) -> EngineResult:
         started = time.perf_counter()

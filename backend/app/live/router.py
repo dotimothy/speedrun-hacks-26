@@ -30,7 +30,7 @@ from fastapi.responses import JSONResponse
 from ..asr import whisper_engine
 from ..config import settings
 from ..confidence import resolve as resolve_confidence
-from ..decision.laya_model import LayaEngine
+from ..decision.registry import get_engine
 from ..decision.rules import RuleEngine
 from .diffing import build_suggestions
 from .models import (
@@ -49,8 +49,17 @@ from .store import SessionNotFound, StaleAction, store
 
 router = APIRouter(prefix="/api/v2", tags=["live"])
 
-laya_engine = LayaEngine()
 rule_engine = RuleEngine()
+
+
+def laya_engine():
+    """The configured decision engine.
+
+    Named for history rather than for the implementation: tests patch this.
+    Which engine answers is a deployment decision, and the rest of this module
+    is written so it cannot tell the difference.
+    """
+    return get_engine()
 
 
 # ---------------------------------------------------------------------------
@@ -223,8 +232,9 @@ async def append_segment(session_id: str, request: Request) -> dict:
         if s.speaker is Speaker.CALLER
     )
 
+    engine = get_engine(req.decision_engine)
     t0 = time.perf_counter()
-    laya_result = laya_engine.extract(caller_text, caller_english, language)
+    laya_result = engine.extract(caller_text, caller_english, language)
     rule_result = rule_engine.extract(caller_text, caller_english, language)
     resolution = resolve_confidence(
         laya_result, rule_result, caller_text, caller_english, asr_confidence=word_confidence
@@ -247,6 +257,10 @@ async def append_segment(session_id: str, request: Request) -> dict:
         engine={
             "decision": laya_result.engine,
             "decision_model": laya_result.model,
+            # Where the caller's words actually went. Reported on every
+            # response, not just in health, because it can change per request.
+            "inference_location": engine.describe().get("inference_location", "unknown"),
+            "is_local": str(getattr(engine, "is_local", True)),
             "whisper_size": req.whisper_size,
             "whisper_device": whisper_engine.device,
             "asr_confidence": "measured" if word_confidence is not None else "not_applicable",
