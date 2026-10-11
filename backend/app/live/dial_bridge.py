@@ -166,9 +166,22 @@ class DialBridge:
             Path(path).unlink(missing_ok=True)
 
         if original is None or not original.text.strip():
-            # Silence, or noise. Saying nothing was heard is the honest
-            # outcome; inventing a segment from it is not.
-            return None
+            # Silence, or noise. Nothing is added to the transcript --
+            # inventing a segment from a quiet line would be worse than the
+            # quiet. But the agent still has to take its turn: a caller who
+            # has stopped talking is waiting for something, and this used to
+            # return here without ever asking what to say. On a real call
+            # that is where the agent went mute, and where a finished call
+            # was left open instead of being closed.
+            if not any(
+                s.speaker is Speaker.CALLER for s in store.get(self.call_id).segments
+            ):
+                # Nobody has spoken yet. The greeting is still doing its job.
+                return None
+            phrase_id = self._pick_phrase()
+            if phrase_id is not None:
+                self._record_agent_line(phrase_id)
+            return phrase_id
 
         asr_ms = (time.perf_counter() - started) * 1000
         snapshot = store.get(self.call_id)
@@ -360,7 +373,7 @@ class DialBridge:
         finish. Running out of things to ask is the end of the call; it just
         has to be said out loud.
         """
-        if len(snapshot.segments) < MIN_SEGMENTS_BEFORE_CLOSING:
+        if self._heard < MIN_SEGMENTS_BEFORE_CLOSING:
             return False
         if not all(self._exhausted(q["phrase_id"]) for q in questions):
             return False
@@ -411,7 +424,10 @@ class DialBridge:
         """
         snapshot = store.get(self.call_id)
         self._tick += 1
-        self._heard = len(snapshot.segments)
+        # Caller utterances only. The agent's own lines are in the session
+        # too now, and counting them would make every question look answered
+        # the moment it was asked.
+        self._heard = sum(1 for s in snapshot.segments if s.speaker is Speaker.CALLER)
 
         if any(flag.kind.value in SILENCING_FLAGS for flag in snapshot.open_flags):
             # Hand over rather than talk. See the module docstring.

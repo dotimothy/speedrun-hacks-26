@@ -247,6 +247,44 @@ class TestTheCallThatWentQuiet:
         assert "wrap_up_en" in spoken
 
 
+class TestAQuietLine:
+    """The caller has stopped talking. That is a turn, not an absence of one."""
+
+    @pytest.fixture
+    def quiet(self, monkeypatch):
+        # Whisper hears nothing: the chunk is silence.
+        monkeypatch.setattr(
+            "app.live.dial_bridge.whisper_engine.transcribe_and_translate",
+            lambda path, size: (None, None),
+        )
+
+    def test_the_agent_still_takes_its_turn(self, bridge, quiet):
+        agent, snapshot = bridge
+        heard(snapshot, "there is a fire")
+        said = [agent._process_chunk(bytes(64000)) for _ in range(8)]
+        assert any(said), "silence from the caller produced silence from the agent"
+
+    def test_a_finished_call_is_closed_even_if_nobody_speaks_again(self, bridge, quiet):
+        """This is the hangup that did not happen on the live number."""
+        agent, snapshot = bridge
+        answer_everything(snapshot)
+        said = [agent._process_chunk(bytes(64000)) for _ in range(4)]
+        assert "wrap_up_en" in said
+        assert agent.should_end_call() is True
+
+    def test_silence_adds_nothing_to_the_caller_s_transcript(self, bridge, quiet):
+        agent, snapshot = bridge
+        heard(snapshot, "there is a fire")
+        for _ in range(6):
+            agent._process_chunk(bytes(64000))
+        assert sum(1 for s in snapshot.segments if s.speaker is Speaker.CALLER) == 1
+
+    def test_it_does_not_talk_over_its_own_greeting(self, bridge, quiet):
+        """Before the caller's first word there is nothing to respond to."""
+        agent, _ = bridge
+        assert [agent._process_chunk(bytes(64000)) for _ in range(5)] == [None] * 5
+
+
 class TestWhatTheOperatorSees:
     def test_the_agent_s_questions_are_written_into_the_session(self, bridge):
         """An answer on screen is unreadable without the question."""
