@@ -130,7 +130,42 @@ def create_session(payload: dict | None = None) -> dict:
 
 @router.get("/sessions")
 def list_sessions() -> dict:
-    return {"sessions": store.ids()}
+    """Every call this process has seen, newest first.
+
+    Summaries rather than ids: a call history is only useful if you can tell
+    the calls apart without opening each one, and the three things that
+    identify a call to an operator are what it was, where it was, and whether
+    anything was shared.
+    """
+    summaries = []
+    for session_id in store.ids():
+        snapshot = store.get(session_id)
+        record = snapshot.accepted_record
+        summaries.append(
+            {
+                "session_id": session_id,
+                "created_at": snapshot.created_at,
+                "revision": snapshot.revision,
+                "segments": len(snapshot.segments),
+                "pending": len(snapshot.pending),
+                "open_flags": len(snapshot.open_flags),
+                "published": len(snapshot.published),
+                "language": snapshot.detected_language,
+                "incident_type": (
+                    record["incident_type"].value if "incident_type" in record else None
+                ),
+                "location_text": (
+                    record["location_text"].value if "location_text" in record else None
+                ),
+                # The first thing the caller said: what an operator actually
+                # recognises a call by.
+                "opening_line": (
+                    snapshot.segments[0].original_text[:90] if snapshot.segments else None
+                ),
+            }
+        )
+    summaries.sort(key=lambda item: item["created_at"], reverse=True)
+    return {"sessions": summaries}
 
 
 @router.get("/sessions/{session_id}")

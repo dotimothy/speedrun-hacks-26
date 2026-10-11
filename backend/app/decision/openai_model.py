@@ -50,26 +50,30 @@ _NOUL_FIELDS = tuple(
 
 
 def _schema() -> dict:
+    """The typed answer, and nothing else.
+
+    An earlier version also asked for a 0-1 confidence. It was removed on
+    purpose: the only generative model measured on this project returned
+    exactly 1.0 for every field, every time, so the number carried no
+    information and invited a client to render it as a percentage. Asking a
+    model how sure it is produces a sentence about confidence, not a
+    measurement of it.
+
+    Abstention is kept as a value instead, which a model *can* answer
+    honestly: every question may be answered "unknown", and that answer
+    survives into the record as "unknown" rather than being inferred from a
+    low number. Support is then derived the same way it is for every other
+    engine -- from agreement with the rule extractor and from evidence in the
+    transcript.
+    """
     properties: dict[str, dict] = {}
     for name, options in _CHOICE_FIELDS.items():
         properties[name] = {
-            "type": "object",
-            "properties": {
-                "value": {"type": "string", "enum": list(options)},
-                # Asked for, but treated as the model's claim rather than a
-                # measurement -- see the note in `extract`.
-                "probability": {"type": "number"},
-            },
-            "required": ["value", "probability"],
-            "additionalProperties": False,
+            "type": "string",
+            "enum": [*options, "unknown"],
         }
     for name in _NOUL_FIELDS:
-        properties[name] = {
-            "type": "object",
-            "properties": {"probability": {"type": "number"}},
-            "required": ["probability"],
-            "additionalProperties": False,
-        }
+        properties[name] = {"type": "string", "enum": ["yes", "no", "unknown"]}
     return {
         "type": "object",
         "properties": properties,
@@ -188,29 +192,36 @@ class OpenAIEngine:
 
         answers: dict[str, FieldAnswer] = {}
         for name, options in _CHOICE_FIELDS.items():
-            entry = payload.get(name) or {}
-            value = entry.get("value")
+            value = payload.get(name)
+            # "unknown" is an answer, not a failure, and it stops here rather
+            # than becoming a low-confidence guess downstream.
             if value not in options:
                 continue
             answers[name] = FieldAnswer(
                 label=name,
                 value=value,
-                # A self-reported number. Measured on this project's other
-                # generative model: it returned exactly 1.0 every time. The
-                # confidence layer treats it as a claim to be corroborated,
-                # not as a probability, which is why it is safe to pass on.
-                probability=float(entry.get("probability") or 0.0),
+                # No probability: this engine is not asked for one. The
+                # confidence layer applies a neutral prior and moves it on
+                # corroboration, exactly as it would for any typed answer with
+                # no number attached.
+                probability=None,
                 decided_on="english",
             )
+
+        # The tri-state answers round-trip through the probability band the
+        # rest of the pipeline thresholds on: yes -> 1.0, no -> 0.0, and
+        # unknown -> 0.5, which lands in the abstention band by construction.
+        _BAND = {"yes": 1.0, "no": 0.0, "unknown": 0.5}
         for name in _NOUL_FIELDS:
-            entry = payload.get(name) or {}
-            p_true = float(entry.get("probability") or 0.0)
+            spoken = payload.get(name)
+            if spoken not in _BAND:
+                continue
             answers[name] = FieldAnswer(
                 label=name,
-                value=p_true,
-                probability=max(p_true, 1.0 - p_true),
-                probabilities={"true": p_true, "false": 1.0 - p_true},
+                value=_BAND[spoken],
+                probability=None,
                 decided_on="english",
+                notes=[f"typed answer: {spoken}"],
             )
 
         return EngineResult(

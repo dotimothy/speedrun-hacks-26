@@ -99,6 +99,11 @@ class Settings:
     openai_api_key: str = _env("OPENAI_API_KEY", "")
     openai_model: str = _env("DISPATCHIQ_OPENAI_MODEL", "gpt-4o-mini")
     openai_timeout_s: float = float(_env("DISPATCHIQ_OPENAI_TIMEOUT", "20"))
+    # What a typed answer is worth before anything corroborates it, for
+    # engines that report no probability of their own. Deliberately middling:
+    # one model asserting something, with nothing agreeing with it yet, is
+    # neither strong nor worthless. Agreement and evidence move it from here.
+    typed_answer_prior: float = float(_env("DISPATCHIQ_TYPED_PRIOR", "0.6"))
 
     # Jev / TypeSafe System-One. `jev_is_local` exists because locality here
     # depends on where the endpoint is: a self-hosted deployment runs on your

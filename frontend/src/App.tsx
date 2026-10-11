@@ -9,6 +9,9 @@ import {
 } from './api'
 import AutoReplyPanel from './components/AutoReplyPanel'
 import CallAudio from './components/CallAudio'
+import CallHistory, { loadHistory, recordCall } from './components/CallHistory'
+import type { CallRecord } from './components/CallHistory'
+import SettingsMenu from './components/SettingsMenu'
 import IncidentFormPane from './components/IncidentFormPane'
 import MicPanel from './components/MicPanel'
 import PredictionList from './components/PredictionList'
@@ -38,6 +41,10 @@ export default function App() {
   const [error, setError] = useState<string | null>(null)
   const [transcriptDraft, setTranscriptDraft] = useState('')
   const [callCount, setCallCount] = useState(0)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [engine, setEngine] = useState('laya')
+  const [history, setHistory] = useState<CallRecord[]>(() => loadHistory())
+  const [activeCall, setActiveCall] = useState<string | null>(null)
 
   // Whatever audio the current result came from, so it can be played back.
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
@@ -73,12 +80,18 @@ export default function App() {
     setAudioLabel(label)
   }
 
-  const run = async (work: () => Promise<ProcessResponse>) => {
+  const run = async (work: () => Promise<ProcessResponse>, label?: string) => {
     setBusy(true)
     setError(null)
     try {
-      setResult(await work())
+      const response = await work()
+      setResult(response)
       setCallCount((n) => n + 1)
+      if (label) {
+        const updated = recordCall(label, response)
+        setHistory(updated)
+        setActiveCall(updated[0]?.id ?? null)
+      }
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : String(exception))
     } finally {
@@ -95,7 +108,7 @@ export default function App() {
     }
     const wav = await response.blob()
     attachAudio(wav, label)
-    await run(() => processAudio(id, wav, whisperSize))
+    await run(() => processAudio(id, wav, whisperSize), label)
   }
 
   // Live interim passes must not flip the UI into its busy state or the
@@ -106,7 +119,7 @@ export default function App() {
     if (final) {
       setSessionId(id)
       attachAudio(wav, 'microphone recording')
-      await run(() => processAudio(id, wav, sizeRef.current))
+      await run(() => processAudio(id, wav, sizeRef.current), 'Microphone recording')
       return
     }
     const interim = await processAudio(id, wav, sizeRef.current)
@@ -151,6 +164,10 @@ export default function App() {
             </span>
             <span className="chip">laya {health.laya?.ready ? health.laya?.device : 'down'}</span>
             <span className="chip">tts {health.tts?.rendered ?? 0} phrases</span>
+            <span className={'chip' + (health.inference_is_local === false ? ' chip-warn' : '')}>
+              {health.inference_is_local === false ? 'cloud inference on' : 'local only'}
+            </span>
+            <button onClick={() => setSettingsOpen(true)}>Settings</button>
           </div>
         )}
       </header>
@@ -172,18 +189,6 @@ export default function App() {
           </div>
         </div>
 
-        <div className="control-group">
-          <label>Whisper model</label>
-          <select value={whisperSize} onChange={(event) => setWhisperSize(event.target.value)}>
-            {(models?.whisper_sizes ?? ['small']).map((size) => (
-              <option key={size} value={size}>
-                {size}
-                {models?.whisper_loaded.includes(size) ? ' (loaded)' : ''}
-              </option>
-            ))}
-          </select>
-        </div>
-
         <div className="control-group grow">
           <label>Or paste a transcript (skips speech recognition)</label>
           <div className="row">
@@ -200,7 +205,10 @@ export default function App() {
                 setSessionId(id)
                 setAudioUrl(null)
                 setAudioBlob(null)
-                return run(() => processTranscript(id, transcriptDraft))
+                return run(
+                  () => processTranscript(id, transcriptDraft),
+                  transcriptDraft.slice(0, 40),
+                )
               }}
             >
               Process
@@ -213,6 +221,36 @@ export default function App() {
         <MicPanel onAudio={onMicAudio} disabled={busy} />
         <CallAudio src={audioUrl} blob={audioBlob} label={audioLabel || 'call'} />
       </div>
+
+      <div className="grid grid-intake">
+        <CallHistory
+          history={history}
+          activeId={activeCall}
+          onOpen={(entry) => {
+            // Restore what the operator actually saw. No model runs.
+            setResult(entry.response)
+            setActiveCall(entry.id)
+            setAudioUrl(null)
+            setAudioBlob(null)
+          }}
+          onClear={() => {
+            localStorage.removeItem('dispatchiq.callHistory.v1')
+            setHistory([])
+            setActiveCall(null)
+          }}
+        />
+      </div>
+
+      <SettingsMenu
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        models={models}
+        health={health}
+        whisperSize={whisperSize}
+        onWhisperSize={setWhisperSize}
+        engine={engine}
+        onEngine={setEngine}
+      />
 
       {busy && <p className="working">working…</p>}
       {error && <p className="warn">{error}</p>}

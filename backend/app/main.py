@@ -175,8 +175,9 @@ def models() -> dict:
         "whisper_sizes": list(settings.whisper_sizes),
         "whisper_default": settings.whisper_default_size,
         "whisper_loaded": whisper_engine.loaded_sizes(),
-        "decision_engines": ["laya", "rules"],
-        "decision_default": "laya",
+        "decision_engines": describe_engines(),
+        "decision_default": settings.decision_engine,
+        "cloud_inference_enabled": settings.allow_cloud_inference,
         "laya_checkpoints": ["multilingual", "english", "typed-decisions"],
         "thresholds": {
             "choice_min_confidence": settings.choice_min_confidence,
