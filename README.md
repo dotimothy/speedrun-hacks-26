@@ -53,8 +53,9 @@ Browser mic / WAV  →  audio transport  →  Whisper (multilingual)
 
 Optional reply path: an approved template phrase → Piper TTS → browser speakers.
 
-All inference runs locally on a Windows RTX 3090 — `faster-whisper` for ASR and
-translation, Laya for structured extraction. No audio or transcript leaves the machine.
+All inference runs on hardware the team controls — `faster-whisper` for ASR and
+translation, Laya for structured extraction. No audio or transcript is sent to a
+third-party service.
 
 ---
 
