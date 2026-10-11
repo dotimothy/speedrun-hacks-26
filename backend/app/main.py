@@ -46,6 +46,7 @@ from .timing import StageTimer
 from .transport.audio import pcm16_to_wav
 from .transport.dial import DialSession, verify_signature
 from .transport.dial_call import CallLoop
+from .transport.dial_llm import LlmSession, handle_frame
 from .workflow import apply as apply_workflow
 
 logging.basicConfig(level=logging.INFO)
@@ -460,6 +461,67 @@ async def _analyse_dial_call(call_id: str, pcm16k: bytes) -> None:
         log.warning("Dial call %s: pipeline refused the audio (%s)", call_id, exc.detail)
     except Exception:
         log.exception("Dial call %s: pipeline failed", call_id)
+
+
+def _approved_text(phrase_id: str) -> str:
+    """The exact approved words for a phrase id. Nothing else is ever spoken."""
+    return tts.APPROVED[phrase_id][1]
+
+
+async def _llm_brain(session: LlmSession) -> str | None:
+    """Pick the next approved phrase from what the caller has said so far.
+
+    The pipeline runs on the transcript text with the rules engine, so the
+    Laya model never loads on this path. Its reply policy supplies the phrase.
+    Silence is never the answer on a live call, so a fallback question is used
+    when the policy declines.
+    """
+    text = session.caller_text()
+    if not text:
+        return "greeting_en"
+    req = ProcessRequest(
+        session_id=f"llm:{session.call_id}",
+        transcript=text,
+        decision_engine="rules",
+    )
+    result = await _run_pipeline(req, None)
+    auto = result.auto_reply
+    if auto is not None and auto.allowed and auto.phrase_id in tts.APPROVED:
+        return auto.phrase_id
+    return "what_happening_en"
+
+
+@app.websocket("/dispatchiq/llm/{call_id}")
+async def dial_llm_socket(websocket: WebSocket, call_id: str) -> None:
+    """Dial Self-Hosted LLM socket. Refuses every connection until the LLM
+    signing secret is configured, and checks the signature before accepting."""
+    if not settings.dial_llm_signing_secret:
+        await websocket.close(code=1008)
+        return
+    if not verify_signature(
+        websocket.headers.get("x-dial-signature"),
+        call_id,
+        settings.dial_llm_signing_secret,
+        tolerance_s=settings.dial_signature_tolerance_s,
+    ):
+        log.warning("rejected Dial LLM socket for call %s: bad signature", call_id)
+        await websocket.close(code=1008)
+        return
+
+    await websocket.accept()
+    session = LlmSession(call_id=call_id)
+    try:
+        while not session.ended:
+            raw = await websocket.receive_text()
+            for outgoing in await handle_frame(session, raw, _llm_brain, _approved_text):
+                await websocket.send_text(outgoing)
+    except WebSocketDisconnect:
+        pass
+    log.info(
+        "Dial LLM call %s finished after %d transcript entries",
+        call_id,
+        len(session.transcript),
+    )
 
 
 @app.get("/api/dispatchiq/calls/{call_id}", response_model=ProcessResponse)
