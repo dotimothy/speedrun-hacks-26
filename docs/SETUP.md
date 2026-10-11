@@ -93,6 +93,21 @@ python -m uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port 8000   --
 cd frontend && npm run dev       # picks up certs/ automatically
 ```
 
+The two halves choose TLS independently: the dashboard from whether `certs/`
+exists, the backend from whether you passed `--ssl-certfile`. Starting the
+backend without those flags while `certs/` happens to exist used to leave the
+dev server proxying HTTPS at an HTTP backend, and every `/api` call failed
+with nothing on screen explaining why. The dev server now probes the backend
+at startup and proxies whichever protocol it actually speaks, printing a line
+when the two disagree:
+
+```
+[dispatchiq] backend speaks http, not https — proxying http.
+```
+
+That mismatch is survivable rather than silent, but `scripts/serve.py` keeps
+both sides on the same protocol and is still the easier path.
+
 ### Why HTTPS
 
 Not decoration. `getUserMedia` only runs in a secure context: `localhost`
@@ -158,4 +173,5 @@ All optional; the defaults are what the demo uses.
 | Microphone button does nothing | Not on `localhost` and not on HTTPS — run `scripts/serve.py`, or permission was denied |
 | Browser warns about the certificate | Expected; it is self-signed. Accept once per device |
 | API calls fail from a phone but work locally | The certificate was not accepted for the API origin. Open `https://<lan-ip>:8000/api/health` once and accept it too |
+| Every `/api` call 500s in the dashboard | Protocol mismatch between the dev server and the backend. The startup line says which the backend speaks; `scripts/serve.py` avoids it |
 | Nothing works and the demo is in five minutes | `DISPATCHIQ_MOCK=1` — the committed fixtures are served with no models at all |
