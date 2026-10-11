@@ -450,7 +450,8 @@ async def dial_socket(websocket: WebSocket, call_id: str) -> None:
         session,
         send=websocket.send_text,
         synthesize=_dial_reply_audio,
-        opening_phrase="greeting_en",
+        opening_phrase=settings.dial_opening_phrase,
+        decide_every_s=settings.dial_decide_every_s,
         # The same tick transcribes, files a segment, and decides whether to
         # speak -- so what the agent says and what the operator sees come
         # from one pass over one transcript.

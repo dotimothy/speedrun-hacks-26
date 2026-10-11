@@ -191,6 +191,23 @@ class Settings:
     # The /dispatchiq/llm/{call_id} socket refuses connections while it is empty.
     dial_llm_signing_secret: str = _env("DIAL_LLM_SIGNING_SECRET", "")
 
+    # How the call itself is paced. These were constants in three different
+    # files, which is awkward mid-demo: how often the agent may speak and how
+    # much audio a transcription pass gets are exactly the knobs you want to
+    # turn while listening to it, not after editing code and restarting.
+    dial_opening_phrase: str = _env("DIAL_OPENING_PHRASE", "greeting_en")
+    # Seconds of caller audio between decision ticks. Each tick transcribes,
+    # files a segment, and may speak. Lower feels more responsive and gives
+    # Whisper less to work with.
+    dial_decide_every_s: float = float(_env("DIAL_DECIDE_EVERY_S", "3.0"))
+    # Audio shorter than this is not sent to Whisper: a breath or a syllable
+    # is where hallucinated filler comes from.
+    dial_min_chunk_s: float = float(_env("DIAL_MIN_CHUNK_S", "1.8"))
+    # Whisper size for live call chunks, separate from the dashboard default.
+    # A phone call is 8 kHz and chunked, so a bigger model buys less here than
+    # it does on a clean recording, while costing latency the caller feels.
+    dial_whisper_size: str = _env("DIAL_WHISPER_SIZE", "small")
+
     # Numbers permitted to reach the demo. Dial has no allowlist of its own,
     # so this is the only thing standing between a live public number and
     # whoever dials it. Empty means anyone, which is fine for a local

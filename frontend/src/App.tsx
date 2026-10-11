@@ -11,6 +11,8 @@ import AutoReplyPanel from './components/AutoReplyPanel'
 import CallAudio from './components/CallAudio'
 import CallHistory, { loadHistory, recordCall } from './components/CallHistory'
 import LiveCall from './components/LiveCall'
+import { fetchLiveSession, listLiveSessions } from './api'
+import { snapshotToResult } from './liveToResult'
 import type { CallRecord } from './components/CallHistory'
 import SettingsMenu from './components/SettingsMenu'
 import IncidentFormPane from './components/IncidentFormPane'
@@ -46,6 +48,13 @@ export default function App() {
   const [engine, setEngine] = useState('laya')
   const [history, setHistory] = useState<CallRecord[]>(() => loadHistory())
   const [activeCall, setActiveCall] = useState<string | null>(null)
+  // A phone call drives the whole dashboard, not just the review strip.
+  // Following is on until the operator deliberately looks at something else,
+  // because a live call arriving should not yank a scenario off the screen
+  // mid-sentence while somebody is presenting it.
+  const [followLive, setFollowLive] = useState(true)
+  const [liveCallId, setLiveCallId] = useState<string | null>(null)
+  const lastSeen = useRef<number>(0)
 
   // Whatever audio the current result came from, so it can be played back.
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
@@ -101,6 +110,7 @@ export default function App() {
   }
 
   const playFixture = async (id: string, label: string) => {
+    setFollowLive(false)
     setSessionId(id)
     const response = await fetch('/fixtures/audio/' + id + '.wav')
     if (!response.ok) {
@@ -139,6 +149,46 @@ export default function App() {
       await run(() => processTranscript(sessionId, result.transcript_original, cleaned))
     }
   }
+
+  // Poll for a call in progress. Two seconds is indistinguishable from live
+  // at conversational pace and is one transport fewer to debug on stage.
+  useEffect(() => {
+    let cancelled = false
+    const tick = async () => {
+      const sessions = await listLiveSessions().catch(() => [])
+      const active = sessions.find((s) => s.segments > 0)
+      if (cancelled) return
+
+      if (!active) {
+        setLiveCallId(null)
+        return
+      }
+      setLiveCallId(active.session_id)
+
+      // A brand-new call takes the screen back even if the operator had
+      // wandered off to a fixture: a ringing phone is the more important
+      // thing on the desk.
+      if (active.session_id !== liveCallId) {
+        setFollowLive(true)
+        lastSeen.current = 0
+      }
+      if (!followLive || active.segments === lastSeen.current) return
+
+      const snapshot = await fetchLiveSession(active.session_id)
+      if (cancelled || !snapshot) return
+      lastSeen.current = active.segments
+      setResult(snapshotToResult(snapshot))
+      setSessionId(active.session_id)
+      setAudioUrl(null)
+      setAudioBlob(null)
+    }
+    tick()
+    const timer = window.setInterval(tick, 2000)
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+    }
+  }, [followLive, liveCallId])
 
   const banner = useMemo(() => {
     if (!result) return null
@@ -222,6 +272,25 @@ export default function App() {
         <MicPanel onAudio={onMicAudio} disabled={busy} />
         <CallAudio src={audioUrl} blob={audioBlob} label={audioLabel || 'call'} />
       </div>
+
+      {liveCallId && (
+        <section className={'banner' + (followLive ? ' banner-live' : '')}>
+          <div className="banner-row">
+            <strong>
+              <span className="live-dot" aria-hidden="true" />
+              call in progress — {liveCallId}
+            </strong>
+            <button className="link" onClick={() => setFollowLive(!followLive)}>
+              {followLive ? 'stop following' : 'follow this call'}
+            </button>
+          </div>
+          <p className="muted">
+            {followLive
+              ? 'The panes below are this call, updating as it is spoken.'
+              : 'Showing something else. The call is still being recorded.'}
+          </p>
+        </section>
+      )}
 
       <LiveCall />
 

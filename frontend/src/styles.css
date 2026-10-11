@@ -390,3 +390,5 @@ code {
 
 .flag-strip { margin-bottom: 12px; border-left: 3px solid var(--urgent); padding-left: 10px; }
 .flag-strip p { margin: 2px 0; font-size: 13px; }
+
+.banner-live { border-left-color: var(--urgent); }

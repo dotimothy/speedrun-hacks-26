@@ -46,10 +46,6 @@ log = logging.getLogger("dispatchiq.dial.bridge")
 
 rule_engine = RuleEngine()
 
-# Audio shorter than this is not worth a Whisper pass: it is usually a breath
-# or a syllable, and short clips are where hallucinated filler comes from.
-MIN_CHUNK_SECONDS = 1.8
-
 # Safety flags that stop the agent speaking entirely.
 SILENCING_FLAGS = {"weapon_mentioned", "caller_may_be_trapped"}
 
@@ -59,7 +55,7 @@ class DialBridge:
     """Per-call state: where we have read up to, and what we have already said."""
 
     call_id: str
-    whisper_size: str = "small"
+    whisper_size: str = field(default_factory=lambda: settings.dial_whisper_size)
     _offset: int = 0
     _spoken: list[str] = field(default_factory=list)
     _busy: bool = False
@@ -91,7 +87,7 @@ class DialBridge:
             return None
 
         pcm = bytes(session.pcm16k[self._offset :])
-        if len(pcm) / 2 / 16000 < MIN_CHUNK_SECONDS:
+        if len(pcm) / 2 / 16000 < settings.dial_min_chunk_s:
             return None
 
         self._busy = True
