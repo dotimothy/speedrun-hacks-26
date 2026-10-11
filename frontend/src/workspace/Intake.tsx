@@ -42,6 +42,7 @@ export default function Intake({
   const [error, setError] = useState<string | null>(null);
   const [queued, setQueued] = useState(0);
   const [received, setReceived] = useState(0);
+  const [lastResult, setLastResult] = useState("");
   const [elapsed, setElapsed] = useState(0);
   const [level, setLevel] = useState(0);
   useEffect(() => {
@@ -115,6 +116,14 @@ export default function Intake({
             type: "server",
             snapshot: adaptSnapshot(snapshot, mode),
           });
+          const pending = snapshot.suggestions.filter(
+            (s) => s.status === "pending",
+          ).length;
+          setLastResult(
+            pending
+              ? `Utterance received · ${pending} proposal(s) awaiting review.`
+              : "Utterance received · No pending proposals returned. You can enter missing details manually.",
+          );
           queue.current.shift();
           setQueued(queue.current.length);
           setReceived((n) => n + 1);
@@ -306,6 +315,7 @@ export default function Intake({
           </div>
         </form>
       )}
+      {lastResult && <p role="status">{lastResult}</p>}
       {error && (
         <div className="intake-error" role="alert">
           <p>

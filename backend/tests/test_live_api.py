@@ -232,3 +232,17 @@ class TestSessionIsolation:
         record = client.get(f"/api/v2/sessions/{session}").json()["accepted_record"]
         assert record["callback_number"]["presence"] == "stated_absent"
         assert record["callback_number"]["value"] is None
+
+
+def test_lowercase_intersection_creates_location_proposal(client, session):
+    snapshot = say(client, session, "We are at oak and third.")["snapshot"]
+    proposal = find(snapshot, "location_text")
+    assert proposal is not None
+    assert proposal["proposed_value"] == "oak and third"
+    assert proposal["evidence"][0]["text"].lower() == "oak and third"
+
+
+def test_lowercase_intersection_does_not_turn_symptoms_into_location():
+    from app.decision.rules import find_all_locations
+    assert find_all_locations("He is coughing and bleeding") == []
+    assert find_all_locations("We are with john and mary") == []
