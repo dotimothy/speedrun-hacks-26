@@ -167,6 +167,29 @@ def test_call_ended_stops_the_loop_cleanly() -> None:
     assert loop.session.ended
 
 
+def test_closing_audio_finishes_before_hangup() -> None:
+    closing = False
+    def should_end():
+        return closing
+    async def choose(_session):
+        nonlocal closing
+        closing = True
+        return "wrap_up_en"
+    async def scenario():
+        sent = []
+        async def send(frame): sent.append(frame)
+        loop = CallLoop(DialSession(call_id="closing"), send=send,
+                        synthesize=lambda _: reply_wav(1.0), choose_reply=choose,
+                        should_end=should_end, frame_interval=0)
+        await loop.run(scripted([connected()] + QUIET + [caller_frame(0)] * 100))
+        return loop, sent
+    loop, sent = asyncio.run(scenario())
+    assert closing and loop.session.ended
+    assert media_count(sent) == 50
+    assert json.loads(sent[-1])["type"] == "end_call"
+    assert all(json.loads(frame)["type"] == "media" for frame in sent[:-1])
+
+
 def test_rms_reads_level() -> None:
     silence = (0).to_bytes(2, "little", signed=True) * 100
     loud = (1000).to_bytes(2, "little", signed=True) * 100

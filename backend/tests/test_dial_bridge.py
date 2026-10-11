@@ -208,6 +208,11 @@ class TestItLeavesRoomToAnswer:
 
 
 class TestItEndsTheCall:
+    @pytest.mark.parametrize("phrase_id", ["wrap_up_en", "wrap_up_partial_en", "wrap_up_es", "wrap_up_partial_es"])
+    def test_every_closing_ends_with_help_reassurance(self, phrase_id):
+        language, text = APPROVED[phrase_id]
+        assert text.endswith("Help is on the way." if language == "en" else "La ayuda va en camino.")
+
     def test_with_everything_known_it_says_it_has_what_it_needs(self, bridge):
         agent, snapshot = bridge
         answer_everything(snapshot)

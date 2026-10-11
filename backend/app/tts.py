@@ -7,6 +7,7 @@ one generated follow-up in memory; caller-specific audio is not cached.
 from __future__ import annotations
 
 import base64
+import hashlib
 import io
 from threading import Lock
 import logging
@@ -33,26 +34,23 @@ APPROVED: dict[str, tuple[str, str]] = {
     "ask_safe_en": ("en", "Are you somewhere safe right now?"),
     "interpreter_en": ("en", "I am getting someone who speaks your language."),
     # Said once, when every scripted question has an answer, immediately
-    # before the line is closed. In this prototype nothing is dispatched, so
-    # the wording stays with what is actually true: a dispatcher has the
-    # record. A deployment that really did dispatch would say so here.
+    # before the line is closed. The demo ends with the requested reassurance.
     "wrap_up_en": (
         "en",
-        "Thank you, I have what I need. A dispatcher has your information "
-        "and help is on the way. Please stay safe, and call back if anything "
-        "changes.",
+        "Thank you, I have what I need. Please stay safe, and call back if "
+        "anything changes. Help is on the way.",
     ),
     # The closing line for a call that ended without the incident or the
-    # location on the record. It claims nothing about what was collected.
+    # location on the record. It uses the same final reassurance.
     "wrap_up_partial_en": (
         "en",
-        "Thank you. Your call is on record and a person will review what you "
-        "have told me. Please call back if anything changes.",
+        "Thank you. Your call is on record. Please stay safe, and call back "
+        "if anything changes. Help is on the way.",
     ),
     "wrap_up_partial_es": (
         "es",
-        "Gracias. Su llamada ha quedado registrada y una persona revisara lo "
-        "que me ha dicho. Vuelva a llamar si algo cambia.",
+        "Gracias. Su llamada ha quedado registrada. Cuidese, y vuelva a "
+        "llamar si algo cambia. La ayuda va en camino.",
     ),
     "stay_on_line_es": ("es", "Por favor, no cuelgue, quedese en la linea."),
     "what_happening_es": ("es", "Puede decirme que esta pasando ahora mismo?"),
@@ -63,8 +61,8 @@ APPROVED: dict[str, tuple[str, str]] = {
     "interpreter_es": ("es", "Estoy buscando a alguien que hable su idioma."),
     "wrap_up_es": (
         "es",
-        "Gracias, ya tengo la informacion. Un despachador la tiene y la ayuda "
-        "va en camino. Cuidese, y vuelva a llamar si algo cambia.",
+        "Gracias, ya tengo la informacion. Cuidese, y vuelva a llamar si "
+        "algo cambia. La ayuda va en camino.",
     ),
 }
 
@@ -119,10 +117,10 @@ def _get_voice(language: str):
 
 def _render(phrase_id: str, language: str, text: str) -> Path | None:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    # The speed is part of the cache key: changing it must produce new audio
-    # rather than silently serving the previously rendered pace.
+    # Include the wording so phrase edits never play an older cached recording.
     speed = str(settings.piper_length_scale).replace(".", "")
-    out = CACHE_DIR / f"{phrase_id}-s{speed}.wav"
+    content_key = hashlib.sha256(f"{language}:{text}:{settings.piper_noise_scale}:{settings.piper_noise_w}".encode()).hexdigest()[:12]
+    out = CACHE_DIR / f"{phrase_id}-{content_key}-s{speed}.wav"
     if out.exists():
         return out
 
