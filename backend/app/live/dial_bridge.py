@@ -49,6 +49,18 @@ rule_engine = RuleEngine()
 # Safety flags that stop the agent speaking entirely.
 SILENCING_FLAGS = {"weapon_mentioned", "caller_may_be_trapped"}
 
+# How long before a still-unanswered question may be asked again, in decision
+# ticks (a tick is settings.dial_decide_every_s of caller audio), and how many
+# times in total. Enough of a pause that it reads as patience rather than a
+# loop, and a low enough ceiling that it stops rather than nags.
+REASK_COOLDOWN_TICKS = 4
+REASK_LIMIT = 2
+
+# The holding phrase, for when there is nothing left to ask. Rare, because its
+# job is to show the line is open, not to fill every pause.
+HOLDING_COOLDOWN_TICKS = 6
+HOLDING_LIMIT = 4
+
 
 @dataclass
 class DialBridge:
@@ -57,7 +69,9 @@ class DialBridge:
     call_id: str
     whisper_size: str = field(default_factory=lambda: settings.dial_whisper_size)
     _offset: int = 0
-    _spoken: list[str] = field(default_factory=list)
+    # phrase id -> the tick it was last spoken on, and how many times.
+    _spoken: dict[str, tuple[int, int]] = field(default_factory=dict)
+    _tick: int = 0
     _busy: bool = False
     _started: float = field(default_factory=time.perf_counter)
 
@@ -201,9 +215,39 @@ class DialBridge:
         return self._pick_phrase()
 
     # ------------------------------------------------------------------
+    def _say(self, phrase_id: str) -> str:
+        asked_at, times = self._spoken.get(phrase_id, (0, 0))
+        self._spoken[phrase_id] = (self._tick, times + 1)
+        return phrase_id
+
+    def _may_say(self, phrase_id: str, *, cooldown: int, limit: int) -> bool:
+        if phrase_id not in APPROVED:
+            return False
+        asked_at, times = self._spoken.get(phrase_id, (-999, 0))
+        return times < limit and (self._tick - asked_at) >= cooldown
+
     def _pick_phrase(self) -> str | None:
-        """The next approved question, or None to stay quiet."""
+        """The next thing to say, or None to stay quiet.
+
+        The first version of this walked the question list once and returned
+        None forever after the last one -- so a caller who got as far as "Are
+        you safe right now?" was answered with permanent silence for the rest
+        of the call. Two things were wrong with it, and both are fixed here.
+
+        A question was asked once ever, even if the caller never answered it.
+        A field that is still unknown is worth asking about again after a
+        pause, which is what a person would do; ``REASK_COOLDOWN_TICKS`` and
+        ``REASK_LIMIT`` keep that from becoming nagging.
+
+        And running out of questions is not a reason to go mute. A line that
+        has gone silent sounds like a dropped call, so the fallback is a
+        holding phrase rather than nothing.
+
+        The one case that still produces silence is the one that should: an
+        open weapon or trapped-caller flag.
+        """
         snapshot = store.get(self.call_id)
+        self._tick += 1
 
         if any(flag.kind.value in SILENCING_FLAGS for flag in snapshot.open_flags):
             # Hand over rather than talk. See the module docstring.
@@ -213,21 +257,28 @@ class DialBridge:
         if language not in SUPPORTED_LANGUAGES:
             return None
 
-        known = {
+        # A field counts as handled once it is accepted, or once a suggestion
+        # for it is waiting on a human -- asking again would talk past them.
+        handled = {
             name for name, value in snapshot.accepted_record.items() if value.value
         }
-        # A pending suggestion means the field has been heard and is waiting
-        # for a human, so asking about it again would be talking past them.
-        known |= {s.field for s in snapshot.pending}
+        handled |= {s.field for s in snapshot.pending}
 
-        for field_name, base in FIELD_PHRASES:
-            if field_name in known:
-                continue
-            phrase_id = f"{base}_{language}"
-            if phrase_id in self._spoken or phrase_id not in APPROVED:
-                continue
-            self._spoken.append(phrase_id)
-            return phrase_id
+        # First pass: anything never asked. Second: anything still unknown
+        # whose cooldown has elapsed.
+        for cooldown, limit in ((0, 1), (REASK_COOLDOWN_TICKS, REASK_LIMIT)):
+            for field_name, base in FIELD_PHRASES:
+                if field_name in handled:
+                    continue
+                phrase_id = f"{base}_{language}"
+                if self._may_say(phrase_id, cooldown=cooldown, limit=limit):
+                    return self._say(phrase_id)
+
+        # Nothing to ask. Say something anyway, occasionally: the caller
+        # should be able to tell the line is still open.
+        holding = f"stay_on_line_{language}"
+        if self._may_say(holding, cooldown=HOLDING_COOLDOWN_TICKS, limit=HOLDING_LIMIT):
+            return self._say(holding)
         return None
 
 
