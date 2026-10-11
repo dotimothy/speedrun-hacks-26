@@ -39,55 +39,137 @@ Three properties make it trustworthy rather than merely fast:
 ## How it works
 
 ```
-Browser mic / WAV  →  audio transport  →  Whisper (multilingual)
-                                              │  original + English transcript
-                                              ▼
-                                        Laya decision model
-                                              │  typed tags + uncertainty + evidence
-                                              ▼
-                                     deterministic workflow engine
-                                              │
-                                              ▼
-                                   suggested incident form  →  HUMAN REVIEW
+Browser mic / WAV / Dial call  →  audio transport  →  Whisper (multilingual)
+                                                          │  original + English transcript
+                                                          ▼
+                                          decision engine (Laya by default)
+                                                          │  typed answers + confidence + evidence
+                                                          ▼
+                                  diffing + deterministic workflow engine
+                                                          │
+                                                          ▼
+                       suggested incident form  →  HUMAN REVIEW  →  publish
 ```
 
-Optional reply path: an approved template phrase → Piper TTS → browser speakers.
+Reply path: an approved template phrase → Piper TTS → browser speakers, or → Dial,
+which speaks it on a live call.
 
-All inference runs on hardware the team controls — `faster-whisper` for ASR and
-translation, Laya for structured extraction. No audio or transcript is sent to a
-third-party service.
+All inference runs on hardware the team controls by default — `faster-whisper` for ASR
+and translation, Laya for structured extraction. Two engines (OpenAI and TypeSafe Jev) can
+send a caller's words to a third party; they are off unless explicitly enabled. See
+[Cloud engines](#cloud-engines).
 
 ---
 
-## MVP scope
+## What is implemented
 
-The eight-hour target. Everything here is in scope; everything else is not.
+### Batch processing (API v1)
 
-**In**
+- `POST /api/process` accepts a WAV **or** a plain transcript and returns structured JSON:
+  both transcripts, typed predictions with scores and evidence, and a suggested form.
+- Whisper transcription with English translation; language is auto-detected.
+- Confidence is derived from independent checks, not read from the model. See
+  [How the scores are built](#why-the-scores-are-built-rather-than-read).
+- Confirm and reject endpoints (`/api/sessions/{id}/confirm`, `DELETE /api/sessions/{id}`).
+- Mock mode (`DISPATCHIQ_MOCK=1`) serves committed fixture responses with no models loaded.
 
-- `POST /api/process` — accepts a WAV **or** a plain transcript, returns structured JSON.
-- Whisper transcription + English translation, language auto-detected.
-- Laya extraction into typed incident tags, each with a score and an evidence span.
-- A dashboard showing both transcripts, the tags, and an editable suggested form.
-- Confirm / correct / take-over controls, with verification state per field.
-- One multilingual scenario working end to end.
-- Measured latency per stage, and a manual-vs-assisted form completion comparison.
+### Live sessions (API v2)
 
-**Stretch**
+A session accumulates transcript segments as a call progresses, and the system proposes
+field updates as a diff against what has already been accepted.
 
-- Piper TTS for pre-approved reply phrases, with interruption control.
-- Dial as an alternative audio transport (swaps the transport layer only).
+- `POST /api/v2/sessions`, `GET /api/v2/sessions`, `GET`/`DELETE /api/v2/sessions/{id}`.
+- `POST /api/v2/sessions/{id}/segments` appends an utterance (JSON or multipart with audio).
+  Replays are idempotent via `client_segment_id`.
+- Each update is classified as an **addition**, **correction**, **conflict**, or
+  **confirmation**. A conflict is shown to the operator, not resolved by the system.
+- Suggestions can be accepted, rejected, or resolved (`…/suggestions/{id}/accept|reject|resolve`),
+  and fields can be set directly (`…/fields/{name}`).
+- Review flags (weapon mentioned, caller may be trapped, language uncertain, and others)
+  can be acknowledged.
+- A narrative draft is generated from a template and can be edited (`PUT …/narrative`).
+- `POST …/publish` shares a snapshot to the receiving view. `GET /api/v2/dispatch/inbox`
+  shows only published records; live records are not visible there.
+- Actions carry an `operation_id` (double-submit protection) and a `base_revision`
+  (stale-decision protection). Review actions never run inference; this is tested.
 
-**Explicitly out**
+Session state is held in process memory (`backend/app/live/store.py`). It is lost on restart.
 
-- Real call audio, real addresses, live telephony.
-- Automated urgency, triage, resource allocation, or dispatch.
-- Cloud inference of any kind.
+### Decision engines
+
+Selected by `DISPATCHIQ_DECISION_ENGINE` or per request. Engines are cached per process.
+
+| Engine | Where inference runs | Status |
+|---|---|---|
+| `laya` | This machine (PyTorch, MPS/CUDA/CPU) | Default. Implemented and measured. |
+| `rules` | This machine (regex / keyword) | Implemented. Owns address, callback number, and head-count. |
+| `openai` | OpenAI, over the internet | Implemented. Requires `DISPATCHIQ_ALLOW_CLOUD=1` and `OPENAI_API_KEY`. |
+| `jev` | TypeSafe System-One (hosted), or a self-hosted endpoint | Implemented. Requires `system-one-adapter`. Not yet verified against the live endpoint. |
+
+A request for a cloud engine on a deployment that hasn't enabled it falls back to a local
+engine and says so in the response notes. It never errors and never silently uses the cloud.
+
+An `ollama` value appears in the schema and the `decision/base.py` docstring, and
+`DISPATCHIQ_DECISION_MODEL` / `OLLAMA_HOST` exist in config, but **no Ollama engine is
+implemented**.
+
+### Audio transports
+
+- **Browser.** Live microphone (`getUserMedia`) and WAV upload. Served over HTTPS.
+- **Dial Self-Hosted, audio socket** (`/dispatchiq/audio/{call_id}`). Full-duplex call loop
+  with barge-in (queued audio is dropped and a `clear` is sent when the caller starts
+  talking), 20 ms frame pacing, and periodic decisions on caller audio. Connections must
+  carry a valid HMAC signature (`DIAL_SIGNING_SECRET`).
+- **Dial Self-Hosted, LLM socket** (`/dispatchiq/llm/{call_id}`). Dial handles telephony,
+  STT and TTS. This project decides what to say and returns only approved phrase IDs.
+  Refuses all connections until `DIAL_LLM_SIGNING_SECRET` is set.
+- `scripts/inbound.py` turns inbound calls to the Dial number on, off, or reports status.
+
+Both Dial sockets are covered by tests that use recorded frames. They have not yet been
+exercised against live Dial telephony.
+
+### Replies and autonomous mode
+
+- **Piper TTS** speaks pre-approved phrases only (`tts.APPROVED`). No code path synthesises
+  arbitrary text.
+- **Autonomous replies** (`autoreply.py`) are off by default. When on, the system may ask
+  one approved question when a field is missing, with a visible countdown and a stop control.
+  Rules are enforced in code and tested: approved phrases only, never during an escalation,
+  never the same question twice, never a promise of help, and no writes to the form or
+  `requires_review`.
+
+### Dashboard (React + Vite)
+
+- Both transcripts, the prediction list, and an editable suggested form with per-field
+  verification state.
+- Microphone and WAV input, call audio playback, and an auto-reply panel.
+- Settings drawer: decision engine choice, speech recognition model, abstention thresholds,
+  and a "this machine" panel reporting what was actually resolved.
+- Call history, which lists v2 sessions.
+
+**Not yet in the dashboard:** the v2 review queue (accept, reject, resolve), narrative
+editing, and the receiving view. These exist as API endpoints only.
+
+### Tests
+
+`python -m pytest -q` runs **198 tests** covering the v1 contract, autoreply rules, the Dial
+transports and LLM socket, the live store, diffing, and the v2 HTTP surface. No GPU or
+network access is required.
+
+---
+
+## Explicitly out of scope
+
+- Real call audio, real addresses, or live telephony in the demo.
+- Automated urgency, triage, resource allocation, or dispatch. The receiving view is simulated.
+- Cloud inference by default.
 - Any claim of validated real-world safety or time savings.
 
 ---
 
 ## API sketch
+
+Batch (v1):
 
 ```http
 POST /api/process
@@ -112,17 +194,32 @@ POST /api/process
 }
 ```
 
-Full contract and schema rules: [`plan.md`](./plan.md).
+Live sessions (v2): `POST /api/v2/sessions`, then `POST /api/v2/sessions/{id}/segments`,
+review actions on suggestions and fields, `PUT …/narrative`, and `POST …/publish`.
+
+Full contract: [`docs/API.md`](./docs/API.md). Schema source of truth:
+[`backend/app/schemas.py`](./backend/app/schemas.py).
 
 ---
 
 ## Repo layout
 
 ```
-/backend    FastAPI app, Whisper + Laya wrappers, workflow engine
+/backend
+  app/main.py         FastAPI app: v1 routes, Dial sockets, mounts the v2 router
+  app/live/           v2 live sessions: store, diffing, narrative, HTTP router
+  app/decision/       decision engines: laya, rules, openai, jev; registry
+  app/transport/      Dial audio and LLM transports, audio codecs
+  app/asr.py          faster-whisper wrapper
+  app/tts.py          Piper wrapper and the approved phrase list
+  app/autoreply.py    autonomous reply policy
+  app/confidence.py   score derivation from independent checks
+  app/workflow.py     deterministic workflow engine
+  tests/              pytest suite
 /frontend   React + Vite dashboard
-/fixtures   synthetic call audio + expected JSON responses
-/docs       API contract, demo script, latency results
+/fixtures   synthetic call audio, scenarios, and expected JSON responses
+/scripts    setup, serve, smoke test, benchmark, Dial inbound toggle
+/docs       API contract, demo script, latency results, setup notes
 plan.md     team execution plan and sprint timeline
 ```
 
@@ -145,13 +242,26 @@ does use MPS there, so the decision stage stays fast and it is speech
 recognition that pays. `/api/health` reports what was actually resolved.
 
 ```bash
-python -m pytest -q        # 67 contract tests, no GPU required
+python -m pytest -q        # 198 tests, no GPU required
 python scripts/smoke.py    # end-to-end against a running backend
 python scripts/bench.py    # writes docs/LATENCY.md
 ```
 
 `DISPATCHIQ_MOCK=1` serves the committed fixture responses with no models
 loaded at all — the demo fallback.
+
+### Configuration
+
+Set in `.env` at the repo root (see `.env.example`). `.env` is gitignored and must stay so.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `DISPATCHIQ_DECISION_ENGINE` | `laya` | Default engine: `laya`, `rules`, `openai`, `jev` |
+| `DISPATCHIQ_ALLOW_CLOUD` | `0` | Must be `1` before `openai` or a hosted `jev` can be used |
+| `DISPATCHIQ_JEV_ENDPOINT` / `_API_KEY` / `_IS_LOCAL` | — / — / `0` | TypeSafe System-One connection; `_IS_LOCAL=1` marks a self-hosted endpoint as local |
+| `DIAL_SIGNING_SECRET` | — | Enables the Dial audio socket |
+| `DIAL_LLM_SIGNING_SECRET` | — | Enables the Dial LLM socket |
+| `DISPATCHIQ_MOCK` | `0` | Serve fixtures with no models loaded |
 
 ## How the pieces are chosen
 
@@ -172,19 +282,22 @@ an independent second opinion on everything else.
 **Piper** speaks the approved reply phrases. There is no code path that
 synthesises arbitrary text.
 
+**Dial** is an alternative transport. It replaces the browser audio path and
+nothing else: Whisper, the decision engines and the workflow see the same 16 kHz
+PCM either way.
+
 Served over HTTPS on every interface, because `getUserMedia` only runs in a
 secure context and a LAN address is not one — without TLS the microphone works
 on the demo laptop and silently fails on every other device.
 
-### Autonomous mode
+### Cloud engines
 
-Optional, off by default. Switched on, the system asks one of the approved
-questions by itself when a field is missing, after a visible countdown with a
-stop control. It is bounded by rules that are tested rather than promised: the
-approved phrases only, **never during an escalation**, never the same question
-twice, never a promise that help is coming, and it cannot write to the form or
-clear `requires_review`. On the intruder-with-a-knife scenario it goes quiet
-and hands to a human, which is the behaviour worth showing.
+`openai` and `jev` send the caller's words to a third party. Both are opt-in:
+`DISPATCHIQ_ALLOW_CLOUD=1` must be set, and each engine reports `is_local = false`
+in `/api/health` and in every response. A self-hosted Jev endpoint can be marked
+`DISPATCHIQ_JEV_IS_LOCAL=1` and does not need the cloud switch. When cloud is
+enabled, the "no cloud inference" claim in this README no longer holds for those
+requests, and the demo script must say so.
 
 ### Why the scores are built rather than read
 
@@ -209,12 +322,17 @@ both candidates shown, instead of telling a dispatcher "gas leak, 96%".
 
 Median warm end-to-end **647 ms** per call on an RTX 3090 (Whisper `small`),
 of which **65 ms** is the decision engine. Full table in
-[`docs/LATENCY.md`](./docs/LATENCY.md).
+[`docs/LATENCY.md`](./docs/LATENCY.md). These figures predate the v2 live-session
+and Dial work and have not been re-measured since.
 
 ## Status
 
-Working prototype on `feat/full-prototype`. `plan.md` holds the sprint plan and
-role ownership; [`docs/DEMO.md`](./docs/DEMO.md) is the run sheet;
+Branch `feat/live-session`. Implemented: batch processing, the v2 live-session API,
+the Laya/rules/OpenAI/Jev engines, browser and Dial audio transports, Piper replies,
+and autonomous mode. Not yet implemented: the v2 review UI, the receiving view UI,
+an Ollama engine, and live Dial telephony verification.
+
+[`plan.md`](./plan.md) holds the sprint plan and role ownership;
 [`docs/API.md`](./docs/API.md) documents the contract.
 
 ## Team

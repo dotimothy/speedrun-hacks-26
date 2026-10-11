@@ -80,6 +80,62 @@ A few things worth knowing before you rely on it on stage:
 If you want the mic beat but do not trust the room's audio, record a short
 call before the judges arrive — the result stays on screen.
 
+## Taking a real phone call
+
+The number is **+1 351-777-6040**, and it reaches a documentation assistant
+working from synthetic scenarios. It dispatches nothing.
+
+Three things have to be true at once, and only one of them survives between
+sessions:
+
+```bash
+python -m uvicorn app.main:app --app-dir backend --port 8000   # 1. backend up
+python scripts/dial_demo.py                                    # 2. + 3.
+```
+
+`dial_demo.py` opens a Cloudflare quick tunnel, repoints Dial's self-hosted
+audio socket at it, turns inbound calling on, and prints the number. Ctrl+C
+takes the number down and closes the tunnel.
+
+**The tunnel hostname changes every run.** Quick tunnels are random and
+ephemeral, so the URL stored in Dial goes stale the moment the previous one
+stops. That is the single most likely reason a call does not connect, and
+`python scripts/dial_demo.py --status` says so in as many words:
+
+```
+dial connects to  wss://pipes-trend-refined-gained.trycloudflare.com/dispatchiq/audio
+that url is       NOT reachable (stale tunnel)
+```
+
+Check `--status` before trusting anything else: it reports the number, whether
+inbound is on, which mode is active, where Dial will connect, and whether that
+address answers.
+
+### What happens on the call
+
+Dial does the telephony and streams μ-law 8 kHz audio to
+`/dispatchiq/audio/{call_id}`. The signature is checked before the handshake
+is accepted, so a socket with no matching `DIAL_SIGNING_SECRET` refuses every
+connection rather than taking calls it cannot authenticate. The loop is
+full-duplex with barge-in: if the caller talks over a reply, the queued audio
+is dropped and Dial is told to stop playing it.
+
+Replies are the approved phrases and nothing else. The same table the
+dashboard uses, spoken by Piper.
+
+When the call ends the audio goes through the normal pipeline and the result
+is available at `/api/dispatchiq/calls/{call_id}`.
+
+### Afterwards
+
+```bash
+python scripts/dial_demo.py --down
+```
+
+Leaving a live number and a public tunnel to your laptop running after a demo
+is its own hazard, which is why Ctrl+C does it for you and why there is a
+separate switch for when it did not.
+
 ## The scenarios, and what each is for
 
 | Button | Shows |
