@@ -235,3 +235,25 @@ def test_concurrent_assistant_requests_share_one_completion(enabled, monkeypatch
         assert first.result()["stale"] is False
         assert second.result()["cached"] is True
     assert len(calls) == 1
+
+
+def test_phone_accepts_completed_short_answer_below_chunk_minimum(phone, monkeypatch):
+    import asyncio
+    from app.transport.dial import DialSession
+    bridge, _ = phone
+    received = []
+    monkeypatch.setattr(bridge, "_process_chunk", lambda pcm, **kwargs: received.append((pcm, kwargs)))
+    session = DialSession(call_id=bridge.call_id, utterance_ready=True, pcm16k=bytearray(32000))
+    asyncio.run(bridge.choose_reply(session))
+    assert len(received) == 1
+    assert len(received[0][0]) == 32000
+    assert received[0][1]["allow_reply"] is True
+
+
+def test_phone_flush_after_hangup_files_evidence_without_speaking(phone):
+    bridge, local_store = phone
+    assert bridge._process_chunk(bytes(32000), allow_reply=False) is None
+    state = local_store.get(bridge.call_id)
+    assert state.segments[-1].speaker == Speaker.CALLER
+    assert state.pending
+    assert state.assistant is None

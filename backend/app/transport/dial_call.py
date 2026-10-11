@@ -5,8 +5,8 @@ paced at 20 ms per frame. Two things make it more than a send loop:
 
 * **Barge-in.** If the caller starts talking while a reply is playing, the
   queued audio is dropped and a ``clear`` frame tells Dial to stop playback.
-* **Decisions.** Every ``decide_every_s`` seconds of caller audio, the loop asks
-  ``choose_reply`` whether to speak. That callback is where the pipeline plugs
+* **Decisions.** Caller speech is buffered until a pause; quiet-line decisions
+  use ``decide_every_s``. The ``choose_reply`` callback is where the pipeline plugs
   in. The loop accepts approved phrase IDs or pre-rendered assistant questions.
 * **Closing.** ``should_end`` lets the pipeline say the call is finished. The
   loop still waits for the reply queue to drain before hanging up, so the last
@@ -65,6 +65,8 @@ class CallLoop:
         opening_phrase: str | None = None,
         barge_in_rms: float = 600.0,
         decide_every_s: float = 3.0,
+        speech_pause_s: float = 0.9,
+        speech_rms: float = 300.0,
         frame_interval: float = FRAME_MS / 1000,
     ) -> None:
         self.session = session
@@ -74,6 +76,8 @@ class CallLoop:
         self.opening_phrase = opening_phrase
         self.barge_in_rms = barge_in_rms
         self.decide_every_s = decide_every_s
+        self.speech_pause_s = speech_pause_s
+        self.speech_rms = speech_rms
         self.frame_interval = frame_interval
         self.barge_ins = 0
         self._opened = False
@@ -82,6 +86,8 @@ class CallLoop:
         self._queue: asyncio.Queue[str] = asyncio.Queue()
         self._sending = False
         self._last_decision_s = 0.0
+        self._speech_pending = False
+        self._last_speech_s = 0.0
 
     @property
     def speaking(self) -> bool:
@@ -111,6 +117,9 @@ class CallLoop:
                     self._opened = True
                     self._speak(self.opening_phrase)
                 heard = bytes(self.session.pcm16k[before:])
+                if heard and rms(heard) >= self.speech_rms:
+                    self._speech_pending = True
+                    self._last_speech_s = self.session.buffered_seconds()
                 if heard and self.speaking and rms(heard) >= self.barge_in_rms:
                     await self._barge_in()
                 await self._maybe_decide()
@@ -120,16 +129,30 @@ class CallLoop:
             sender.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await sender
+            # A disconnected socket may arrive without a call_ended frame.
+            # File the last spoken words without trying to play a reply.
+            self.session.ended = True
+            await self._maybe_decide()
 
     async def _maybe_decide(self) -> None:
-        if self.choose_reply is None or self.speaking:
+        if self.choose_reply is None or (self.speaking and not self.session.ended):
             return
         heard_s = self.session.buffered_seconds()
-        if heard_s - self._last_decision_s < self.decide_every_s:
+        if self.session.ended and not self._speech_pending:
             return
+        if self._speech_pending:
+            if not self.session.ended and heard_s - self._last_speech_s + 1e-6 < self.speech_pause_s:
+                return
+        elif heard_s - self._last_decision_s < self.decide_every_s:
+            return
+        self.session.utterance_ready = self._speech_pending
+        self._speech_pending = False
         self._last_decision_s = heard_s
-        phrase_id = await self.choose_reply(self.session)
-        if phrase_id is not None:
+        try:
+            phrase_id = await self.choose_reply(self.session)
+        finally:
+            self.session.utterance_ready = False
+        if phrase_id is not None and not self.session.ended:
             self._speak(phrase_id)
 
     async def _maybe_hang_up(self) -> bool:

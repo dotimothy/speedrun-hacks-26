@@ -140,13 +140,13 @@ class TestItCanOnlySayApprovedThings:
         # "it cannot say anything unapproved" structural rather than a promise.
         assert not hasattr(reply, "text")
 
-    # Reassurance lives in exactly one phrase per language, said once, as the
+    # Reassurance lives in the full and partial closing phrases, said once, as the
     # call is being closed. The product owner asked for it explicitly. It is
     # scoped this narrowly because the original rule was the right one for
     # every other phrase: a question or a holding line that implies something
     # has been dispatched is a promise this prototype cannot keep, and
     # autonomous mode plays those unprompted, mid-call, over and over.
-    REASSURANCE = {"wrap_up_en", "wrap_up_es"}
+    REASSURANCE = {"wrap_up_en", "wrap_up_es", "wrap_up_partial_en", "wrap_up_partial_es"}
 
     def test_no_question_or_holding_phrase_promises_help_is_coming(self):
         banned = ("on the way", "en camino", "dispatch", "help is coming",
@@ -177,7 +177,7 @@ class TestItCanOnlySayApprovedThings:
                 assert not found, f"{phrase_id}: {text}"
 
     def test_the_reassurance_is_only_in_the_closing_phrase(self):
-        """One phrase per language, so it cannot be said at an arbitrary time."""
+        """Only closing phrases may reassure, never mid-call questions."""
         reassuring = {
             pid for pid, (_, text) in APPROVED.items()
             if "on the way" in text.lower() or "en camino" in text.lower()

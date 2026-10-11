@@ -139,7 +139,7 @@ class DialBridge:
 
     # ------------------------------------------------------------------
     async def choose_reply(self, session) -> str | GeneratedReply | None:
-        """Called every few seconds of caller audio by ``CallLoop``."""
+        """Called at a speech boundary or on an idle tick by ``CallLoop``."""
         # A tick that arrives while the previous one is still transcribing is
         # dropped rather than queued. A backlog would put older answers on
         # screen after newer ones, and the caller has moved on anyway.
@@ -147,13 +147,16 @@ class DialBridge:
             return None
 
         pcm = bytes(session.pcm16k[self._offset :])
-        if len(pcm) / 2 / 16000 < settings.dial_min_chunk_s:
+        # A completed short answer ("yes", an apartment number) must not be
+        # discarded just because it is shorter than the idle chunk minimum.
+        minimum = min(settings.dial_min_chunk_s, 0.25) if getattr(session, "utterance_ready", False) else settings.dial_min_chunk_s
+        if len(pcm) / 2 / 16000 < minimum:
             return None
 
         self._busy = True
         self._offset = len(session.pcm16k)
         try:
-            return await asyncio.to_thread(self._process_chunk, pcm)
+            return await asyncio.to_thread(self._process_chunk, pcm, allow_reply=not session.ended)
         except Exception as exc:  # a failed tick must not drop the call
             log.warning("dial bridge tick failed for %s: %s", self.call_id, exc)
             return None
@@ -161,7 +164,7 @@ class DialBridge:
             self._busy = False
 
     # ------------------------------------------------------------------
-    def _process_chunk(self, pcm: bytes) -> str | GeneratedReply | None:
+    def _process_chunk(self, pcm: bytes, *, allow_reply: bool = True) -> str | GeneratedReply | None:
         self.ensure_session()
         self._record_opening_line()
         path = self._pcm_to_wav(pcm)
@@ -174,6 +177,8 @@ class DialBridge:
             Path(path).unlink(missing_ok=True)
 
         if original is None or not original.text.strip():
+            if not allow_reply:
+                return None
             # Silence, or noise. Nothing is added to the transcript --
             # inventing a segment from a quiet line would be worse than the
             # quiet. But the agent still has to take its turn: a caller who
@@ -274,7 +279,9 @@ class DialBridge:
             len(store.get(self.call_id).pending),
         )
 
-        return self._reply_after_decision()
+        if allow_reply:
+            return self._reply_after_decision()
+        return None
 
     def _reply_after_decision(self) -> str | GeneratedReply | None:
         """Summarize extraction, then speak one eligible question with fallback."""

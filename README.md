@@ -297,6 +297,12 @@ an independent second opinion on everything else.
 live audio calls. Generated audio is rendered in memory and uses the same
 frame pacing and barge-in path as the fixed questions.
 
+Live phone transcription buffers caller speech until a 0.9-second pause,
+preserving long sentences across the idle three-second decision timer. Short
+answers are processed at the same speech boundary, and remaining speech is
+filed when the caller disconnects. `DIAL_SPEECH_PAUSE_S` controls the pause and
+`DIAL_SPEECH_RMS` controls the speech energy threshold (default 300).
+
 **Dial** is an alternative transport. It replaces the browser audio path and
 nothing else: Whisper, the decision engines and the workflow see the same 16 kHz
 PCM either way.

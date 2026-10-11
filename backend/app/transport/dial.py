@@ -145,6 +145,8 @@ class DialSession:
     reconnect: bool = False
     ended: bool = False
     pcm16k: bytearray = field(default_factory=bytearray)
+    # Set by the call loop at a speech boundary (or when flushing hangup).
+    utterance_ready: bool = False
     dtmf_digits: list[str] = field(default_factory=list)
 
     def on_message(self, raw: str) -> list[str]:

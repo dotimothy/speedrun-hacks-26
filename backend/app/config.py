@@ -200,10 +200,11 @@ class Settings:
     # much audio a transcription pass gets are exactly the knobs you want to
     # turn while listening to it, not after editing code and restarting.
     dial_opening_phrase: str = _env("DIAL_OPENING_PHRASE", "greeting_en")
-    # Seconds of caller audio between decision ticks. Each tick transcribes,
-    # files a segment, and may speak. Lower feels more responsive and gives
-    # Whisper less to work with.
+    # Idle decision ticks. Speech is buffered until a pause, independently
+    # of this timer, so it cannot cut a sentence every three seconds.
     dial_decide_every_s: float = float(_env("DIAL_DECIDE_EVERY_S", "3.0"))
+    dial_speech_pause_s: float = float(_env("DIAL_SPEECH_PAUSE_S", "0.9"))
+    dial_speech_rms: float = float(_env("DIAL_SPEECH_RMS", "300"))
     # Audio shorter than this is not sent to Whisper: a breath or a syllable
     # is where hallucinated filler comes from.
     dial_min_chunk_s: float = float(_env("DIAL_MIN_CHUNK_S", "1.8"))

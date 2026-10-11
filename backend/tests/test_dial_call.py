@@ -11,6 +11,7 @@ import base64
 import io
 import json
 import wave
+import pytest
 
 from app.transport.audio import pcm16_to_mulaw
 from app.transport.dial import DialSession, clear_frame
@@ -195,3 +196,77 @@ def test_rms_reads_level() -> None:
     loud = (1000).to_bytes(2, "little", signed=True) * 100
     assert rms(silence) == 0
     assert rms(loud) == 1000
+
+
+async def capture_turns(frames):
+    turns = []
+    offset = 0
+    async def choose(session):
+        nonlocal offset
+        turns.append({"audio": bytes(session.pcm16k[offset:]),
+                      "ready": session.utterance_ready, "ended": session.ended})
+        offset = len(session.pcm16k)
+        return None
+    async def send(_): pass
+    loop = CallLoop(DialSession(call_id="sentences"), send=send,
+                    synthesize=lambda _: None, choose_reply=choose, frame_interval=0)
+    await loop.run(scripted([connected()] + frames))
+    return turns
+
+
+def test_long_sentence_is_not_cut_at_three_second_intervals():
+    frames = [caller_frame(1500)] * 400 + [caller_frame(0)] * 45
+    turns = asyncio.run(capture_turns(frames))
+    assert len(turns) == 1
+    assert turns[0]["ready"] and not turns[0]["ended"]
+    assert len(turns[0]["audio"]) == round(8.9 * 16000 * 2)
+
+
+def test_brief_pause_inside_sentence_preserves_both_halves():
+    frames = [caller_frame(1500)] * 200 + [caller_frame(0)] * 20
+    frames += [caller_frame(1500)] * 200 + [caller_frame(0)] * 45
+    turns = asyncio.run(capture_turns(frames))
+    assert len(turns) == 1
+    assert len(turns[0]["audio"]) == round(9.3 * 16000 * 2)
+
+
+def test_short_answer_is_ready_without_waiting_for_three_seconds():
+    turns = asyncio.run(capture_turns([caller_frame(1500)] * 15 + [caller_frame(0)] * 45))
+    assert len(turns) == 1
+    assert turns[0]["ready"] and not turns[0]["ended"]
+    assert len(turns[0]["audio"]) == round(1.2 * 16000 * 2)
+
+
+def test_hangup_flushes_last_words_without_a_trailing_pause():
+    turns = asyncio.run(capture_turns([caller_frame(1500)] * 100))
+    assert len(turns) == 1
+    assert turns[0]["ready"] and turns[0]["ended"]
+    assert len(turns[0]["audio"]) == 2 * 16000 * 2
+
+
+def test_separate_utterances_are_consumed_once_without_dropping_audio():
+    frames = ([caller_frame(1500)] * 100 + [caller_frame(0)] * 45) * 2
+    turns = asyncio.run(capture_turns(frames))
+    assert len(turns) == 2
+    assert all(len(turn["audio"]) == round(2.9 * 16000 * 2) for turn in turns)
+
+
+def test_disconnect_without_end_frame_flushes_pending_speech():
+    async def scenario():
+        frames = [connected()] + [caller_frame(1500)] * 100
+        turns = []
+        async def receive():
+            if not frames:
+                raise ConnectionError("socket disconnected")
+            return frames.pop(0)
+        async def choose(session):
+            turns.append((session.buffered_seconds(), session.ended, session.utterance_ready))
+            return "stay_on_line_en"
+        async def send(_):
+            raise AssertionError("No reply after disconnect")
+        loop = CallLoop(DialSession(call_id="disconnect"), send=send,
+                        synthesize=lambda _: reply_wav(1.0), choose_reply=choose)
+        with pytest.raises(ConnectionError):
+            await loop.run(receive)
+        return turns
+    assert asyncio.run(scenario()) == [(2.0, True, True)]
