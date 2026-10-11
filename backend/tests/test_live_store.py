@@ -336,3 +336,13 @@ class TestPublication:
         store.publish("idem", base_revision=0, operation_id="op-1")
         store.publish("idem", base_revision=0, operation_id="op-1")
         assert len(snap.published) == 1
+
+    def test_stale_publication_does_not_share_unreviewed_revision(self, store: SessionStore):
+        snap = store.create("stale-pub")
+        store.set_field_directly("stale-pub", "location_text", value="Oak and Third",
+                                 presence=Presence.STATED, operation_id="direct-1")
+        with pytest.raises(StaleAction) as caught:
+            store.publish("stale-pub", base_revision=0, operation_id="publish-old")
+        assert caught.value.code == "stale_publication"
+        assert snap.published == []
+        assert snap.revision == 1

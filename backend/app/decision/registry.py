@@ -40,6 +40,10 @@ def _build(name: str) -> DecisionEngine | None:
         from .openai_model import OpenAIEngine
 
         return OpenAIEngine()
+    if name == "openai_decisions":
+        from .openai_decisions import OpenAIDecisionsEngine
+
+        return OpenAIDecisionsEngine()
     if name == "jev":
         from .jev_model import JevEngine
 
@@ -51,7 +55,7 @@ def available() -> list[str]:
     """Engines this deployment will allow, in preference order."""
     names = ["laya", "rules"]
     if settings.allow_cloud_inference:
-        names.extend(["openai", "jev"])
+        names.extend(["openai", "openai_decisions", "jev"])
     elif settings.jev_is_local:
         # A self-hosted Jev endpoint is not cloud inference, so it does not
         # need the cloud switch.
@@ -69,7 +73,7 @@ def get_engine(name: str | None = None) -> DecisionEngine:
     """
     requested = (name or settings.decision_engine or "laya").lower()
 
-    if requested in ("openai", "jev") and requested not in available():
+    if requested in ("openai", "openai_decisions", "jev") and requested not in available():
         log.warning(
             "%s requested but not enabled for this deployment "
             "(set DISPATCHIQ_ALLOW_CLOUD=1); using a local engine instead",

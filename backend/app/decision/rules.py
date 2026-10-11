@@ -105,6 +105,15 @@ def _looks_like_intersection(match: "re.Match") -> bool:
     return bool(_ORDINAL_ANCHORED.match(left) or _ORDINAL_ANCHORED.match(right))
 
 
+# ASR and typed input may omit capitals. Require an explicit location cue and
+# an ordinal street on one side rather than treating every "x and y" as a place.
+_LOWER_NAME = r"[a-zà-ÿ][\w'à-ÿ-]*(?:\s+[a-zà-ÿ][\w'à-ÿ-]*)?"
+_CUED_ORDINAL_INTERSECTION = re.compile(
+    rf"\b(?:{_CORNER})\s+((?:{_LOWER_NAME})\s+{_SEP}\s+(?:{_ORDINAL})\b"
+    rf"|(?:{_ORDINAL})\s+{_SEP}\s+(?:{_LOWER_NAME}))",
+    re.IGNORECASE,
+)
+
 def find_intersections(text: str, *, relaxed: bool = False) -> list[str]:
     """Every intersection in the text, in order -- not just the first.
 
@@ -124,6 +133,10 @@ def find_intersections(text: str, *, relaxed: bool = False) -> list[str]:
         # Drop a leading cue word so the stored value is the place itself.
         value = re.sub(rf"^{_CORNER}\s+", "", value).strip(" ,.")
         if value and value not in found:
+            found.append(value)
+    for match in _CUED_ORDINAL_INTERSECTION.finditer(text):
+        value = match.group(1).strip(" ,.")
+        if value not in found:
             found.append(value)
     return found
 

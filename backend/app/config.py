@@ -98,6 +98,7 @@ class Settings:
     allow_cloud_inference: bool = _env("DISPATCHIQ_ALLOW_CLOUD", "0") == "1"
     openai_api_key: str = _env("OPENAI_API_KEY", "")
     openai_model: str = _env("DISPATCHIQ_OPENAI_MODEL", "gpt-4o-mini")
+    decisions_model: str = _env("DISPATCHIQ_DECISIONS_MODEL", "gpt-6-luna")
     openai_timeout_s: float = float(_env("DISPATCHIQ_OPENAI_TIMEOUT", "20"))
     # What a typed answer is worth before anything corroborates it, for
     # engines that report no probability of their own. Deliberately middling:

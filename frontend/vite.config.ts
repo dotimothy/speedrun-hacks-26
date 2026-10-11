@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import http from 'node:http'
 import https from 'node:https'
 import path from 'node:path'
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // Serve over HTTPS when scripts/make_cert.py has been run.
@@ -11,7 +11,7 @@ import react from '@vitejs/plugin-react'
 // secure context, and while `localhost` counts as one, a LAN address does
 // not. Without TLS the microphone silently stops working the moment someone
 // opens the dashboard on their phone. With the certificate present we serve
-// HTTPS; without it we fall back to HTTP on localhost, which still works.
+// HTTPS; without it we fall back to HTTP, which still works on localhost.
 const certDir = path.resolve(__dirname, '../certs')
 const key = path.join(certDir, 'dev.key')
 const cert = path.join(certDir, 'dev.crt')
@@ -31,8 +31,8 @@ const BACKEND_PORT = 8000
  * HTTPS at an HTTP backend. Every /api call fails, and the dashboard looks
  * broken for a reason nothing on screen explains.
  *
- * Probing costs one request at startup and is right however the backend was
- * launched.
+ * DISPATCHIQ_API_TARGET still wins when set, for pointing at a backend that
+ * is not on this machine at all.
  */
 function probe(scheme: 'http' | 'https'): Promise<boolean> {
   return new Promise((resolve) => {
@@ -62,8 +62,9 @@ function probe(scheme: 'http' | 'https'): Promise<boolean> {
   })
 }
 
-async function backendScheme(): Promise<'http' | 'https'> {
-  // Try the likelier one first, then the other.
+async function backendTarget(configured: string | undefined): Promise<string> {
+  if (configured) return configured
+
   const order: Array<'http' | 'https'> = secure ? ['https', 'http'] : ['http', 'https']
   for (const scheme of order) {
     if (await probe(scheme)) {
@@ -73,20 +74,22 @@ async function backendScheme(): Promise<'http' | 'https'> {
             `(Start it with scripts/serve.py to keep both sides on the same protocol.)`,
         )
       }
-      return scheme
+      return `${scheme}://127.0.0.1:${BACKEND_PORT}`
     }
   }
   console.warn(
     `[dispatchiq] no backend answering on port ${BACKEND_PORT}. Assuming ` +
       `${order[0]}; start it with: python scripts/serve.py`,
   )
-  return order[0]
+  return `${order[0]}://127.0.0.1:${BACKEND_PORT}`
 }
 
 // Vite is pinned to 6.x on purpose: 7 and 8 declare
 // engines ^20.19.0 || >=22.12.0 and this machine runs Node 20.13.1.
-export default defineConfig(async () => {
-  const target = `${await backendScheme()}://127.0.0.1:${BACKEND_PORT}`
+export default defineConfig(async ({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), 'DISPATCHIQ_')
+  const target = await backendTarget(env.DISPATCHIQ_API_TARGET)
+  // `secure: false` because the backend presents a self-signed certificate.
   const proxy = { target, changeOrigin: true, secure: false }
 
   return {
@@ -98,10 +101,8 @@ export default defineConfig(async () => {
       port: 5173,
       https: secure ? { key: fs.readFileSync(key), cert: fs.readFileSync(cert) } : undefined,
       proxy: {
-        // Same-origin in dev, so CORS never enters the picture. 127.0.0.1
-        // rather than localhost avoids Node's IPv6-first resolution on Windows.
+        // Same-origin in dev, so CORS never enters the picture.
         '/api': proxy,
-        // Fixture audio lives outside this package, so the backend serves it.
         '/fixtures': proxy,
       },
     },

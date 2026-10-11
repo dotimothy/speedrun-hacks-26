@@ -1,0 +1,14 @@
+[
+  {"id":"missing-information","text":"Something happened. I need help.","expected":{"injuries":"unknown","weapons_present":0.5,"hazard_gas":0.5}},
+  {"id":"explicit-denial","text":"Nobody is hurt. There are no weapons here.","expected":{"injuries":"none","weapons_present":0.0}},
+  {"id":"burn-injury","text":"My roommate burned his hand. He is awake and talking.","expected":{"injuries":"confirmed","weapons_present":0.5}},
+  {"id":"injury-paraphrase","text":"Her wrist is broken and she says it hurts terribly.","expected":{"injuries":"confirmed","weapons_present":0.5}},
+  {"id":"uncertain-gas","text":"There is a strong smell, but I cannot tell whether it is gas or smoke.","expected":{"hazard_gas":0.5,"hazard_smoke":0.5},"required_uncertainty":"Unidentified smell; gas and smoke not confirmed"},
+  {"id":"uncertain-gas-paraphrase","text":"It smells strange in here. Maybe a gas leak, but I really do not know.","expected":{"hazard_gas":0.5},"required_uncertainty":"Possible gas leak explicitly uncertain"},
+  {"id":"other-occupants","text":"I am outside. I do not know if anyone is still upstairs.","expected":{"caller_evacuated":1.0,"caller_trapped":0.0},"required_uncertainty":"Other occupants may remain inside"},
+  {"id":"other-occupants-paraphrase","text":"I got out of the building. I cannot account for the people on the upper floor.","expected":{"caller_evacuated":1.0,"caller_trapped":0.0},"required_uncertainty":"Upper-floor occupants unaccounted for"},
+  {"id":"different-person","text":"I am outside and safe, but my brother is trapped in the bedroom.","expected":{"caller_evacuated":1.0,"caller_trapped":0.0}},
+  {"id":"injury-correction","text":"Nobody is hurt. Sorry, I was wrong: my sister has a deep cut and is bleeding.","expected":{"injuries":"confirmed"}},
+  {"id":"weapon-retraction","text":"He has a gun. Wait, I was mistaken, it is a phone. There is no weapon.","expected":{"weapons_present":0.0}},
+  {"id":"clear-fire","text":"Flames are coming out of the stove and there is smoke in the kitchen. I got outside.","expected":{"hazard_fire":1.0,"hazard_smoke":1.0,"caller_evacuated":1.0,"weapons_present":0.5}}
+]

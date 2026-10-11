@@ -232,3 +232,47 @@ class TestSessionIsolation:
         record = client.get(f"/api/v2/sessions/{session}").json()["accepted_record"]
         assert record["callback_number"]["presence"] == "stated_absent"
         assert record["callback_number"]["value"] is None
+
+
+def test_lowercase_intersection_creates_location_proposal(client, session):
+    snapshot = say(client, session, "We are at oak and third.")["snapshot"]
+    proposal = find(snapshot, "location_text")
+    assert proposal is not None
+    assert proposal["proposed_value"] == "oak and third"
+    assert proposal["evidence"][0]["text"].lower() == "oak and third"
+
+
+def test_lowercase_intersection_does_not_turn_symptoms_into_location():
+    from app.decision.rules import find_all_locations
+    assert find_all_locations("He is coughing and bleeding") == []
+    assert find_all_locations("We are with john and mary") == []
+
+
+def test_full_replacement_intersection_precedes_ordinal_substitution(client, session):
+    snapshot = say(client, session, "we are at oak and third.")["snapshot"]
+    suggestion = find(snapshot, "location_text")
+    client.post(f"/api/v2/sessions/{session}/suggestions/{suggestion['id']}/accept",
+                json={"base_revision": 0, "operation_id": "accept-original"})
+    updated = say(client, session, "sorry, fourth and third")["snapshot"]
+    assert find(updated, "location_text")["proposed_value"] == "fourth and third"
+    assert updated["accepted_record"]["location_text"]["value"] == "oak and third"
+
+
+def test_accepted_correction_does_not_recur_on_unrelated_utterances(client, session):
+    first = say(client, session, "We're at Oak and Third")["snapshot"]
+    location = find(first, "location_text")
+    client.post(f"/api/v2/sessions/{session}/suggestions/{location['id']}/accept",
+                json={"base_revision": 0, "operation_id": "accept-original"})
+    corrected = say(client, session, "Sorry, it's Fourth and Third")["snapshot"]
+    location = find(corrected, "location_text")
+    assert location["proposed_value"] == "Fourth and Third"
+    client.post(f"/api/v2/sessions/{session}/suggestions/{location['id']}/accept",
+                json={"base_revision": 1, "operation_id": "accept-correction"})
+    for text in ["My roommate burned his hand. He's awake and talking",
+                 "I don't know if anyone is still upstairs.",
+                 "There's a strong smell, but I can't tell if it's gas or just smoke",
+                 "You can call me back at 415-555-0136"]:
+        snapshot = say(client, session, text)["snapshot"]
+        assert find(snapshot, "location_text") is None
+        assert snapshot["accepted_record"]["location_text"]["value"] == "Fourth and Third"
+    assert find(snapshot, "callback_number")["proposed_value"] == "415-555-0136"
