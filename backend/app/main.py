@@ -23,7 +23,7 @@ import os
 import tempfile
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -42,6 +42,7 @@ from .schemas import (
     SpeakRequest,
 )
 from .timing import StageTimer
+from .transport.dial import DialSession, verify_signature
 from .workflow import apply as apply_workflow
 
 logging.basicConfig(level=logging.INFO)
@@ -371,3 +372,42 @@ def confirm(session_id: str, payload: dict) -> dict:
 def reset_session(session_id: str) -> dict:
     SESSIONS.pop(session_id, None)
     return {"session_id": session_id, "confirmed": {}}
+
+
+@app.websocket("/dial/{call_id}")
+async def dial_socket(websocket: WebSocket, call_id: str) -> None:
+    """Dial Self-Hosted audio socket. Refuses every connection until a signing
+    secret is configured.
+
+    The signature is checked before the handshake is accepted. For now the
+    session echoes caller audio back when the formats match, which is the echo
+    test from plan.md. The ASR hand-off reads ``session.pcm16k`` once the call
+    ends.
+    """
+    if not settings.dial_signing_secret:
+        await websocket.close(code=1008)
+        return
+    if not verify_signature(
+        websocket.headers.get("x-dial-signature"),
+        call_id,
+        settings.dial_signing_secret,
+        tolerance_s=settings.dial_signature_tolerance_s,
+    ):
+        log.warning("rejected Dial socket for call %s: bad signature", call_id)
+        await websocket.close(code=1008)
+        return
+
+    await websocket.accept()
+    session = DialSession(call_id=call_id, echo=True)
+    try:
+        while not session.ended:
+            raw = await websocket.receive_text()
+            for outgoing in session.on_message(raw):
+                await websocket.send_text(outgoing)
+    except WebSocketDisconnect:
+        pass
+    log.info(
+        "Dial call %s finished: %.1fs of caller audio buffered",
+        call_id,
+        session.buffered_seconds(),
+    )
