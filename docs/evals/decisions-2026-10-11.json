@@ -1,0 +1,5741 @@
+{
+  "created_at": "2026-10-11T22:02:46.916253+00:00",
+  "git_revision": "c45ddfe4bbc137b4b8c7caa7aeb905842011d2a1",
+  "question_sha256": "3d77e40a23fce514ec8200b3d4e0227a366114a4bbb87d36a91c1c31280c821e",
+  "summary": {
+    "cases": 12,
+    "errors": 0,
+    "passed": 20,
+    "checked": 24,
+    "median_ms": 289.45,
+    "max_ms": 383.8
+  },
+  "cases": [
+    {
+      "id": "missing-information",
+      "text": "Something happened. I need help.",
+      "expected": {
+        "injuries": "unknown",
+        "weapons_present": 0.5,
+        "hazard_gas": 0.5
+      },
+      "engine": "openai_decisions",
+      "model": "gpt-6-luna",
+      "latency_ms": 299.0,
+      "checks": [
+        {
+          "field": "injuries",
+          "expected": "unknown",
+          "actual": "unknown",
+          "passed": true
+        },
+        {
+          "field": "weapons_present",
+          "expected": 0.5,
+          "actual": 0.5,
+          "passed": true
+        },
+        {
+          "field": "hazard_gas",
+          "expected": 0.5,
+          "actual": 0.5,
+          "passed": true
+        }
+      ],
+      "raw_answers": {
+        "incident_type": {
+          "label": "incident_type",
+          "value": "unknown",
+          "probability": 0.94,
+          "probabilities": {
+            "structure_fire": 0.02,
+            "medical": 0.02,
+            "traffic_collision": 0.0,
+            "crime_in_progress": 0.01,
+            "gas_leak": 0.0,
+            "water_rescue": 0.0,
+            "other": 0.01,
+            "unknown": 0.94
+          },
+          "entropy_confidence": 0.93,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "injuries": {
+          "label": "injuries",
+          "value": "unknown",
+          "probability": 0.62,
+          "probabilities": {
+            "none": 0.1,
+            "suspected": 0.21,
+            "confirmed": 0.07,
+            "unknown": 0.62
+          },
+          "entropy_confidence": 0.49,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "weapons_present": {
+          "label": "weapons_present",
+          "value": 0.5,
+          "probability": 0.96,
+          "probabilities": {
+            "yes": 0.03,
+            "no": 0.01,
+            "unknown": 0.96
+          },
+          "entropy_confidence": 0.94,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "caller_trapped": {
+          "label": "caller_trapped",
+          "value": 0.5,
+          "probability": 0.98,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.01,
+            "unknown": 0.98
+          },
+          "entropy_confidence": 0.97,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "caller_evacuated": {
+          "label": "caller_evacuated",
+          "value": 0.5,
+          "probability": 0.95,
+          "probabilities": {
+            "yes": 0.04,
+            "no": 0.01,
+            "unknown": 0.95
+          },
+          "entropy_confidence": 0.93,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_smoke": {
+          "label": "hazard_smoke",
+          "value": 0.5,
+          "probability": 0.98,
+          "probabilities": {
+            "yes": 0.02,
+            "no": 0.0,
+            "unknown": 0.98
+          },
+          "entropy_confidence": 0.97,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_fire": {
+          "label": "hazard_fire",
+          "value": 0.5,
+          "probability": 0.98,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.01,
+            "unknown": 0.98
+          },
+          "entropy_confidence": 0.97,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_gas": {
+          "label": "hazard_gas",
+          "value": 0.5,
+          "probability": 0.98,
+          "probabilities": {
+            "yes": 0.02,
+            "no": 0.0,
+            "unknown": 0.98
+          },
+          "entropy_confidence": 0.97,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_weapon": {
+          "label": "hazard_weapon",
+          "value": 0.5,
+          "probability": 0.97,
+          "probabilities": {
+            "yes": 0.02,
+            "no": 0.01,
+            "unknown": 0.97
+          },
+          "entropy_confidence": 0.96,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_water": {
+          "label": "hazard_water",
+          "value": 0.5,
+          "probability": 0.94,
+          "probabilities": {
+            "yes": 0.05,
+            "no": 0.01,
+            "unknown": 0.94
+          },
+          "entropy_confidence": 0.91,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_electrical": {
+          "label": "hazard_electrical",
+          "value": 0.5,
+          "probability": 0.96,
+          "probabilities": {
+            "yes": 0.03,
+            "no": 0.01,
+            "unknown": 0.96
+          },
+          "entropy_confidence": 0.94,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_vehicle": {
+          "label": "hazard_vehicle",
+          "value": 0.5,
+          "probability": 0.91,
+          "probabilities": {
+            "yes": 0.06,
+            "no": 0.03,
+            "unknown": 0.91
+          },
+          "entropy_confidence": 0.86,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        }
+      },
+      "predictions": [
+        {
+          "label": "incident_type",
+          "value": "unknown",
+          "score": 0.35,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "structure_fire": 0.02,
+            "medical": 0.02,
+            "traffic_collision": 0.0,
+            "crime_in_progress": 0.01,
+            "gas_leak": 0.0,
+            "water_rescue": 0.0,
+            "other": 0.01,
+            "unknown": 0.94
+          },
+          "raw_probability": 0.94,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.94,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.35,
+            "uncorroborated": "no evidence span located and no independent agreement; score capped at 0.35",
+            "abstained": "score < 0.55"
+          }
+        },
+        {
+          "label": "injuries",
+          "value": "unknown",
+          "score": 0.35,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "none": 0.1,
+            "suspected": 0.21,
+            "confirmed": 0.07,
+            "unknown": 0.62
+          },
+          "raw_probability": 0.62,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.62,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.35,
+            "uncorroborated": "no evidence span located and no independent agreement; score capped at 0.35",
+            "abstained": "score < 0.55"
+          }
+        },
+        {
+          "label": "weapons_present",
+          "value": "unknown",
+          "score": 0.35,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "yes": 0.03,
+            "no": 0.01,
+            "unknown": 0.96
+          },
+          "raw_probability": 0.96,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.96,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.35,
+            "p_true": 0.5,
+            "thresholds": "yes>=0.7 no<=0.3",
+            "uncorroborated": "no evidence span located and no independent agreement; score capped at 0.35"
+          }
+        },
+        {
+          "label": "caller_safe",
+          "value": "unknown",
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "trapped": 0.5,
+            "evacuated": 0.5
+          },
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "composed_from": [
+              "caller_trapped",
+              "caller_evacuated"
+            ],
+            "p_trapped": 0.5,
+            "p_evacuated": 0.5,
+            "reason": "the call never says either way",
+            "asr_factor": 1.0,
+            "final": 0.0
+          }
+        },
+        {
+          "label": "hazards",
+          "value": [],
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "smoke": 0.5,
+            "fire": 0.5,
+            "gas": 0.5,
+            "weapon": 0.5,
+            "water": 0.5,
+            "electrical": 0.5,
+            "vehicle": 0.5
+          },
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "per_hazard": {
+              "smoke": 0.5,
+              "fire": 0.5,
+              "gas": 0.5,
+              "weapon": 0.5,
+              "water": 0.5,
+              "electrical": 0.5,
+              "vehicle": 0.5
+            },
+            "threshold": 0.7,
+            "cross_check": "agree"
+          }
+        },
+        {
+          "label": "location_text",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        },
+        {
+          "label": "callback_number",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        },
+        {
+          "label": "persons_involved",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        }
+      ],
+      "suggestions": [],
+      "unresolved": [],
+      "flags": []
+    },
+    {
+      "id": "explicit-denial",
+      "text": "Nobody is hurt. There are no weapons here.",
+      "expected": {
+        "injuries": "none",
+        "weapons_present": 0.0
+      },
+      "engine": "openai_decisions",
+      "model": "gpt-6-luna",
+      "latency_ms": 255.5,
+      "checks": [
+        {
+          "field": "injuries",
+          "expected": "none",
+          "actual": "none",
+          "passed": true
+        },
+        {
+          "field": "weapons_present",
+          "expected": 0.0,
+          "actual": 0.0,
+          "passed": true
+        }
+      ],
+      "raw_answers": {
+        "incident_type": {
+          "label": "incident_type",
+          "value": "unknown",
+          "probability": 0.82,
+          "probabilities": {
+            "structure_fire": 0.02,
+            "medical": 0.09,
+            "traffic_collision": 0.01,
+            "crime_in_progress": 0.01,
+            "gas_leak": 0.01,
+            "water_rescue": 0.0,
+            "other": 0.04,
+            "unknown": 0.82
+          },
+          "entropy_confidence": 0.79,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "injuries": {
+          "label": "injuries",
+          "value": "none",
+          "probability": 0.87,
+          "probabilities": {
+            "none": 0.87,
+            "suspected": 0.04,
+            "confirmed": 0.03,
+            "unknown": 0.06
+          },
+          "entropy_confidence": 0.83,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "weapons_present": {
+          "label": "weapons_present",
+          "value": 0.0,
+          "probability": 0.77,
+          "probabilities": {
+            "yes": 0.05,
+            "no": 0.77,
+            "unknown": 0.18
+          },
+          "entropy_confidence": 0.66,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "caller_trapped": {
+          "label": "caller_trapped",
+          "value": 0.5,
+          "probability": 0.81,
+          "probabilities": {
+            "yes": 0.03,
+            "no": 0.16,
+            "unknown": 0.81
+          },
+          "entropy_confidence": 0.72,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "caller_evacuated": {
+          "label": "caller_evacuated",
+          "value": 0.5,
+          "probability": 0.81,
+          "probabilities": {
+            "yes": 0.17,
+            "no": 0.02,
+            "unknown": 0.81
+          },
+          "entropy_confidence": 0.72,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_smoke": {
+          "label": "hazard_smoke",
+          "value": 0.5,
+          "probability": 0.84,
+          "probabilities": {
+            "yes": 0.03,
+            "no": 0.13,
+            "unknown": 0.84
+          },
+          "entropy_confidence": 0.76,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_fire": {
+          "label": "hazard_fire",
+          "value": 0.5,
+          "probability": 0.84,
+          "probabilities": {
+            "yes": 0.04,
+            "no": 0.12,
+            "unknown": 0.84
+          },
+          "entropy_confidence": 0.76,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_gas": {
+          "label": "hazard_gas",
+          "value": 0.5,
+          "probability": 0.81,
+          "probabilities": {
+            "yes": 0.11,
+            "no": 0.08,
+            "unknown": 0.81
+          },
+          "entropy_confidence": 0.72,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_weapon": {
+          "label": "hazard_weapon",
+          "value": 0.0,
+          "probability": 0.63,
+          "probabilities": {
+            "yes": 0.11,
+            "no": 0.63,
+            "unknown": 0.26
+          },
+          "entropy_confidence": 0.45,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_water": {
+          "label": "hazard_water",
+          "value": 0.5,
+          "probability": 0.57,
+          "probabilities": {
+            "yes": 0.03,
+            "no": 0.4,
+            "unknown": 0.57
+          },
+          "entropy_confidence": 0.35,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_electrical": {
+          "label": "hazard_electrical",
+          "value": 0.5,
+          "probability": 0.56,
+          "probabilities": {
+            "yes": 0.02,
+            "no": 0.42,
+            "unknown": 0.56
+          },
+          "entropy_confidence": 0.34,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_vehicle": {
+          "label": "hazard_vehicle",
+          "value": 0.5,
+          "probability": 0.76,
+          "probabilities": {
+            "yes": 0.07,
+            "no": 0.17,
+            "unknown": 0.76
+          },
+          "entropy_confidence": 0.64,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        }
+      },
+      "predictions": [
+        {
+          "label": "incident_type",
+          "value": "unknown",
+          "score": 0.82,
+          "evidence": {
+            "text": "There are no weapons here.",
+            "start": 16,
+            "end": 42,
+            "source": "original",
+            "match": "exact"
+          },
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "structure_fire": 0.02,
+            "medical": 0.09,
+            "traffic_collision": 0.01,
+            "crime_in_progress": 0.01,
+            "gas_leak": 0.01,
+            "water_rescue": 0.0,
+            "other": 0.04,
+            "unknown": 0.82
+          },
+          "raw_probability": 0.82,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.82,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.82
+          }
+        },
+        {
+          "label": "injuries",
+          "value": "none",
+          "score": 0.87,
+          "evidence": {
+            "text": "Nobody is hurt.",
+            "start": 0,
+            "end": 15,
+            "source": "original",
+            "match": "exact"
+          },
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "none": 0.87,
+            "suspected": 0.04,
+            "confirmed": 0.03,
+            "unknown": 0.06
+          },
+          "raw_probability": 0.87,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.87,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.87
+          }
+        },
+        {
+          "label": "weapons_present",
+          "value": "yes",
+          "score": 0.6,
+          "evidence": {
+            "text": "There are no weapons here.",
+            "start": 16,
+            "end": 42,
+            "source": "original",
+            "match": "exact"
+          },
+          "verification_state": "unverified",
+          "conflict": true,
+          "evidence_unverified": false,
+          "probabilities": {
+            "yes": 0.05,
+            "no": 0.77,
+            "unknown": 0.18
+          },
+          "raw_probability": 0.77,
+          "decided_on": "original",
+          "alternative": "yes",
+          "breakdown": {
+            "laya_original": 0.77,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "disagree",
+            "rule_value": "yes",
+            "final": 0.462,
+            "p_true": 0.0,
+            "thresholds": "yes>=0.7 no<=0.3",
+            "forced_unknown": "passes disagreed after thresholding",
+            "rule_override": "weapon term found verbatim in the transcript; reported as yes"
+          }
+        },
+        {
+          "label": "caller_safe",
+          "value": "unknown",
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "trapped": 0.5,
+            "evacuated": 0.5
+          },
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "composed_from": [
+              "caller_trapped",
+              "caller_evacuated"
+            ],
+            "p_trapped": 0.5,
+            "p_evacuated": 0.5,
+            "reason": "the call never says either way",
+            "asr_factor": 1.0,
+            "final": 0.0
+          }
+        },
+        {
+          "label": "hazards",
+          "value": [],
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "smoke": 0.5,
+            "fire": 0.5,
+            "gas": 0.5,
+            "weapon": 0.0,
+            "water": 0.5,
+            "electrical": 0.5,
+            "vehicle": 0.5
+          },
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "per_hazard": {
+              "smoke": 0.5,
+              "fire": 0.5,
+              "gas": 0.5,
+              "weapon": 0.0,
+              "water": 0.5,
+              "electrical": 0.5,
+              "vehicle": 0.5
+            },
+            "threshold": 0.7,
+            "cross_check": "agree"
+          }
+        },
+        {
+          "label": "location_text",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        },
+        {
+          "label": "callback_number",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        },
+        {
+          "label": "persons_involved",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        }
+      ],
+      "suggestions": [
+        {
+          "id": "sug-1",
+          "field": "injuries",
+          "kind": "addition",
+          "proposed_value": "none",
+          "value_kind": "text",
+          "proposed_presence": "stated",
+          "previous_value": null,
+          "base_revision": 0,
+          "status": "pending",
+          "created_at": "2026-10-11T22:02:44.111+00:00",
+          "evidence": [
+            {
+              "segment_id": "seg-1",
+              "source": "original",
+              "text": "Nobody is hurt.",
+              "start": 0,
+              "end": 15,
+              "offset_unit": "utf16",
+              "start_ms": null,
+              "end_ms": null,
+              "method": "keyword_context"
+            }
+          ],
+          "support": {
+            "derived_score": 0.87,
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "asr_confidence": null,
+            "uncorroborated": false,
+            "note": null
+          },
+          "raw_model": {
+            "engine": "laya",
+            "checkpoint": null,
+            "probability": 0.87,
+            "probabilities": {
+              "none": 0.87,
+              "suspected": 0.04,
+              "confirmed": 0.03,
+              "unknown": 0.06
+            },
+            "calibrated": false
+          },
+          "superseded_by": null,
+          "corroborating_segment_ids": [],
+          "resolved_value": null,
+          "resolved_at": null,
+          "conflict_options": [],
+          "conflicts_with": [],
+          "prior_statement": null,
+          "prior_evidence": null,
+          "note": null
+        },
+        {
+          "id": "sug-2",
+          "field": "weapons_present",
+          "kind": "addition",
+          "proposed_value": "yes",
+          "value_kind": "text",
+          "proposed_presence": "stated",
+          "previous_value": null,
+          "base_revision": 0,
+          "status": "pending",
+          "created_at": "2026-10-11T22:02:44.111+00:00",
+          "evidence": [
+            {
+              "segment_id": "seg-1",
+              "source": "original",
+              "text": "There are no weapons here.",
+              "start": 16,
+              "end": 42,
+              "offset_unit": "utf16",
+              "start_ms": null,
+              "end_ms": null,
+              "method": "keyword_context"
+            }
+          ],
+          "support": {
+            "derived_score": 0.6,
+            "cross_check": "unavailable",
+            "rule_check": "disagree",
+            "asr_confidence": null,
+            "uncorroborated": false,
+            "note": null
+          },
+          "raw_model": {
+            "engine": "laya",
+            "checkpoint": null,
+            "probability": 0.77,
+            "probabilities": {
+              "yes": 0.05,
+              "no": 0.77,
+              "unknown": 0.18
+            },
+            "calibrated": false
+          },
+          "superseded_by": null,
+          "corroborating_segment_ids": [],
+          "resolved_value": null,
+          "resolved_at": null,
+          "conflict_options": [],
+          "conflicts_with": [],
+          "prior_statement": null,
+          "prior_evidence": null,
+          "note": null
+        }
+      ],
+      "unresolved": [],
+      "flags": []
+    },
+    {
+      "id": "burn-injury",
+      "text": "My roommate burned his hand. He is awake and talking.",
+      "expected": {
+        "injuries": "confirmed",
+        "weapons_present": 0.5
+      },
+      "engine": "openai_decisions",
+      "model": "gpt-6-luna",
+      "latency_ms": 310.3,
+      "checks": [
+        {
+          "field": "injuries",
+          "expected": "confirmed",
+          "actual": "confirmed",
+          "passed": true
+        },
+        {
+          "field": "weapons_present",
+          "expected": 0.5,
+          "actual": 0.5,
+          "passed": true
+        }
+      ],
+      "raw_answers": {
+        "incident_type": {
+          "label": "incident_type",
+          "value": "medical",
+          "probability": 0.99,
+          "probabilities": {
+            "structure_fire": 0.01,
+            "medical": 0.99,
+            "traffic_collision": 0.0,
+            "crime_in_progress": 0.0,
+            "gas_leak": 0.0,
+            "water_rescue": 0.0,
+            "other": 0.0,
+            "unknown": 0.0
+          },
+          "entropy_confidence": 0.99,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "injuries": {
+          "label": "injuries",
+          "value": "confirmed",
+          "probability": 0.92,
+          "probabilities": {
+            "none": 0.02,
+            "suspected": 0.03,
+            "confirmed": 0.92,
+            "unknown": 0.03
+          },
+          "entropy_confidence": 0.89,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "weapons_present": {
+          "label": "weapons_present",
+          "value": 0.5,
+          "probability": 0.92,
+          "probabilities": {
+            "yes": 0.02,
+            "no": 0.06,
+            "unknown": 0.92
+          },
+          "entropy_confidence": 0.88,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "caller_trapped": {
+          "label": "caller_trapped",
+          "value": 0.5,
+          "probability": 0.66,
+          "probabilities": {
+            "yes": 0.05,
+            "no": 0.29,
+            "unknown": 0.66
+          },
+          "entropy_confidence": 0.49,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "caller_evacuated": {
+          "label": "caller_evacuated",
+          "value": 0.5,
+          "probability": 0.94,
+          "probabilities": {
+            "yes": 0.03,
+            "no": 0.03,
+            "unknown": 0.94
+          },
+          "entropy_confidence": 0.91,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_smoke": {
+          "label": "hazard_smoke",
+          "value": 0.5,
+          "probability": 0.98,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.01,
+            "unknown": 0.98
+          },
+          "entropy_confidence": 0.97,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_fire": {
+          "label": "hazard_fire",
+          "value": 0.5,
+          "probability": 0.67,
+          "probabilities": {
+            "yes": 0.23,
+            "no": 0.1,
+            "unknown": 0.67
+          },
+          "entropy_confidence": 0.51,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_gas": {
+          "label": "hazard_gas",
+          "value": 0.5,
+          "probability": 0.87,
+          "probabilities": {
+            "yes": 0.02,
+            "no": 0.11,
+            "unknown": 0.87
+          },
+          "entropy_confidence": 0.8,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_weapon": {
+          "label": "hazard_weapon",
+          "value": 0.5,
+          "probability": 0.78,
+          "probabilities": {
+            "yes": 0.03,
+            "no": 0.19,
+            "unknown": 0.78
+          },
+          "entropy_confidence": 0.67,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_water": {
+          "label": "hazard_water",
+          "value": 0.5,
+          "probability": 0.79,
+          "probabilities": {
+            "yes": 0.05,
+            "no": 0.16,
+            "unknown": 0.79
+          },
+          "entropy_confidence": 0.69,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_electrical": {
+          "label": "hazard_electrical",
+          "value": 0.5,
+          "probability": 0.78,
+          "probabilities": {
+            "yes": 0.02,
+            "no": 0.2,
+            "unknown": 0.78
+          },
+          "entropy_confidence": 0.67,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_vehicle": {
+          "label": "hazard_vehicle",
+          "value": 0.5,
+          "probability": 0.74,
+          "probabilities": {
+            "yes": 0.05,
+            "no": 0.21,
+            "unknown": 0.74
+          },
+          "entropy_confidence": 0.61,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        }
+      },
+      "predictions": [
+        {
+          "label": "incident_type",
+          "value": "unknown",
+          "score": 0.35,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "structure_fire": 0.01,
+            "medical": 0.99,
+            "traffic_collision": 0.0,
+            "crime_in_progress": 0.0,
+            "gas_leak": 0.0,
+            "water_rescue": 0.0,
+            "other": 0.0,
+            "unknown": 0.0
+          },
+          "raw_probability": 0.99,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.99,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.35,
+            "uncorroborated": "no evidence span located and no independent agreement; score capped at 0.35",
+            "abstained": "score < 0.55"
+          }
+        },
+        {
+          "label": "injuries",
+          "value": "confirmed",
+          "score": 0.92,
+          "evidence": {
+            "text": "My roommate burned his hand.",
+            "start": 0,
+            "end": 28,
+            "source": "original",
+            "match": "exact"
+          },
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "none": 0.02,
+            "suspected": 0.03,
+            "confirmed": 0.92,
+            "unknown": 0.03
+          },
+          "raw_probability": 0.92,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.92,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.92
+          }
+        },
+        {
+          "label": "weapons_present",
+          "value": "unknown",
+          "score": 0.35,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "yes": 0.02,
+            "no": 0.06,
+            "unknown": 0.92
+          },
+          "raw_probability": 0.92,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.92,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.35,
+            "p_true": 0.5,
+            "thresholds": "yes>=0.7 no<=0.3",
+            "uncorroborated": "no evidence span located and no independent agreement; score capped at 0.35"
+          }
+        },
+        {
+          "label": "caller_safe",
+          "value": "unknown",
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "trapped": 0.5,
+            "evacuated": 0.5
+          },
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "composed_from": [
+              "caller_trapped",
+              "caller_evacuated"
+            ],
+            "p_trapped": 0.5,
+            "p_evacuated": 0.5,
+            "reason": "the call never says either way",
+            "asr_factor": 1.0,
+            "final": 0.0
+          }
+        },
+        {
+          "label": "hazards",
+          "value": [],
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "smoke": 0.5,
+            "fire": 0.5,
+            "gas": 0.5,
+            "weapon": 0.5,
+            "water": 0.5,
+            "electrical": 0.5,
+            "vehicle": 0.5
+          },
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "per_hazard": {
+              "smoke": 0.5,
+              "fire": 0.5,
+              "gas": 0.5,
+              "weapon": 0.5,
+              "water": 0.5,
+              "electrical": 0.5,
+              "vehicle": 0.5
+            },
+            "threshold": 0.7,
+            "cross_check": "agree"
+          }
+        },
+        {
+          "label": "location_text",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        },
+        {
+          "label": "callback_number",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        },
+        {
+          "label": "persons_involved",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        }
+      ],
+      "suggestions": [
+        {
+          "id": "sug-1",
+          "field": "injuries",
+          "kind": "addition",
+          "proposed_value": "confirmed",
+          "value_kind": "text",
+          "proposed_presence": "stated",
+          "previous_value": null,
+          "base_revision": 0,
+          "status": "pending",
+          "created_at": "2026-10-11T22:02:44.425+00:00",
+          "evidence": [
+            {
+              "segment_id": "seg-1",
+              "source": "original",
+              "text": "My roommate burned his hand.",
+              "start": 0,
+              "end": 28,
+              "offset_unit": "utf16",
+              "start_ms": null,
+              "end_ms": null,
+              "method": "keyword_context"
+            }
+          ],
+          "support": {
+            "derived_score": 0.92,
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "asr_confidence": null,
+            "uncorroborated": false,
+            "note": null
+          },
+          "raw_model": {
+            "engine": "laya",
+            "checkpoint": null,
+            "probability": 0.92,
+            "probabilities": {
+              "none": 0.02,
+              "suspected": 0.03,
+              "confirmed": 0.92,
+              "unknown": 0.03
+            },
+            "calibrated": false
+          },
+          "superseded_by": null,
+          "corroborating_segment_ids": [],
+          "resolved_value": null,
+          "resolved_at": null,
+          "conflict_options": [],
+          "conflicts_with": [],
+          "prior_statement": null,
+          "prior_evidence": null,
+          "note": null
+        }
+      ],
+      "unresolved": [],
+      "flags": []
+    },
+    {
+      "id": "injury-paraphrase",
+      "text": "Her wrist is broken and she says it hurts terribly.",
+      "expected": {
+        "injuries": "confirmed",
+        "weapons_present": 0.5
+      },
+      "engine": "openai_decisions",
+      "model": "gpt-6-luna",
+      "latency_ms": 207.2,
+      "checks": [
+        {
+          "field": "injuries",
+          "expected": "confirmed",
+          "actual": "confirmed",
+          "passed": true
+        },
+        {
+          "field": "weapons_present",
+          "expected": 0.5,
+          "actual": 0.5,
+          "passed": true
+        }
+      ],
+      "raw_answers": {
+        "incident_type": {
+          "label": "incident_type",
+          "value": "medical",
+          "probability": 0.99,
+          "probabilities": {
+            "structure_fire": 0.01,
+            "medical": 0.99,
+            "traffic_collision": 0.0,
+            "crime_in_progress": 0.0,
+            "gas_leak": 0.0,
+            "water_rescue": 0.0,
+            "other": 0.0,
+            "unknown": 0.0
+          },
+          "entropy_confidence": 0.99,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "injuries": {
+          "label": "injuries",
+          "value": "confirmed",
+          "probability": 0.91,
+          "probabilities": {
+            "none": 0.03,
+            "suspected": 0.03,
+            "confirmed": 0.91,
+            "unknown": 0.03
+          },
+          "entropy_confidence": 0.88,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "weapons_present": {
+          "label": "weapons_present",
+          "value": 0.5,
+          "probability": 0.98,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.01,
+            "unknown": 0.98
+          },
+          "entropy_confidence": 0.97,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "caller_trapped": {
+          "label": "caller_trapped",
+          "value": 0.5,
+          "probability": 0.99,
+          "probabilities": {
+            "yes": 0.0,
+            "no": 0.01,
+            "unknown": 0.99
+          },
+          "entropy_confidence": 0.99,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "caller_evacuated": {
+          "label": "caller_evacuated",
+          "value": 0.5,
+          "probability": 0.99,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.0,
+            "unknown": 0.99
+          },
+          "entropy_confidence": 0.99,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_smoke": {
+          "label": "hazard_smoke",
+          "value": 0.5,
+          "probability": 0.97,
+          "probabilities": {
+            "yes": 0.0,
+            "no": 0.03,
+            "unknown": 0.97
+          },
+          "entropy_confidence": 0.96,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_fire": {
+          "label": "hazard_fire",
+          "value": 0.5,
+          "probability": 0.51,
+          "probabilities": {
+            "yes": 0.0,
+            "no": 0.49,
+            "unknown": 0.51
+          },
+          "entropy_confidence": 0.27,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_gas": {
+          "label": "hazard_gas",
+          "value": 0.5,
+          "probability": 0.87,
+          "probabilities": {
+            "yes": 0.0,
+            "no": 0.13,
+            "unknown": 0.87
+          },
+          "entropy_confidence": 0.8,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_weapon": {
+          "label": "hazard_weapon",
+          "value": 0.0,
+          "probability": 0.52,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.52,
+            "unknown": 0.47
+          },
+          "entropy_confidence": 0.28,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_water": {
+          "label": "hazard_water",
+          "value": 0.5,
+          "probability": 0.97,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.02,
+            "unknown": 0.97
+          },
+          "entropy_confidence": 0.96,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_electrical": {
+          "label": "hazard_electrical",
+          "value": 0.5,
+          "probability": 0.99,
+          "probabilities": {
+            "yes": 0.0,
+            "no": 0.01,
+            "unknown": 0.99
+          },
+          "entropy_confidence": 0.99,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_vehicle": {
+          "label": "hazard_vehicle",
+          "value": 0.5,
+          "probability": 0.96,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.03,
+            "unknown": 0.96
+          },
+          "entropy_confidence": 0.94,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        }
+      },
+      "predictions": [
+        {
+          "label": "incident_type",
+          "value": "unknown",
+          "score": 0.35,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "structure_fire": 0.01,
+            "medical": 0.99,
+            "traffic_collision": 0.0,
+            "crime_in_progress": 0.0,
+            "gas_leak": 0.0,
+            "water_rescue": 0.0,
+            "other": 0.0,
+            "unknown": 0.0
+          },
+          "raw_probability": 0.99,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.99,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.35,
+            "uncorroborated": "no evidence span located and no independent agreement; score capped at 0.35",
+            "abstained": "score < 0.55"
+          }
+        },
+        {
+          "label": "injuries",
+          "value": "confirmed",
+          "score": 0.91,
+          "evidence": {
+            "text": "Her wrist is broken and she says it hurts terribly.",
+            "start": 0,
+            "end": 51,
+            "source": "original",
+            "match": "exact"
+          },
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "none": 0.03,
+            "suspected": 0.03,
+            "confirmed": 0.91,
+            "unknown": 0.03
+          },
+          "raw_probability": 0.91,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.91,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.91
+          }
+        },
+        {
+          "label": "weapons_present",
+          "value": "unknown",
+          "score": 0.35,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.01,
+            "unknown": 0.98
+          },
+          "raw_probability": 0.98,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.98,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.35,
+            "p_true": 0.5,
+            "thresholds": "yes>=0.7 no<=0.3",
+            "uncorroborated": "no evidence span located and no independent agreement; score capped at 0.35"
+          }
+        },
+        {
+          "label": "caller_safe",
+          "value": "unknown",
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "trapped": 0.5,
+            "evacuated": 0.5
+          },
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "composed_from": [
+              "caller_trapped",
+              "caller_evacuated"
+            ],
+            "p_trapped": 0.5,
+            "p_evacuated": 0.5,
+            "reason": "the call never says either way",
+            "asr_factor": 1.0,
+            "final": 0.0
+          }
+        },
+        {
+          "label": "hazards",
+          "value": [],
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "smoke": 0.5,
+            "fire": 0.5,
+            "gas": 0.5,
+            "weapon": 0.0,
+            "water": 0.5,
+            "electrical": 0.5,
+            "vehicle": 0.5
+          },
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "per_hazard": {
+              "smoke": 0.5,
+              "fire": 0.5,
+              "gas": 0.5,
+              "weapon": 0.0,
+              "water": 0.5,
+              "electrical": 0.5,
+              "vehicle": 0.5
+            },
+            "threshold": 0.7,
+            "cross_check": "agree"
+          }
+        },
+        {
+          "label": "location_text",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        },
+        {
+          "label": "callback_number",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        },
+        {
+          "label": "persons_involved",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        }
+      ],
+      "suggestions": [
+        {
+          "id": "sug-1",
+          "field": "injuries",
+          "kind": "addition",
+          "proposed_value": "confirmed",
+          "value_kind": "text",
+          "proposed_presence": "stated",
+          "previous_value": null,
+          "base_revision": 0,
+          "status": "pending",
+          "created_at": "2026-10-11T22:02:44.635+00:00",
+          "evidence": [
+            {
+              "segment_id": "seg-1",
+              "source": "original",
+              "text": "Her wrist is broken and she says it hurts terribly.",
+              "start": 0,
+              "end": 51,
+              "offset_unit": "utf16",
+              "start_ms": null,
+              "end_ms": null,
+              "method": "keyword_context"
+            }
+          ],
+          "support": {
+            "derived_score": 0.91,
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "asr_confidence": null,
+            "uncorroborated": false,
+            "note": null
+          },
+          "raw_model": {
+            "engine": "laya",
+            "checkpoint": null,
+            "probability": 0.91,
+            "probabilities": {
+              "none": 0.03,
+              "suspected": 0.03,
+              "confirmed": 0.91,
+              "unknown": 0.03
+            },
+            "calibrated": false
+          },
+          "superseded_by": null,
+          "corroborating_segment_ids": [],
+          "resolved_value": null,
+          "resolved_at": null,
+          "conflict_options": [],
+          "conflicts_with": [],
+          "prior_statement": null,
+          "prior_evidence": null,
+          "note": null
+        }
+      ],
+      "unresolved": [],
+      "flags": []
+    },
+    {
+      "id": "uncertain-gas",
+      "text": "There is a strong smell, but I cannot tell whether it is gas or smoke.",
+      "expected": {
+        "hazard_gas": 0.5,
+        "hazard_smoke": 0.5
+      },
+      "required_uncertainty": "Unidentified smell; gas and smoke not confirmed",
+      "engine": "openai_decisions",
+      "model": "gpt-6-luna",
+      "latency_ms": 367.9,
+      "checks": [
+        {
+          "field": "hazard_gas",
+          "expected": 0.5,
+          "actual": 0.5,
+          "passed": true
+        },
+        {
+          "field": "hazard_smoke",
+          "expected": 0.5,
+          "actual": 0.5,
+          "passed": true
+        }
+      ],
+      "raw_answers": {
+        "incident_type": {
+          "label": "incident_type",
+          "value": "unknown",
+          "probability": 0.86,
+          "probabilities": {
+            "structure_fire": 0.01,
+            "medical": 0.0,
+            "traffic_collision": 0.01,
+            "crime_in_progress": 0.0,
+            "gas_leak": 0.1,
+            "water_rescue": 0.01,
+            "other": 0.01,
+            "unknown": 0.86
+          },
+          "entropy_confidence": 0.84,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "injuries": {
+          "label": "injuries",
+          "value": "unknown",
+          "probability": 0.88,
+          "probabilities": {
+            "none": 0.09,
+            "suspected": 0.01,
+            "confirmed": 0.02,
+            "unknown": 0.88
+          },
+          "entropy_confidence": 0.84,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "weapons_present": {
+          "label": "weapons_present",
+          "value": 0.5,
+          "probability": 0.96,
+          "probabilities": {
+            "yes": 0.02,
+            "no": 0.02,
+            "unknown": 0.96
+          },
+          "entropy_confidence": 0.94,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "caller_trapped": {
+          "label": "caller_trapped",
+          "value": 0.5,
+          "probability": 0.99,
+          "probabilities": {
+            "yes": 0.0,
+            "no": 0.01,
+            "unknown": 0.99
+          },
+          "entropy_confidence": 0.99,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "caller_evacuated": {
+          "label": "caller_evacuated",
+          "value": 0.5,
+          "probability": 0.99,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.0,
+            "unknown": 0.99
+          },
+          "entropy_confidence": 0.99,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_smoke": {
+          "label": "hazard_smoke",
+          "value": 0.5,
+          "probability": 0.94,
+          "probabilities": {
+            "yes": 0.04,
+            "no": 0.02,
+            "unknown": 0.94
+          },
+          "entropy_confidence": 0.91,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_fire": {
+          "label": "hazard_fire",
+          "value": 0.5,
+          "probability": 0.99,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.0,
+            "unknown": 0.99
+          },
+          "entropy_confidence": 0.99,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_gas": {
+          "label": "hazard_gas",
+          "value": 0.5,
+          "probability": 0.82,
+          "probabilities": {
+            "yes": 0.16,
+            "no": 0.02,
+            "unknown": 0.82
+          },
+          "entropy_confidence": 0.73,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_weapon": {
+          "label": "hazard_weapon",
+          "value": 0.5,
+          "probability": 0.95,
+          "probabilities": {
+            "yes": 0.02,
+            "no": 0.03,
+            "unknown": 0.95
+          },
+          "entropy_confidence": 0.93,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_water": {
+          "label": "hazard_water",
+          "value": 0.5,
+          "probability": 0.97,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.02,
+            "unknown": 0.97
+          },
+          "entropy_confidence": 0.96,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_electrical": {
+          "label": "hazard_electrical",
+          "value": 0.5,
+          "probability": 0.99,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.0,
+            "unknown": 0.99
+          },
+          "entropy_confidence": 0.99,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_vehicle": {
+          "label": "hazard_vehicle",
+          "value": 0.5,
+          "probability": 0.94,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.05,
+            "unknown": 0.94
+          },
+          "entropy_confidence": 0.91,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        }
+      },
+      "predictions": [
+        {
+          "label": "incident_type",
+          "value": "unknown",
+          "score": 0.516,
+          "evidence": {
+            "text": "There is a strong smell, but I cannot tell whether it is gas or smoke.",
+            "start": 0,
+            "end": 70,
+            "source": "original",
+            "match": "exact"
+          },
+          "verification_state": "unverified",
+          "conflict": true,
+          "evidence_unverified": false,
+          "probabilities": {
+            "structure_fire": 0.01,
+            "medical": 0.0,
+            "traffic_collision": 0.01,
+            "crime_in_progress": 0.0,
+            "gas_leak": 0.1,
+            "water_rescue": 0.01,
+            "other": 0.01,
+            "unknown": 0.86
+          },
+          "raw_probability": 0.86,
+          "decided_on": "original",
+          "alternative": "structure_fire",
+          "breakdown": {
+            "laya_original": 0.86,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "disagree",
+            "rule_value": "structure_fire",
+            "final": 0.516,
+            "abstained": "score < 0.55"
+          }
+        },
+        {
+          "label": "injuries",
+          "value": "unknown",
+          "score": 0.35,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "none": 0.09,
+            "suspected": 0.01,
+            "confirmed": 0.02,
+            "unknown": 0.88
+          },
+          "raw_probability": 0.88,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.88,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.35,
+            "uncorroborated": "no evidence span located and no independent agreement; score capped at 0.35",
+            "abstained": "score < 0.55"
+          }
+        },
+        {
+          "label": "weapons_present",
+          "value": "unknown",
+          "score": 0.35,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "yes": 0.02,
+            "no": 0.02,
+            "unknown": 0.96
+          },
+          "raw_probability": 0.96,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.96,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.35,
+            "p_true": 0.5,
+            "thresholds": "yes>=0.7 no<=0.3",
+            "uncorroborated": "no evidence span located and no independent agreement; score capped at 0.35"
+          }
+        },
+        {
+          "label": "caller_safe",
+          "value": "unknown",
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "trapped": 0.5,
+            "evacuated": 0.5
+          },
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "composed_from": [
+              "caller_trapped",
+              "caller_evacuated"
+            ],
+            "p_trapped": 0.5,
+            "p_evacuated": 0.5,
+            "reason": "the call never says either way",
+            "asr_factor": 1.0,
+            "final": 0.0
+          }
+        },
+        {
+          "label": "hazards",
+          "value": [],
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "smoke": 0.5,
+            "fire": 0.5,
+            "gas": 0.5,
+            "weapon": 0.5,
+            "water": 0.5,
+            "electrical": 0.5,
+            "vehicle": 0.5
+          },
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "per_hazard": {
+              "smoke": 0.5,
+              "fire": 0.5,
+              "gas": 0.5,
+              "weapon": 0.5,
+              "water": 0.5,
+              "electrical": 0.5,
+              "vehicle": 0.5
+            },
+            "threshold": 0.7,
+            "cross_check": "agree"
+          }
+        },
+        {
+          "label": "location_text",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        },
+        {
+          "label": "callback_number",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        },
+        {
+          "label": "persons_involved",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        }
+      ],
+      "suggestions": [],
+      "unresolved": [],
+      "flags": []
+    },
+    {
+      "id": "uncertain-gas-paraphrase",
+      "text": "It smells strange in here. Maybe a gas leak, but I really do not know.",
+      "expected": {
+        "hazard_gas": 0.5
+      },
+      "required_uncertainty": "Possible gas leak explicitly uncertain",
+      "engine": "openai_decisions",
+      "model": "gpt-6-luna",
+      "latency_ms": 205.9,
+      "checks": [
+        {
+          "field": "hazard_gas",
+          "expected": 0.5,
+          "actual": 1.0,
+          "passed": false
+        }
+      ],
+      "raw_answers": {
+        "incident_type": {
+          "label": "incident_type",
+          "value": "gas_leak",
+          "probability": 0.88,
+          "probabilities": {
+            "structure_fire": 0.01,
+            "medical": 0.0,
+            "traffic_collision": 0.0,
+            "crime_in_progress": 0.0,
+            "gas_leak": 0.88,
+            "water_rescue": 0.01,
+            "other": 0.01,
+            "unknown": 0.09
+          },
+          "entropy_confidence": 0.86,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "injuries": {
+          "label": "injuries",
+          "value": "unknown",
+          "probability": 0.77,
+          "probabilities": {
+            "none": 0.15,
+            "suspected": 0.05,
+            "confirmed": 0.03,
+            "unknown": 0.77
+          },
+          "entropy_confidence": 0.69,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "weapons_present": {
+          "label": "weapons_present",
+          "value": 0.5,
+          "probability": 0.98,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.01,
+            "unknown": 0.98
+          },
+          "entropy_confidence": 0.97,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "caller_trapped": {
+          "label": "caller_trapped",
+          "value": 0.5,
+          "probability": 0.96,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.03,
+            "unknown": 0.96
+          },
+          "entropy_confidence": 0.94,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "caller_evacuated": {
+          "label": "caller_evacuated",
+          "value": 0.5,
+          "probability": 0.99,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.0,
+            "unknown": 0.99
+          },
+          "entropy_confidence": 0.99,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_smoke": {
+          "label": "hazard_smoke",
+          "value": 0.5,
+          "probability": 0.96,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.03,
+            "unknown": 0.96
+          },
+          "entropy_confidence": 0.94,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_fire": {
+          "label": "hazard_fire",
+          "value": 0.5,
+          "probability": 0.97,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.02,
+            "unknown": 0.97
+          },
+          "entropy_confidence": 0.96,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_gas": {
+          "label": "hazard_gas",
+          "value": 1.0,
+          "probability": 0.62,
+          "probabilities": {
+            "yes": 0.62,
+            "no": 0.01,
+            "unknown": 0.37
+          },
+          "entropy_confidence": 0.43,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_weapon": {
+          "label": "hazard_weapon",
+          "value": 0.5,
+          "probability": 0.88,
+          "probabilities": {
+            "yes": 0.03,
+            "no": 0.09,
+            "unknown": 0.88
+          },
+          "entropy_confidence": 0.82,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_water": {
+          "label": "hazard_water",
+          "value": 0.5,
+          "probability": 0.96,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.03,
+            "unknown": 0.96
+          },
+          "entropy_confidence": 0.94,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_electrical": {
+          "label": "hazard_electrical",
+          "value": 0.5,
+          "probability": 0.99,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.0,
+            "unknown": 0.99
+          },
+          "entropy_confidence": 0.99,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_vehicle": {
+          "label": "hazard_vehicle",
+          "value": 0.5,
+          "probability": 0.95,
+          "probabilities": {
+            "yes": 0.02,
+            "no": 0.03,
+            "unknown": 0.95
+          },
+          "entropy_confidence": 0.93,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        }
+      },
+      "predictions": [
+        {
+          "label": "incident_type",
+          "value": "gas_leak",
+          "score": 0.968,
+          "evidence": {
+            "text": "Maybe a gas leak, but I really do not know.",
+            "start": 27,
+            "end": 70,
+            "source": "original",
+            "match": "exact"
+          },
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "structure_fire": 0.01,
+            "medical": 0.0,
+            "traffic_collision": 0.0,
+            "crime_in_progress": 0.0,
+            "gas_leak": 0.88,
+            "water_rescue": 0.01,
+            "other": 0.01,
+            "unknown": 0.09
+          },
+          "raw_probability": 0.88,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.88,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "agree",
+            "final": 0.968
+          }
+        },
+        {
+          "label": "injuries",
+          "value": "unknown",
+          "score": 0.35,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "none": 0.15,
+            "suspected": 0.05,
+            "confirmed": 0.03,
+            "unknown": 0.77
+          },
+          "raw_probability": 0.77,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.77,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.35,
+            "uncorroborated": "no evidence span located and no independent agreement; score capped at 0.35",
+            "abstained": "score < 0.55"
+          }
+        },
+        {
+          "label": "weapons_present",
+          "value": "unknown",
+          "score": 0.35,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.01,
+            "unknown": 0.98
+          },
+          "raw_probability": 0.98,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.98,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.35,
+            "p_true": 0.5,
+            "thresholds": "yes>=0.7 no<=0.3",
+            "uncorroborated": "no evidence span located and no independent agreement; score capped at 0.35"
+          }
+        },
+        {
+          "label": "caller_safe",
+          "value": "unknown",
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "trapped": 0.5,
+            "evacuated": 0.5
+          },
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "composed_from": [
+              "caller_trapped",
+              "caller_evacuated"
+            ],
+            "p_trapped": 0.5,
+            "p_evacuated": 0.5,
+            "reason": "the call never says either way",
+            "asr_factor": 1.0,
+            "final": 0.0
+          }
+        },
+        {
+          "label": "hazards",
+          "value": [
+            "gas"
+          ],
+          "score": 1.0,
+          "evidence": {
+            "text": "Maybe a gas leak, but I really do not know.",
+            "start": 27,
+            "end": 70,
+            "source": "original",
+            "match": "exact"
+          },
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "smoke": 0.5,
+            "fire": 0.5,
+            "gas": 1.0,
+            "weapon": 0.5,
+            "water": 0.5,
+            "electrical": 0.5,
+            "vehicle": 0.5
+          },
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "per_hazard": {
+              "smoke": 0.5,
+              "fire": 0.5,
+              "gas": 1.0,
+              "weapon": 0.5,
+              "water": 0.5,
+              "electrical": 0.5,
+              "vehicle": 0.5
+            },
+            "threshold": 0.7,
+            "cross_check": "agree"
+          }
+        },
+        {
+          "label": "location_text",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        },
+        {
+          "label": "callback_number",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        },
+        {
+          "label": "persons_involved",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        }
+      ],
+      "suggestions": [
+        {
+          "id": "sug-1",
+          "field": "incident_type",
+          "kind": "addition",
+          "proposed_value": "gas_leak",
+          "value_kind": "text",
+          "proposed_presence": "stated",
+          "previous_value": null,
+          "base_revision": 0,
+          "status": "pending",
+          "created_at": "2026-10-11T22:02:45.215+00:00",
+          "evidence": [
+            {
+              "segment_id": "seg-1",
+              "source": "original",
+              "text": "Maybe a gas leak, but I really do not know.",
+              "start": 27,
+              "end": 70,
+              "offset_unit": "utf16",
+              "start_ms": null,
+              "end_ms": null,
+              "method": "keyword_context"
+            }
+          ],
+          "support": {
+            "derived_score": 0.968,
+            "cross_check": "unavailable",
+            "rule_check": "agree",
+            "asr_confidence": null,
+            "uncorroborated": false,
+            "note": null
+          },
+          "raw_model": {
+            "engine": "laya",
+            "checkpoint": null,
+            "probability": 0.88,
+            "probabilities": {
+              "structure_fire": 0.01,
+              "medical": 0.0,
+              "traffic_collision": 0.0,
+              "crime_in_progress": 0.0,
+              "gas_leak": 0.88,
+              "water_rescue": 0.01,
+              "other": 0.01,
+              "unknown": 0.09
+            },
+            "calibrated": false
+          },
+          "superseded_by": null,
+          "corroborating_segment_ids": [],
+          "resolved_value": null,
+          "resolved_at": null,
+          "conflict_options": [],
+          "conflicts_with": [],
+          "prior_statement": null,
+          "prior_evidence": null,
+          "note": null
+        },
+        {
+          "id": "sug-2",
+          "field": "hazards",
+          "kind": "addition",
+          "proposed_value": [
+            "gas"
+          ],
+          "value_kind": "list",
+          "proposed_presence": "stated",
+          "previous_value": null,
+          "base_revision": 0,
+          "status": "pending",
+          "created_at": "2026-10-11T22:02:45.215+00:00",
+          "evidence": [
+            {
+              "segment_id": "seg-1",
+              "source": "original",
+              "text": "Maybe a gas leak, but I really do not know.",
+              "start": 27,
+              "end": 70,
+              "offset_unit": "utf16",
+              "start_ms": null,
+              "end_ms": null,
+              "method": "keyword_context"
+            }
+          ],
+          "support": {
+            "derived_score": 1.0,
+            "cross_check": "agree",
+            "rule_check": "no_opinion",
+            "asr_confidence": null,
+            "uncorroborated": false,
+            "note": null
+          },
+          "raw_model": null,
+          "superseded_by": null,
+          "corroborating_segment_ids": [],
+          "resolved_value": null,
+          "resolved_at": null,
+          "conflict_options": [],
+          "conflicts_with": [],
+          "prior_statement": null,
+          "prior_evidence": null,
+          "note": null
+        }
+      ],
+      "unresolved": [],
+      "flags": []
+    },
+    {
+      "id": "other-occupants",
+      "text": "I am outside. I do not know if anyone is still upstairs.",
+      "expected": {
+        "caller_evacuated": 1.0,
+        "caller_trapped": 0.0
+      },
+      "required_uncertainty": "Other occupants may remain inside",
+      "engine": "openai_decisions",
+      "model": "gpt-6-luna",
+      "latency_ms": 283.9,
+      "checks": [
+        {
+          "field": "caller_evacuated",
+          "expected": 1.0,
+          "actual": 1.0,
+          "passed": true
+        },
+        {
+          "field": "caller_trapped",
+          "expected": 0.0,
+          "actual": 0.5,
+          "passed": false
+        }
+      ],
+      "raw_answers": {
+        "incident_type": {
+          "label": "incident_type",
+          "value": "unknown",
+          "probability": 0.97,
+          "probabilities": {
+            "structure_fire": 0.01,
+            "medical": 0.0,
+            "traffic_collision": 0.0,
+            "crime_in_progress": 0.01,
+            "gas_leak": 0.0,
+            "water_rescue": 0.0,
+            "other": 0.01,
+            "unknown": 0.97
+          },
+          "entropy_confidence": 0.97,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "injuries": {
+          "label": "injuries",
+          "value": "unknown",
+          "probability": 0.85,
+          "probabilities": {
+            "none": 0.05,
+            "suspected": 0.08,
+            "confirmed": 0.02,
+            "unknown": 0.85
+          },
+          "entropy_confidence": 0.8,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "weapons_present": {
+          "label": "weapons_present",
+          "value": 0.5,
+          "probability": 0.91,
+          "probabilities": {
+            "yes": 0.02,
+            "no": 0.07,
+            "unknown": 0.91
+          },
+          "entropy_confidence": 0.86,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "caller_trapped": {
+          "label": "caller_trapped",
+          "value": 0.5,
+          "probability": 0.93,
+          "probabilities": {
+            "yes": 0.06,
+            "no": 0.01,
+            "unknown": 0.93
+          },
+          "entropy_confidence": 0.89,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "caller_evacuated": {
+          "label": "caller_evacuated",
+          "value": 1.0,
+          "probability": 0.95,
+          "probabilities": {
+            "yes": 0.95,
+            "no": 0.01,
+            "unknown": 0.04
+          },
+          "entropy_confidence": 0.93,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_smoke": {
+          "label": "hazard_smoke",
+          "value": 0.5,
+          "probability": 0.95,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.04,
+            "unknown": 0.95
+          },
+          "entropy_confidence": 0.93,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_fire": {
+          "label": "hazard_fire",
+          "value": 0.5,
+          "probability": 0.96,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.03,
+            "unknown": 0.96
+          },
+          "entropy_confidence": 0.94,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_gas": {
+          "label": "hazard_gas",
+          "value": 0.5,
+          "probability": 0.94,
+          "probabilities": {
+            "yes": 0.02,
+            "no": 0.04,
+            "unknown": 0.94
+          },
+          "entropy_confidence": 0.91,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_weapon": {
+          "label": "hazard_weapon",
+          "value": 0.5,
+          "probability": 0.76,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.23,
+            "unknown": 0.76
+          },
+          "entropy_confidence": 0.64,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_water": {
+          "label": "hazard_water",
+          "value": 0.5,
+          "probability": 0.96,
+          "probabilities": {
+            "yes": 0.02,
+            "no": 0.02,
+            "unknown": 0.96
+          },
+          "entropy_confidence": 0.94,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_electrical": {
+          "label": "hazard_electrical",
+          "value": 0.5,
+          "probability": 0.99,
+          "probabilities": {
+            "yes": 0.0,
+            "no": 0.01,
+            "unknown": 0.99
+          },
+          "entropy_confidence": 0.99,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_vehicle": {
+          "label": "hazard_vehicle",
+          "value": 0.5,
+          "probability": 0.82,
+          "probabilities": {
+            "yes": 0.03,
+            "no": 0.15,
+            "unknown": 0.82
+          },
+          "entropy_confidence": 0.73,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        }
+      },
+      "predictions": [
+        {
+          "label": "incident_type",
+          "value": "unknown",
+          "score": 0.35,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "structure_fire": 0.01,
+            "medical": 0.0,
+            "traffic_collision": 0.0,
+            "crime_in_progress": 0.01,
+            "gas_leak": 0.0,
+            "water_rescue": 0.0,
+            "other": 0.01,
+            "unknown": 0.97
+          },
+          "raw_probability": 0.97,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.97,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.35,
+            "uncorroborated": "no evidence span located and no independent agreement; score capped at 0.35",
+            "abstained": "score < 0.55"
+          }
+        },
+        {
+          "label": "injuries",
+          "value": "unknown",
+          "score": 0.35,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "none": 0.05,
+            "suspected": 0.08,
+            "confirmed": 0.02,
+            "unknown": 0.85
+          },
+          "raw_probability": 0.85,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.85,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.35,
+            "uncorroborated": "no evidence span located and no independent agreement; score capped at 0.35",
+            "abstained": "score < 0.55"
+          }
+        },
+        {
+          "label": "weapons_present",
+          "value": "unknown",
+          "score": 0.35,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "yes": 0.02,
+            "no": 0.07,
+            "unknown": 0.91
+          },
+          "raw_probability": 0.91,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.91,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.35,
+            "p_true": 0.5,
+            "thresholds": "yes>=0.7 no<=0.3",
+            "uncorroborated": "no evidence span located and no independent agreement; score capped at 0.35"
+          }
+        },
+        {
+          "label": "caller_safe",
+          "value": "yes",
+          "score": 1.0,
+          "evidence": {
+            "text": "I am outside.",
+            "start": 0,
+            "end": 13,
+            "source": "original",
+            "match": "exact"
+          },
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "trapped": 0.5,
+            "evacuated": 1.0
+          },
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "composed_from": [
+              "caller_trapped",
+              "caller_evacuated"
+            ],
+            "p_trapped": 0.5,
+            "p_evacuated": 1.0,
+            "reason": "caller states they got clear",
+            "asr_factor": 1.0,
+            "final": 1.0
+          }
+        },
+        {
+          "label": "hazards",
+          "value": [],
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "smoke": 0.5,
+            "fire": 0.5,
+            "gas": 0.5,
+            "weapon": 0.5,
+            "water": 0.5,
+            "electrical": 0.5,
+            "vehicle": 0.5
+          },
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "per_hazard": {
+              "smoke": 0.5,
+              "fire": 0.5,
+              "gas": 0.5,
+              "weapon": 0.5,
+              "water": 0.5,
+              "electrical": 0.5,
+              "vehicle": 0.5
+            },
+            "threshold": 0.7,
+            "cross_check": "agree"
+          }
+        },
+        {
+          "label": "location_text",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        },
+        {
+          "label": "callback_number",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        },
+        {
+          "label": "persons_involved",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        }
+      ],
+      "suggestions": [
+        {
+          "id": "sug-1",
+          "field": "caller_safe",
+          "kind": "addition",
+          "proposed_value": "yes",
+          "value_kind": "text",
+          "proposed_presence": "stated",
+          "previous_value": null,
+          "base_revision": 0,
+          "status": "pending",
+          "created_at": "2026-10-11T22:02:45.502+00:00",
+          "evidence": [
+            {
+              "segment_id": "seg-1",
+              "source": "original",
+              "text": "I am outside.",
+              "start": 0,
+              "end": 13,
+              "offset_unit": "utf16",
+              "start_ms": null,
+              "end_ms": null,
+              "method": "keyword_context"
+            }
+          ],
+          "support": {
+            "derived_score": 1.0,
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "asr_confidence": null,
+            "uncorroborated": false,
+            "note": null
+          },
+          "raw_model": null,
+          "superseded_by": null,
+          "corroborating_segment_ids": [],
+          "resolved_value": null,
+          "resolved_at": null,
+          "conflict_options": [],
+          "conflicts_with": [],
+          "prior_statement": null,
+          "prior_evidence": null,
+          "note": null
+        }
+      ],
+      "unresolved": [],
+      "flags": []
+    },
+    {
+      "id": "other-occupants-paraphrase",
+      "text": "I got out of the building. I cannot account for the people on the upper floor.",
+      "expected": {
+        "caller_evacuated": 1.0,
+        "caller_trapped": 0.0
+      },
+      "required_uncertainty": "Upper-floor occupants unaccounted for",
+      "engine": "openai_decisions",
+      "model": "gpt-6-luna",
+      "latency_ms": 221.1,
+      "checks": [
+        {
+          "field": "caller_evacuated",
+          "expected": 1.0,
+          "actual": 1.0,
+          "passed": true
+        },
+        {
+          "field": "caller_trapped",
+          "expected": 0.0,
+          "actual": 0.5,
+          "passed": false
+        }
+      ],
+      "raw_answers": {
+        "incident_type": {
+          "label": "incident_type",
+          "value": "unknown",
+          "probability": 0.83,
+          "probabilities": {
+            "structure_fire": 0.04,
+            "medical": 0.01,
+            "traffic_collision": 0.02,
+            "crime_in_progress": 0.01,
+            "gas_leak": 0.01,
+            "water_rescue": 0.01,
+            "other": 0.07,
+            "unknown": 0.83
+          },
+          "entropy_confidence": 0.81,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "injuries": {
+          "label": "injuries",
+          "value": "unknown",
+          "probability": 0.78,
+          "probabilities": {
+            "none": 0.04,
+            "suspected": 0.12,
+            "confirmed": 0.06,
+            "unknown": 0.78
+          },
+          "entropy_confidence": 0.71,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "weapons_present": {
+          "label": "weapons_present",
+          "value": 0.5,
+          "probability": 0.96,
+          "probabilities": {
+            "yes": 0.0,
+            "no": 0.04,
+            "unknown": 0.96
+          },
+          "entropy_confidence": 0.94,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "caller_trapped": {
+          "label": "caller_trapped",
+          "value": 0.5,
+          "probability": 0.87,
+          "probabilities": {
+            "yes": 0.03,
+            "no": 0.1,
+            "unknown": 0.87
+          },
+          "entropy_confidence": 0.8,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "caller_evacuated": {
+          "label": "caller_evacuated",
+          "value": 1.0,
+          "probability": 0.99,
+          "probabilities": {
+            "yes": 0.99,
+            "no": 0.0,
+            "unknown": 0.01
+          },
+          "entropy_confidence": 0.99,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_smoke": {
+          "label": "hazard_smoke",
+          "value": 0.5,
+          "probability": 0.98,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.01,
+            "unknown": 0.98
+          },
+          "entropy_confidence": 0.97,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_fire": {
+          "label": "hazard_fire",
+          "value": 0.5,
+          "probability": 0.99,
+          "probabilities": {
+            "yes": 0.0,
+            "no": 0.01,
+            "unknown": 0.99
+          },
+          "entropy_confidence": 0.99,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_gas": {
+          "label": "hazard_gas",
+          "value": 0.5,
+          "probability": 0.98,
+          "probabilities": {
+            "yes": 0.0,
+            "no": 0.02,
+            "unknown": 0.98
+          },
+          "entropy_confidence": 0.97,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_weapon": {
+          "label": "hazard_weapon",
+          "value": 0.5,
+          "probability": 0.93,
+          "probabilities": {
+            "yes": 0.0,
+            "no": 0.07,
+            "unknown": 0.93
+          },
+          "entropy_confidence": 0.89,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_water": {
+          "label": "hazard_water",
+          "value": 0.5,
+          "probability": 0.95,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.04,
+            "unknown": 0.95
+          },
+          "entropy_confidence": 0.93,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_electrical": {
+          "label": "hazard_electrical",
+          "value": 0.5,
+          "probability": 0.99,
+          "probabilities": {
+            "yes": 0.0,
+            "no": 0.01,
+            "unknown": 0.99
+          },
+          "entropy_confidence": 0.99,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_vehicle": {
+          "label": "hazard_vehicle",
+          "value": 0.5,
+          "probability": 0.96,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.03,
+            "unknown": 0.96
+          },
+          "entropy_confidence": 0.94,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        }
+      },
+      "predictions": [
+        {
+          "label": "incident_type",
+          "value": "unknown",
+          "score": 0.35,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "structure_fire": 0.04,
+            "medical": 0.01,
+            "traffic_collision": 0.02,
+            "crime_in_progress": 0.01,
+            "gas_leak": 0.01,
+            "water_rescue": 0.01,
+            "other": 0.07,
+            "unknown": 0.83
+          },
+          "raw_probability": 0.83,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.83,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.35,
+            "uncorroborated": "no evidence span located and no independent agreement; score capped at 0.35",
+            "abstained": "score < 0.55"
+          }
+        },
+        {
+          "label": "injuries",
+          "value": "unknown",
+          "score": 0.35,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "none": 0.04,
+            "suspected": 0.12,
+            "confirmed": 0.06,
+            "unknown": 0.78
+          },
+          "raw_probability": 0.78,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.78,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.35,
+            "uncorroborated": "no evidence span located and no independent agreement; score capped at 0.35",
+            "abstained": "score < 0.55"
+          }
+        },
+        {
+          "label": "weapons_present",
+          "value": "unknown",
+          "score": 0.35,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "yes": 0.0,
+            "no": 0.04,
+            "unknown": 0.96
+          },
+          "raw_probability": 0.96,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.96,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.35,
+            "p_true": 0.5,
+            "thresholds": "yes>=0.7 no<=0.3",
+            "uncorroborated": "no evidence span located and no independent agreement; score capped at 0.35"
+          }
+        },
+        {
+          "label": "caller_safe",
+          "value": "yes",
+          "score": 1.0,
+          "evidence": {
+            "text": "I got out of the building.",
+            "start": 0,
+            "end": 26,
+            "source": "original",
+            "match": "exact"
+          },
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "trapped": 0.5,
+            "evacuated": 1.0
+          },
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "composed_from": [
+              "caller_trapped",
+              "caller_evacuated"
+            ],
+            "p_trapped": 0.5,
+            "p_evacuated": 1.0,
+            "reason": "caller states they got clear",
+            "asr_factor": 1.0,
+            "final": 1.0
+          }
+        },
+        {
+          "label": "hazards",
+          "value": [],
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "smoke": 0.5,
+            "fire": 0.5,
+            "gas": 0.5,
+            "weapon": 0.5,
+            "water": 0.5,
+            "electrical": 0.5,
+            "vehicle": 0.5
+          },
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "per_hazard": {
+              "smoke": 0.5,
+              "fire": 0.5,
+              "gas": 0.5,
+              "weapon": 0.5,
+              "water": 0.5,
+              "electrical": 0.5,
+              "vehicle": 0.5
+            },
+            "threshold": 0.7,
+            "cross_check": "agree"
+          }
+        },
+        {
+          "label": "location_text",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        },
+        {
+          "label": "callback_number",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        },
+        {
+          "label": "persons_involved",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        }
+      ],
+      "suggestions": [
+        {
+          "id": "sug-1",
+          "field": "caller_safe",
+          "kind": "addition",
+          "proposed_value": "yes",
+          "value_kind": "text",
+          "proposed_presence": "stated",
+          "previous_value": null,
+          "base_revision": 0,
+          "status": "pending",
+          "created_at": "2026-10-11T22:02:45.727+00:00",
+          "evidence": [
+            {
+              "segment_id": "seg-1",
+              "source": "original",
+              "text": "I got out of the building.",
+              "start": 0,
+              "end": 26,
+              "offset_unit": "utf16",
+              "start_ms": null,
+              "end_ms": null,
+              "method": "keyword_context"
+            }
+          ],
+          "support": {
+            "derived_score": 1.0,
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "asr_confidence": null,
+            "uncorroborated": false,
+            "note": null
+          },
+          "raw_model": null,
+          "superseded_by": null,
+          "corroborating_segment_ids": [],
+          "resolved_value": null,
+          "resolved_at": null,
+          "conflict_options": [],
+          "conflicts_with": [],
+          "prior_statement": null,
+          "prior_evidence": null,
+          "note": null
+        }
+      ],
+      "unresolved": [],
+      "flags": []
+    },
+    {
+      "id": "different-person",
+      "text": "I am outside and safe, but my brother is trapped in the bedroom.",
+      "expected": {
+        "caller_evacuated": 1.0,
+        "caller_trapped": 0.0
+      },
+      "engine": "openai_decisions",
+      "model": "gpt-6-luna",
+      "latency_ms": 383.8,
+      "checks": [
+        {
+          "field": "caller_evacuated",
+          "expected": 1.0,
+          "actual": 1.0,
+          "passed": true
+        },
+        {
+          "field": "caller_trapped",
+          "expected": 0.0,
+          "actual": 0.5,
+          "passed": false
+        }
+      ],
+      "raw_answers": {
+        "incident_type": {
+          "label": "incident_type",
+          "value": "unknown",
+          "probability": 0.79,
+          "probabilities": {
+            "structure_fire": 0.03,
+            "medical": 0.01,
+            "traffic_collision": 0.02,
+            "crime_in_progress": 0.02,
+            "gas_leak": 0.01,
+            "water_rescue": 0.01,
+            "other": 0.11,
+            "unknown": 0.79
+          },
+          "entropy_confidence": 0.76,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "injuries": {
+          "label": "injuries",
+          "value": "unknown",
+          "probability": 0.43,
+          "probabilities": {
+            "none": 0.12,
+            "suspected": 0.36,
+            "confirmed": 0.09,
+            "unknown": 0.43
+          },
+          "entropy_confidence": 0.24,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "weapons_present": {
+          "label": "weapons_present",
+          "value": 0.5,
+          "probability": 0.94,
+          "probabilities": {
+            "yes": 0.02,
+            "no": 0.04,
+            "unknown": 0.94
+          },
+          "entropy_confidence": 0.91,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "caller_trapped": {
+          "label": "caller_trapped",
+          "value": 0.5,
+          "probability": 0.74,
+          "probabilities": {
+            "yes": 0.19,
+            "no": 0.07,
+            "unknown": 0.74
+          },
+          "entropy_confidence": 0.61,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "caller_evacuated": {
+          "label": "caller_evacuated",
+          "value": 1.0,
+          "probability": 0.92,
+          "probabilities": {
+            "yes": 0.92,
+            "no": 0.02,
+            "unknown": 0.06
+          },
+          "entropy_confidence": 0.88,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_smoke": {
+          "label": "hazard_smoke",
+          "value": 0.5,
+          "probability": 0.95,
+          "probabilities": {
+            "yes": 0.03,
+            "no": 0.02,
+            "unknown": 0.95
+          },
+          "entropy_confidence": 0.93,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_fire": {
+          "label": "hazard_fire",
+          "value": 0.5,
+          "probability": 0.95,
+          "probabilities": {
+            "yes": 0.02,
+            "no": 0.03,
+            "unknown": 0.95
+          },
+          "entropy_confidence": 0.93,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_gas": {
+          "label": "hazard_gas",
+          "value": 0.5,
+          "probability": 0.96,
+          "probabilities": {
+            "yes": 0.02,
+            "no": 0.02,
+            "unknown": 0.96
+          },
+          "entropy_confidence": 0.94,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_weapon": {
+          "label": "hazard_weapon",
+          "value": 0.5,
+          "probability": 0.86,
+          "probabilities": {
+            "yes": 0.03,
+            "no": 0.11,
+            "unknown": 0.86
+          },
+          "entropy_confidence": 0.79,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_water": {
+          "label": "hazard_water",
+          "value": 0.5,
+          "probability": 0.93,
+          "probabilities": {
+            "yes": 0.02,
+            "no": 0.05,
+            "unknown": 0.93
+          },
+          "entropy_confidence": 0.89,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_electrical": {
+          "label": "hazard_electrical",
+          "value": 0.5,
+          "probability": 0.99,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.0,
+            "unknown": 0.99
+          },
+          "entropy_confidence": 0.99,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_vehicle": {
+          "label": "hazard_vehicle",
+          "value": 0.5,
+          "probability": 0.86,
+          "probabilities": {
+            "yes": 0.06,
+            "no": 0.08,
+            "unknown": 0.86
+          },
+          "entropy_confidence": 0.79,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        }
+      },
+      "predictions": [
+        {
+          "label": "incident_type",
+          "value": "unknown",
+          "score": 0.35,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "structure_fire": 0.03,
+            "medical": 0.01,
+            "traffic_collision": 0.02,
+            "crime_in_progress": 0.02,
+            "gas_leak": 0.01,
+            "water_rescue": 0.01,
+            "other": 0.11,
+            "unknown": 0.79
+          },
+          "raw_probability": 0.79,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.79,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.35,
+            "uncorroborated": "no evidence span located and no independent agreement; score capped at 0.35",
+            "abstained": "score < 0.55"
+          }
+        },
+        {
+          "label": "injuries",
+          "value": "unknown",
+          "score": 0.35,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "none": 0.12,
+            "suspected": 0.36,
+            "confirmed": 0.09,
+            "unknown": 0.43
+          },
+          "raw_probability": 0.43,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.43,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.35,
+            "uncorroborated": "no evidence span located and no independent agreement; score capped at 0.35",
+            "abstained": "score < 0.55"
+          }
+        },
+        {
+          "label": "weapons_present",
+          "value": "unknown",
+          "score": 0.35,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "yes": 0.02,
+            "no": 0.04,
+            "unknown": 0.94
+          },
+          "raw_probability": 0.94,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.94,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.35,
+            "p_true": 0.5,
+            "thresholds": "yes>=0.7 no<=0.3",
+            "uncorroborated": "no evidence span located and no independent agreement; score capped at 0.35"
+          }
+        },
+        {
+          "label": "caller_safe",
+          "value": "yes",
+          "score": 1.0,
+          "evidence": {
+            "text": "I am outside and safe, but my brother is trapped in the bedroom.",
+            "start": 0,
+            "end": 64,
+            "source": "original",
+            "match": "exact"
+          },
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "trapped": 0.5,
+            "evacuated": 1.0
+          },
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "composed_from": [
+              "caller_trapped",
+              "caller_evacuated"
+            ],
+            "p_trapped": 0.5,
+            "p_evacuated": 1.0,
+            "reason": "caller states they got clear",
+            "asr_factor": 1.0,
+            "final": 1.0
+          }
+        },
+        {
+          "label": "hazards",
+          "value": [],
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "smoke": 0.5,
+            "fire": 0.5,
+            "gas": 0.5,
+            "weapon": 0.5,
+            "water": 0.5,
+            "electrical": 0.5,
+            "vehicle": 0.5
+          },
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "per_hazard": {
+              "smoke": 0.5,
+              "fire": 0.5,
+              "gas": 0.5,
+              "weapon": 0.5,
+              "water": 0.5,
+              "electrical": 0.5,
+              "vehicle": 0.5
+            },
+            "threshold": 0.7,
+            "cross_check": "agree"
+          }
+        },
+        {
+          "label": "location_text",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        },
+        {
+          "label": "callback_number",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        },
+        {
+          "label": "persons_involved",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        }
+      ],
+      "suggestions": [
+        {
+          "id": "sug-1",
+          "field": "caller_safe",
+          "kind": "addition",
+          "proposed_value": "yes",
+          "value_kind": "text",
+          "proposed_presence": "stated",
+          "previous_value": null,
+          "base_revision": 0,
+          "status": "pending",
+          "created_at": "2026-10-11T22:02:46.114+00:00",
+          "evidence": [
+            {
+              "segment_id": "seg-1",
+              "source": "original",
+              "text": "I am outside and safe, but my brother is trapped in the bedroom.",
+              "start": 0,
+              "end": 64,
+              "offset_unit": "utf16",
+              "start_ms": null,
+              "end_ms": null,
+              "method": "keyword_context"
+            }
+          ],
+          "support": {
+            "derived_score": 1.0,
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "asr_confidence": null,
+            "uncorroborated": false,
+            "note": null
+          },
+          "raw_model": null,
+          "superseded_by": null,
+          "corroborating_segment_ids": [],
+          "resolved_value": null,
+          "resolved_at": null,
+          "conflict_options": [],
+          "conflicts_with": [],
+          "prior_statement": null,
+          "prior_evidence": null,
+          "note": null
+        }
+      ],
+      "unresolved": [],
+      "flags": []
+    },
+    {
+      "id": "injury-correction",
+      "text": "Nobody is hurt. Sorry, I was wrong: my sister has a deep cut and is bleeding.",
+      "expected": {
+        "injuries": "confirmed"
+      },
+      "engine": "openai_decisions",
+      "model": "gpt-6-luna",
+      "latency_ms": 295.0,
+      "checks": [
+        {
+          "field": "injuries",
+          "expected": "confirmed",
+          "actual": "confirmed",
+          "passed": true
+        }
+      ],
+      "raw_answers": {
+        "incident_type": {
+          "label": "incident_type",
+          "value": "medical",
+          "probability": 0.97,
+          "probabilities": {
+            "structure_fire": 0.01,
+            "medical": 0.97,
+            "traffic_collision": 0.01,
+            "crime_in_progress": 0.0,
+            "gas_leak": 0.0,
+            "water_rescue": 0.0,
+            "other": 0.0,
+            "unknown": 0.01
+          },
+          "entropy_confidence": 0.97,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "injuries": {
+          "label": "injuries",
+          "value": "confirmed",
+          "probability": 0.99,
+          "probabilities": {
+            "none": 0.01,
+            "suspected": 0.0,
+            "confirmed": 0.99,
+            "unknown": 0.0
+          },
+          "entropy_confidence": 0.99,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "weapons_present": {
+          "label": "weapons_present",
+          "value": 0.5,
+          "probability": 0.88,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.11,
+            "unknown": 0.88
+          },
+          "entropy_confidence": 0.82,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "caller_trapped": {
+          "label": "caller_trapped",
+          "value": 0.5,
+          "probability": 0.71,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.28,
+            "unknown": 0.71
+          },
+          "entropy_confidence": 0.56,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "caller_evacuated": {
+          "label": "caller_evacuated",
+          "value": 0.5,
+          "probability": 1.0,
+          "probabilities": {
+            "yes": 0.0,
+            "no": 0.0,
+            "unknown": 1.0
+          },
+          "entropy_confidence": 1.0,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_smoke": {
+          "label": "hazard_smoke",
+          "value": 0.5,
+          "probability": 0.9,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.09,
+            "unknown": 0.9
+          },
+          "entropy_confidence": 0.85,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_fire": {
+          "label": "hazard_fire",
+          "value": 0.5,
+          "probability": 0.92,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.07,
+            "unknown": 0.92
+          },
+          "entropy_confidence": 0.88,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_gas": {
+          "label": "hazard_gas",
+          "value": 0.5,
+          "probability": 0.73,
+          "probabilities": {
+            "yes": 0.0,
+            "no": 0.27,
+            "unknown": 0.73
+          },
+          "entropy_confidence": 0.6,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_weapon": {
+          "label": "hazard_weapon",
+          "value": 0.5,
+          "probability": 0.98,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.01,
+            "unknown": 0.98
+          },
+          "entropy_confidence": 0.97,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_water": {
+          "label": "hazard_water",
+          "value": 0.0,
+          "probability": 0.59,
+          "probabilities": {
+            "yes": 0.02,
+            "no": 0.59,
+            "unknown": 0.39
+          },
+          "entropy_confidence": 0.38,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_electrical": {
+          "label": "hazard_electrical",
+          "value": 0.5,
+          "probability": 0.95,
+          "probabilities": {
+            "yes": 0.0,
+            "no": 0.05,
+            "unknown": 0.95
+          },
+          "entropy_confidence": 0.93,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_vehicle": {
+          "label": "hazard_vehicle",
+          "value": 0.5,
+          "probability": 0.87,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.12,
+            "unknown": 0.87
+          },
+          "entropy_confidence": 0.8,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        }
+      },
+      "predictions": [
+        {
+          "label": "incident_type",
+          "value": "medical",
+          "score": 1.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "structure_fire": 0.01,
+            "medical": 0.97,
+            "traffic_collision": 0.01,
+            "crime_in_progress": 0.0,
+            "gas_leak": 0.0,
+            "water_rescue": 0.0,
+            "other": 0.0,
+            "unknown": 0.01
+          },
+          "raw_probability": 0.97,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.97,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "agree",
+            "final": 1.0
+          }
+        },
+        {
+          "label": "injuries",
+          "value": "confirmed",
+          "score": 0.99,
+          "evidence": {
+            "text": "Nobody is hurt.",
+            "start": 0,
+            "end": 15,
+            "source": "original",
+            "match": "exact"
+          },
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "none": 0.01,
+            "suspected": 0.0,
+            "confirmed": 0.99,
+            "unknown": 0.0
+          },
+          "raw_probability": 0.99,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.99,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.99
+          }
+        },
+        {
+          "label": "weapons_present",
+          "value": "unknown",
+          "score": 0.35,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.11,
+            "unknown": 0.88
+          },
+          "raw_probability": 0.88,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.88,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.35,
+            "p_true": 0.5,
+            "thresholds": "yes>=0.7 no<=0.3",
+            "uncorroborated": "no evidence span located and no independent agreement; score capped at 0.35"
+          }
+        },
+        {
+          "label": "caller_safe",
+          "value": "unknown",
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "trapped": 0.5,
+            "evacuated": 0.5
+          },
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "composed_from": [
+              "caller_trapped",
+              "caller_evacuated"
+            ],
+            "p_trapped": 0.5,
+            "p_evacuated": 0.5,
+            "reason": "the call never says either way",
+            "asr_factor": 1.0,
+            "final": 0.0
+          }
+        },
+        {
+          "label": "hazards",
+          "value": [],
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "smoke": 0.5,
+            "fire": 0.5,
+            "gas": 0.5,
+            "weapon": 0.5,
+            "water": 0.0,
+            "electrical": 0.5,
+            "vehicle": 0.5
+          },
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "per_hazard": {
+              "smoke": 0.5,
+              "fire": 0.5,
+              "gas": 0.5,
+              "weapon": 0.5,
+              "water": 0.0,
+              "electrical": 0.5,
+              "vehicle": 0.5
+            },
+            "threshold": 0.7,
+            "cross_check": "agree"
+          }
+        },
+        {
+          "label": "location_text",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        },
+        {
+          "label": "callback_number",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        },
+        {
+          "label": "persons_involved",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        }
+      ],
+      "suggestions": [
+        {
+          "id": "sug-1",
+          "field": "incident_type",
+          "kind": "addition",
+          "proposed_value": "medical",
+          "value_kind": "text",
+          "proposed_presence": "stated",
+          "previous_value": null,
+          "base_revision": 0,
+          "status": "pending",
+          "created_at": "2026-10-11T22:02:46.413+00:00",
+          "evidence": [],
+          "support": {
+            "derived_score": 1.0,
+            "cross_check": "unavailable",
+            "rule_check": "agree",
+            "asr_confidence": null,
+            "uncorroborated": false,
+            "note": null
+          },
+          "raw_model": {
+            "engine": "laya",
+            "checkpoint": null,
+            "probability": 0.97,
+            "probabilities": {
+              "structure_fire": 0.01,
+              "medical": 0.97,
+              "traffic_collision": 0.01,
+              "crime_in_progress": 0.0,
+              "gas_leak": 0.0,
+              "water_rescue": 0.0,
+              "other": 0.0,
+              "unknown": 0.01
+            },
+            "calibrated": false
+          },
+          "superseded_by": null,
+          "corroborating_segment_ids": [],
+          "resolved_value": null,
+          "resolved_at": null,
+          "conflict_options": [],
+          "conflicts_with": [],
+          "prior_statement": null,
+          "prior_evidence": null,
+          "note": null
+        },
+        {
+          "id": "sug-2",
+          "field": "injuries",
+          "kind": "addition",
+          "proposed_value": "confirmed",
+          "value_kind": "text",
+          "proposed_presence": "stated",
+          "previous_value": null,
+          "base_revision": 0,
+          "status": "pending",
+          "created_at": "2026-10-11T22:02:46.413+00:00",
+          "evidence": [
+            {
+              "segment_id": "seg-1",
+              "source": "original",
+              "text": "Nobody is hurt.",
+              "start": 0,
+              "end": 15,
+              "offset_unit": "utf16",
+              "start_ms": null,
+              "end_ms": null,
+              "method": "keyword_context"
+            }
+          ],
+          "support": {
+            "derived_score": 0.99,
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "asr_confidence": null,
+            "uncorroborated": false,
+            "note": null
+          },
+          "raw_model": {
+            "engine": "laya",
+            "checkpoint": null,
+            "probability": 0.99,
+            "probabilities": {
+              "none": 0.01,
+              "suspected": 0.0,
+              "confirmed": 0.99,
+              "unknown": 0.0
+            },
+            "calibrated": false
+          },
+          "superseded_by": null,
+          "corroborating_segment_ids": [],
+          "resolved_value": null,
+          "resolved_at": null,
+          "conflict_options": [],
+          "conflicts_with": [],
+          "prior_statement": null,
+          "prior_evidence": null,
+          "note": null
+        }
+      ],
+      "unresolved": [],
+      "flags": []
+    },
+    {
+      "id": "weapon-retraction",
+      "text": "He has a gun. Wait, I was mistaken, it is a phone. There is no weapon.",
+      "expected": {
+        "weapons_present": 0.0
+      },
+      "engine": "openai_decisions",
+      "model": "gpt-6-luna",
+      "latency_ms": 303.4,
+      "checks": [
+        {
+          "field": "weapons_present",
+          "expected": 0.0,
+          "actual": 0.0,
+          "passed": true
+        }
+      ],
+      "raw_answers": {
+        "incident_type": {
+          "label": "incident_type",
+          "value": "unknown",
+          "probability": 0.92,
+          "probabilities": {
+            "structure_fire": 0.02,
+            "medical": 0.01,
+            "traffic_collision": 0.01,
+            "crime_in_progress": 0.03,
+            "gas_leak": 0.0,
+            "water_rescue": 0.0,
+            "other": 0.01,
+            "unknown": 0.92
+          },
+          "entropy_confidence": 0.91,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "injuries": {
+          "label": "injuries",
+          "value": "none",
+          "probability": 0.59,
+          "probabilities": {
+            "none": 0.59,
+            "suspected": 0.02,
+            "confirmed": 0.01,
+            "unknown": 0.38
+          },
+          "entropy_confidence": 0.45,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "weapons_present": {
+          "label": "weapons_present",
+          "value": 0.0,
+          "probability": 0.98,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.98,
+            "unknown": 0.01
+          },
+          "entropy_confidence": 0.97,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "caller_trapped": {
+          "label": "caller_trapped",
+          "value": 0.5,
+          "probability": 0.81,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.18,
+            "unknown": 0.81
+          },
+          "entropy_confidence": 0.72,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "caller_evacuated": {
+          "label": "caller_evacuated",
+          "value": 0.5,
+          "probability": 0.97,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.02,
+            "unknown": 0.97
+          },
+          "entropy_confidence": 0.96,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_smoke": {
+          "label": "hazard_smoke",
+          "value": 0.5,
+          "probability": 0.63,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.36,
+            "unknown": 0.63
+          },
+          "entropy_confidence": 0.45,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_fire": {
+          "label": "hazard_fire",
+          "value": 0.5,
+          "probability": 0.84,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.15,
+            "unknown": 0.84
+          },
+          "entropy_confidence": 0.76,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_gas": {
+          "label": "hazard_gas",
+          "value": 0.0,
+          "probability": 0.76,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.76,
+            "unknown": 0.23
+          },
+          "entropy_confidence": 0.64,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_weapon": {
+          "label": "hazard_weapon",
+          "value": 0.0,
+          "probability": 0.99,
+          "probabilities": {
+            "yes": 0.0,
+            "no": 0.99,
+            "unknown": 0.01
+          },
+          "entropy_confidence": 0.99,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_water": {
+          "label": "hazard_water",
+          "value": 0.5,
+          "probability": 0.51,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.48,
+            "unknown": 0.51
+          },
+          "entropy_confidence": 0.27,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_electrical": {
+          "label": "hazard_electrical",
+          "value": 0.0,
+          "probability": 0.76,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.76,
+            "unknown": 0.23
+          },
+          "entropy_confidence": 0.64,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_vehicle": {
+          "label": "hazard_vehicle",
+          "value": 0.0,
+          "probability": 0.5,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.5,
+            "unknown": 0.49
+          },
+          "entropy_confidence": 0.25,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        }
+      },
+      "predictions": [
+        {
+          "label": "incident_type",
+          "value": "unknown",
+          "score": 0.92,
+          "evidence": {
+            "text": "He has a gun.",
+            "start": 0,
+            "end": 13,
+            "source": "original",
+            "match": "exact"
+          },
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "structure_fire": 0.02,
+            "medical": 0.01,
+            "traffic_collision": 0.01,
+            "crime_in_progress": 0.03,
+            "gas_leak": 0.0,
+            "water_rescue": 0.0,
+            "other": 0.01,
+            "unknown": 0.92
+          },
+          "raw_probability": 0.92,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.92,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.92
+          }
+        },
+        {
+          "label": "injuries",
+          "value": "unknown",
+          "score": 0.35,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "none": 0.59,
+            "suspected": 0.02,
+            "confirmed": 0.01,
+            "unknown": 0.38
+          },
+          "raw_probability": 0.59,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.59,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.35,
+            "uncorroborated": "no evidence span located and no independent agreement; score capped at 0.35",
+            "abstained": "score < 0.55"
+          }
+        },
+        {
+          "label": "weapons_present",
+          "value": "yes",
+          "score": 0.6,
+          "evidence": {
+            "text": "He has a gun.",
+            "start": 0,
+            "end": 13,
+            "source": "original",
+            "match": "exact"
+          },
+          "verification_state": "unverified",
+          "conflict": true,
+          "evidence_unverified": false,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.98,
+            "unknown": 0.01
+          },
+          "raw_probability": 0.98,
+          "decided_on": "original",
+          "alternative": "yes",
+          "breakdown": {
+            "laya_original": 0.98,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "disagree",
+            "rule_value": "yes",
+            "final": 0.588,
+            "p_true": 0.0,
+            "thresholds": "yes>=0.7 no<=0.3",
+            "forced_unknown": "passes disagreed after thresholding",
+            "rule_override": "weapon term found verbatim in the transcript; reported as yes"
+          }
+        },
+        {
+          "label": "caller_safe",
+          "value": "unknown",
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "trapped": 0.5,
+            "evacuated": 0.5
+          },
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "composed_from": [
+              "caller_trapped",
+              "caller_evacuated"
+            ],
+            "p_trapped": 0.5,
+            "p_evacuated": 0.5,
+            "reason": "the call never says either way",
+            "asr_factor": 1.0,
+            "final": 0.0
+          }
+        },
+        {
+          "label": "hazards",
+          "value": [],
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "smoke": 0.5,
+            "fire": 0.5,
+            "gas": 0.0,
+            "weapon": 0.0,
+            "water": 0.5,
+            "electrical": 0.0,
+            "vehicle": 0.0
+          },
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "per_hazard": {
+              "smoke": 0.5,
+              "fire": 0.5,
+              "gas": 0.0,
+              "weapon": 0.0,
+              "water": 0.5,
+              "electrical": 0.0,
+              "vehicle": 0.0
+            },
+            "threshold": 0.7,
+            "cross_check": "agree"
+          }
+        },
+        {
+          "label": "location_text",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        },
+        {
+          "label": "callback_number",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        },
+        {
+          "label": "persons_involved",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        }
+      ],
+      "suggestions": [
+        {
+          "id": "sug-1",
+          "field": "weapons_present",
+          "kind": "addition",
+          "proposed_value": "yes",
+          "value_kind": "text",
+          "proposed_presence": "stated",
+          "previous_value": null,
+          "base_revision": 0,
+          "status": "pending",
+          "created_at": "2026-10-11T22:02:46.720+00:00",
+          "evidence": [
+            {
+              "segment_id": "seg-1",
+              "source": "original",
+              "text": "He has a gun.",
+              "start": 0,
+              "end": 13,
+              "offset_unit": "utf16",
+              "start_ms": null,
+              "end_ms": null,
+              "method": "keyword_context"
+            }
+          ],
+          "support": {
+            "derived_score": 0.6,
+            "cross_check": "unavailable",
+            "rule_check": "disagree",
+            "asr_confidence": null,
+            "uncorroborated": false,
+            "note": null
+          },
+          "raw_model": {
+            "engine": "laya",
+            "checkpoint": null,
+            "probability": 0.98,
+            "probabilities": {
+              "yes": 0.01,
+              "no": 0.98,
+              "unknown": 0.01
+            },
+            "calibrated": false
+          },
+          "superseded_by": null,
+          "corroborating_segment_ids": [],
+          "resolved_value": null,
+          "resolved_at": null,
+          "conflict_options": [],
+          "conflicts_with": [],
+          "prior_statement": null,
+          "prior_evidence": null,
+          "note": null
+        }
+      ],
+      "unresolved": [],
+      "flags": []
+    },
+    {
+      "id": "clear-fire",
+      "text": "Flames are coming out of the stove and there is smoke in the kitchen. I got outside.",
+      "expected": {
+        "hazard_fire": 1.0,
+        "hazard_smoke": 1.0,
+        "caller_evacuated": 1.0,
+        "weapons_present": 0.5
+      },
+      "engine": "openai_decisions",
+      "model": "gpt-6-luna",
+      "latency_ms": 192.1,
+      "checks": [
+        {
+          "field": "hazard_fire",
+          "expected": 1.0,
+          "actual": 1.0,
+          "passed": true
+        },
+        {
+          "field": "hazard_smoke",
+          "expected": 1.0,
+          "actual": 1.0,
+          "passed": true
+        },
+        {
+          "field": "caller_evacuated",
+          "expected": 1.0,
+          "actual": 1.0,
+          "passed": true
+        },
+        {
+          "field": "weapons_present",
+          "expected": 0.5,
+          "actual": 0.5,
+          "passed": true
+        }
+      ],
+      "raw_answers": {
+        "incident_type": {
+          "label": "incident_type",
+          "value": "structure_fire",
+          "probability": 0.97,
+          "probabilities": {
+            "structure_fire": 0.97,
+            "medical": 0.01,
+            "traffic_collision": 0.0,
+            "crime_in_progress": 0.0,
+            "gas_leak": 0.01,
+            "water_rescue": 0.0,
+            "other": 0.0,
+            "unknown": 0.01
+          },
+          "entropy_confidence": 0.97,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "injuries": {
+          "label": "injuries",
+          "value": "unknown",
+          "probability": 0.76,
+          "probabilities": {
+            "none": 0.11,
+            "suspected": 0.11,
+            "confirmed": 0.02,
+            "unknown": 0.76
+          },
+          "entropy_confidence": 0.68,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "weapons_present": {
+          "label": "weapons_present",
+          "value": 0.5,
+          "probability": 0.88,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.11,
+            "unknown": 0.88
+          },
+          "entropy_confidence": 0.82,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "caller_trapped": {
+          "label": "caller_trapped",
+          "value": 0.0,
+          "probability": 0.9,
+          "probabilities": {
+            "yes": 0.06,
+            "no": 0.9,
+            "unknown": 0.04
+          },
+          "entropy_confidence": 0.85,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "caller_evacuated": {
+          "label": "caller_evacuated",
+          "value": 1.0,
+          "probability": 0.99,
+          "probabilities": {
+            "yes": 0.99,
+            "no": 0.0,
+            "unknown": 0.01
+          },
+          "entropy_confidence": 0.99,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_smoke": {
+          "label": "hazard_smoke",
+          "value": 1.0,
+          "probability": 1.0,
+          "probabilities": {
+            "yes": 1.0,
+            "no": 0.0,
+            "unknown": 0.0
+          },
+          "entropy_confidence": 1.0,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_fire": {
+          "label": "hazard_fire",
+          "value": 1.0,
+          "probability": 1.0,
+          "probabilities": {
+            "yes": 1.0,
+            "no": 0.0,
+            "unknown": 0.0
+          },
+          "entropy_confidence": 1.0,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_gas": {
+          "label": "hazard_gas",
+          "value": 0.5,
+          "probability": 0.96,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.03,
+            "unknown": 0.96
+          },
+          "entropy_confidence": 0.94,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_weapon": {
+          "label": "hazard_weapon",
+          "value": 0.5,
+          "probability": 0.56,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.43,
+            "unknown": 0.56
+          },
+          "entropy_confidence": 0.34,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_water": {
+          "label": "hazard_water",
+          "value": 0.0,
+          "probability": 0.93,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.93,
+            "unknown": 0.06
+          },
+          "entropy_confidence": 0.89,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_electrical": {
+          "label": "hazard_electrical",
+          "value": 0.5,
+          "probability": 0.98,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.01,
+            "unknown": 0.98
+          },
+          "entropy_confidence": 0.97,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        },
+        "hazard_vehicle": {
+          "label": "hazard_vehicle",
+          "value": 0.5,
+          "probability": 0.49,
+          "probabilities": {
+            "yes": 0.05,
+            "no": 0.46,
+            "unknown": 0.49
+          },
+          "entropy_confidence": 0.24,
+          "quote": null,
+          "decided_on": "original",
+          "notes": []
+        }
+      },
+      "predictions": [
+        {
+          "label": "incident_type",
+          "value": "structure_fire",
+          "score": 1.0,
+          "evidence": {
+            "text": "Flames are coming out of the stove and there is smoke in the kitchen.",
+            "start": 0,
+            "end": 69,
+            "source": "original",
+            "match": "exact"
+          },
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "structure_fire": 0.97,
+            "medical": 0.01,
+            "traffic_collision": 0.0,
+            "crime_in_progress": 0.0,
+            "gas_leak": 0.01,
+            "water_rescue": 0.0,
+            "other": 0.0,
+            "unknown": 0.01
+          },
+          "raw_probability": 0.97,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.97,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "agree",
+            "final": 1.0
+          }
+        },
+        {
+          "label": "injuries",
+          "value": "unknown",
+          "score": 0.35,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "none": 0.11,
+            "suspected": 0.11,
+            "confirmed": 0.02,
+            "unknown": 0.76
+          },
+          "raw_probability": 0.76,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.76,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.35,
+            "uncorroborated": "no evidence span located and no independent agreement; score capped at 0.35",
+            "abstained": "score < 0.55"
+          }
+        },
+        {
+          "label": "weapons_present",
+          "value": "unknown",
+          "score": 0.35,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "yes": 0.01,
+            "no": 0.11,
+            "unknown": 0.88
+          },
+          "raw_probability": 0.88,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "laya_original": 0.88,
+            "asr_factor": 1.0,
+            "asr_confidence": "not_applicable",
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "final": 0.35,
+            "p_true": 0.5,
+            "thresholds": "yes>=0.7 no<=0.3",
+            "uncorroborated": "no evidence span located and no independent agreement; score capped at 0.35"
+          }
+        },
+        {
+          "label": "caller_safe",
+          "value": "yes",
+          "score": 1.0,
+          "evidence": {
+            "text": "I got outside.",
+            "start": 70,
+            "end": 84,
+            "source": "original",
+            "match": "exact"
+          },
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "trapped": 0.0,
+            "evacuated": 1.0
+          },
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "composed_from": [
+              "caller_trapped",
+              "caller_evacuated"
+            ],
+            "p_trapped": 0.0,
+            "p_evacuated": 1.0,
+            "reason": "caller states they got clear",
+            "asr_factor": 1.0,
+            "final": 1.0
+          }
+        },
+        {
+          "label": "hazards",
+          "value": [
+            "smoke",
+            "fire"
+          ],
+          "score": 1.0,
+          "evidence": {
+            "text": "Flames are coming out of the stove and there is smoke in the kitchen.",
+            "start": 0,
+            "end": 69,
+            "source": "original",
+            "match": "exact"
+          },
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": {
+            "smoke": 1.0,
+            "fire": 1.0,
+            "gas": 0.5,
+            "weapon": 0.5,
+            "water": 0.0,
+            "electrical": 0.5,
+            "vehicle": 0.5
+          },
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "per_hazard": {
+              "smoke": 1.0,
+              "fire": 1.0,
+              "gas": 0.5,
+              "weapon": 0.5,
+              "water": 0.0,
+              "electrical": 0.5,
+              "vehicle": 0.5
+            },
+            "threshold": 0.7,
+            "cross_check": "agree"
+          }
+        },
+        {
+          "label": "location_text",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        },
+        {
+          "label": "callback_number",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        },
+        {
+          "label": "persons_involved",
+          "value": null,
+          "score": 0.0,
+          "evidence": null,
+          "verification_state": "unverified",
+          "conflict": false,
+          "evidence_unverified": false,
+          "probabilities": null,
+          "raw_probability": null,
+          "decided_on": "original",
+          "alternative": null,
+          "breakdown": {
+            "reason": "no pattern matched",
+            "extractor": "regex"
+          }
+        }
+      ],
+      "suggestions": [
+        {
+          "id": "sug-1",
+          "field": "incident_type",
+          "kind": "addition",
+          "proposed_value": "structure_fire",
+          "value_kind": "text",
+          "proposed_presence": "stated",
+          "previous_value": null,
+          "base_revision": 0,
+          "status": "pending",
+          "created_at": "2026-10-11T22:02:46.915+00:00",
+          "evidence": [
+            {
+              "segment_id": "seg-1",
+              "source": "original",
+              "text": "Flames are coming out of the stove and there is smoke in the kitchen.",
+              "start": 0,
+              "end": 69,
+              "offset_unit": "utf16",
+              "start_ms": null,
+              "end_ms": null,
+              "method": "keyword_context"
+            }
+          ],
+          "support": {
+            "derived_score": 1.0,
+            "cross_check": "unavailable",
+            "rule_check": "agree",
+            "asr_confidence": null,
+            "uncorroborated": false,
+            "note": null
+          },
+          "raw_model": {
+            "engine": "laya",
+            "checkpoint": null,
+            "probability": 0.97,
+            "probabilities": {
+              "structure_fire": 0.97,
+              "medical": 0.01,
+              "traffic_collision": 0.0,
+              "crime_in_progress": 0.0,
+              "gas_leak": 0.01,
+              "water_rescue": 0.0,
+              "other": 0.0,
+              "unknown": 0.01
+            },
+            "calibrated": false
+          },
+          "superseded_by": null,
+          "corroborating_segment_ids": [],
+          "resolved_value": null,
+          "resolved_at": null,
+          "conflict_options": [],
+          "conflicts_with": [],
+          "prior_statement": null,
+          "prior_evidence": null,
+          "note": null
+        },
+        {
+          "id": "sug-2",
+          "field": "caller_safe",
+          "kind": "addition",
+          "proposed_value": "yes",
+          "value_kind": "text",
+          "proposed_presence": "stated",
+          "previous_value": null,
+          "base_revision": 0,
+          "status": "pending",
+          "created_at": "2026-10-11T22:02:46.915+00:00",
+          "evidence": [
+            {
+              "segment_id": "seg-1",
+              "source": "original",
+              "text": "I got outside.",
+              "start": 70,
+              "end": 84,
+              "offset_unit": "utf16",
+              "start_ms": null,
+              "end_ms": null,
+              "method": "keyword_context"
+            }
+          ],
+          "support": {
+            "derived_score": 1.0,
+            "cross_check": "unavailable",
+            "rule_check": "no_opinion",
+            "asr_confidence": null,
+            "uncorroborated": false,
+            "note": null
+          },
+          "raw_model": null,
+          "superseded_by": null,
+          "corroborating_segment_ids": [],
+          "resolved_value": null,
+          "resolved_at": null,
+          "conflict_options": [],
+          "conflicts_with": [],
+          "prior_statement": null,
+          "prior_evidence": null,
+          "note": null
+        },
+        {
+          "id": "sug-3",
+          "field": "hazards",
+          "kind": "addition",
+          "proposed_value": [
+            "fire",
+            "smoke"
+          ],
+          "value_kind": "list",
+          "proposed_presence": "stated",
+          "previous_value": null,
+          "base_revision": 0,
+          "status": "pending",
+          "created_at": "2026-10-11T22:02:46.915+00:00",
+          "evidence": [
+            {
+              "segment_id": "seg-1",
+              "source": "original",
+              "text": "Flames are coming out of the stove and there is smoke in the kitchen.",
+              "start": 0,
+              "end": 69,
+              "offset_unit": "utf16",
+              "start_ms": null,
+              "end_ms": null,
+              "method": "keyword_context"
+            }
+          ],
+          "support": {
+            "derived_score": 1.0,
+            "cross_check": "agree",
+            "rule_check": "no_opinion",
+            "asr_confidence": null,
+            "uncorroborated": false,
+            "note": null
+          },
+          "raw_model": null,
+          "superseded_by": null,
+          "corroborating_segment_ids": [],
+          "resolved_value": null,
+          "resolved_at": null,
+          "conflict_options": [],
+          "conflicts_with": [],
+          "prior_statement": null,
+          "prior_evidence": null,
+          "note": null
+        }
+      ],
+      "unresolved": [],
+      "flags": []
+    }
+  ]
+}
