@@ -44,26 +44,60 @@ from .decision.base import EngineResult, FieldAnswer
 from .decision.questions import EVIDENCE_TERMS
 from .evidence import locate_term, resolve as resolve_evidence
 from .schemas import (
+    ChiefComplaint,
+    FireExtent,
     Hazard,
     IncidentForm,
     IncidentType,
     Injuries,
+    Occupancy,
     Prediction,
     Tristate,
 )
 
-CHOICE_FIELDS = ("incident_type", "injuries")
+CHOICE_FIELDS = (
+    "incident_type",
+    "injuries",
+    "occupancy",
+    "fire_extent",
+    "chief_complaint",
+    "awake",
+    "breathing",
+)
 NOUL_FIELDS = ("weapons_present",)
-RULE_FIELDS = ("location_text", "callback_number", "persons_involved")
+RULE_FIELDS = ("location_text", "callback_number", "persons_involved", "caller_name")
+# A quoted phrase is the value. Laya abstaining does not hide "he is awake".
+SPOKEN_FIELDS = {
+    "injuries",
+    "occupancy",
+    "fire_extent",
+    "chief_complaint",
+    "awake",
+    "breathing",
+}
+FIRE_NATURES = {IncidentType.STRUCTURE_FIRE, IncidentType.GAS_LEAK}
 
 # A noul field that the deterministic extractor can also speak to.
 NOUL_RULE_SOURCE = {"weapons_present": "hazard_weapon"}
 
 # A pattern match is strong evidence but not proof: the regex can find a
 # plausible street fragment in a sentence that was not an address.
-RULE_FIELD_SCORE = {"callback_number": 0.95, "location_text": 0.8, "persons_involved": 0.85}
+RULE_FIELD_SCORE = {
+    "callback_number": 0.95,
+    "location_text": 0.8,
+    "persons_involved": 0.85,
+    "caller_name": 0.9,
+}
 
-_ENUMS = {"incident_type": IncidentType, "injuries": Injuries}
+_ENUMS = {
+    "incident_type": IncidentType,
+    "injuries": Injuries,
+    "occupancy": Occupancy,
+    "fire_extent": FireExtent,
+    "chief_complaint": ChiefComplaint,
+    "awake": Tristate,
+    "breathing": Tristate,
+}
 
 
 @dataclass
@@ -257,6 +291,22 @@ def resolve(
         primary = laya_answers.get(label)
         enum = _ENUMS[label]
         if primary is None:
+            rule = rule_answers.get(label)
+            allowed = {item.value for item in enum}
+            if rule is not None and rule.value in allowed and (
+                label in SPOKEN_FIELDS or label == "incident_type"
+            ):
+                predictions.append(
+                    Prediction(
+                        label=label,
+                        value=rule.value,
+                        score=settings.choice_min_confidence,
+                        decided_on="rules",
+                        breakdown={"spoken": rule.value},
+                    )
+                )
+                setattr(form, label, enum(rule.value))
+                continue
             predictions.append(
                 Prediction(
                     label=label,
@@ -282,6 +332,18 @@ def resolve(
         if abstained:
             breakdown["abstained"] = f"score < {settings.choice_min_confidence}"
             value = enum.UNKNOWN.value
+
+        if (
+            rule is not None
+            and label in SPOKEN_FIELDS
+            and rule.value in {item.value for item in enum}
+        ):
+            value = rule.value
+            score = max(score, settings.choice_min_confidence)
+            conflict = False
+            alternative = None
+            breakdown.pop("abstained", None)
+            breakdown["spoken"] = rule.value
 
         predictions.append(
             Prediction(
@@ -500,10 +562,42 @@ def resolve(
         )
         setattr(form, label, rule.value)
 
+    _keep_section_fields(predictions, form)
+
     if laya is None:
         notes.append(
-            "Laya was unavailable; only deterministic extraction ran. Every "
-            "categorical field is reported as unknown."
+            "Laya was unavailable; categorical fields are filled only where a "
+            "quoted phrase matched."
         )
     notes.append(settings.CALIBRATION_WARNING)
     return Resolution(predictions=predictions, form=form, notes=notes)
+
+
+def _keep_section_fields(predictions: list[Prediction], form: IncidentForm) -> None:
+    """A medical call does not record how big a fire is, and a fire does not record awake or breathing."""
+    drop: list[tuple[str, type]] = []
+    if form.incident_type not in FIRE_NATURES:
+        drop.extend([("occupancy", Occupancy), ("fire_extent", FireExtent)])
+    if form.incident_type is not IncidentType.MEDICAL:
+        drop.extend([
+            ("chief_complaint", ChiefComplaint),
+            ("awake", Tristate),
+            ("breathing", Tristate),
+        ])
+    for label, enum in drop:
+        current = getattr(form, label)
+        if current == enum.UNKNOWN:
+            continue
+        setattr(form, label, enum.UNKNOWN)
+        for prediction in predictions:
+            if prediction.label != label:
+                continue
+            prediction.value = enum.UNKNOWN.value
+            prediction.score = 0.0
+            prediction.conflict = False
+            prediction.alternative = None
+            prediction.breakdown = {
+                **(prediction.breakdown or {}),
+                "out_of_scope": "this detail belongs to a different kind of call",
+            }
+            break

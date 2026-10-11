@@ -22,6 +22,12 @@ from .models import FieldValue, Presence
 # who, then how to get back in touch.
 _SENTENCES: tuple[tuple[str, str], ...] = (
     ("incident_type", "Reported incident: {value}."),
+    ("caller_name", "Caller: {value}."),
+    ("chief_complaint", "Chief complaint: {value}."),
+    ("awake", "Awake: {value}."),
+    ("breathing", "Breathing: {value}."),
+    ("occupancy", "Occupancy: {value}."),
+    ("fire_extent", "Fire extent: {value}."),
     ("location_text", "Location: {value}."),
     ("access_notes", "Access: {value}."),
     ("injuries", "Injuries: {value}."),
@@ -34,6 +40,12 @@ _SENTENCES: tuple[tuple[str, str], ...] = (
 
 _LABELS = {
     "incident_type": "Reported incident",
+    "caller_name": "Caller",
+    "chief_complaint": "Chief complaint",
+    "awake": "Awake",
+    "breathing": "Breathing",
+    "occupancy": "Occupancy",
+    "fire_extent": "Fire extent",
     "location_text": "Location",
     "access_notes": "Access",
     "injuries": "Injuries",

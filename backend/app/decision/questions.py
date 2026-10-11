@@ -28,6 +28,53 @@ from ..schemas import Hazard
 STATE_FIELD = "transcript"
 
 INCIDENT_QUESTIONS: dict[str, dict] = {
+    "occupancy": {
+        "type": "choice",
+        "instructions": f"What kind of place is the problem in, in `{STATE_FIELD}`?",
+        "criteria": {
+            "dwelling": "a house or a single home",
+            "multi_unit": "an apartment, flat, or a unit inside a larger building",
+            "commercial": "a store, restaurant, office, or other business",
+        },
+    },
+    "fire_extent": {
+        "type": "choice",
+        "instructions": f"How much of the building does `{STATE_FIELD}` say is involved?",
+        "criteria": {
+            "smoke_only": "smoke or a smell, with nothing described as burning in a particular place",
+            "one_room": "one room, a kitchen, or a single apartment",
+            "one_floor": "one floor of a building",
+            "whole_building": "the whole building",
+            "spreading": "the fire is spreading beyond where it started",
+        },
+    },
+    "chief_complaint": {
+        "type": "choice",
+        "instructions": f"What medical problem does the caller in `{STATE_FIELD}` describe?",
+        "criteria": {
+            "chest_pain": "chest pain or a heart attack",
+            "trouble_breathing": "difficulty breathing, short of not breathing at all",
+            "unconscious": "someone has collapsed or is unconscious",
+            "bleeding": "someone is bleeding",
+            "seizure": "someone is having a seizure",
+        },
+    },
+    "awake": {
+        "type": "choice",
+        "instructions": f"Does `{STATE_FIELD}` say whether the person is awake?",
+        "criteria": {
+            "yes": "the caller says the person is awake",
+            "no": "the caller says the person is unconscious, collapsed, or not awake",
+        },
+    },
+    "breathing": {
+        "type": "choice",
+        "instructions": f"Does `{STATE_FIELD}` say whether the person is breathing?",
+        "criteria": {
+            "yes": "the caller says the person is breathing",
+            "no": "the caller says the person is not breathing",
+        },
+    },
     "incident_type": {
         "type": "choice",
         "instructions": f"What kind of emergency does the caller in `{STATE_FIELD}` describe?",
@@ -110,6 +157,18 @@ ALL_QUESTIONS: dict[str, dict] = {**INCIDENT_QUESTIONS, **HAZARD_QUESTIONS}
 # so there is nothing to falsify here -- a miss means "no span to highlight",
 # never "the answer is wrong". Deliberately bilingual for the demo scenarios.
 EVIDENCE_TERMS: dict[str, tuple[str, ...]] = {
+    "occupancy": (
+        "house", "home", "casa", "apartment", "departamento", "restaurant", "employees",
+    ),
+    "fire_extent": (
+        "kitchen", "room", "departamento", "floor", "building", "spreading", "smoke", "humo",
+    ),
+    "chief_complaint": (
+        "chest pain", "dolor de pecho", "breathing", "respir", "unconscious", "collapsed",
+        "inconsciente", "bleeding", "sangrando", "seizure", "convulsion",
+    ),
+    "awake": ("awake", "unconscious", "collapsed", "inconsciente"),
+    "breathing": ("breathing", "not breathing", "respira", "no respira"),
     "incident_type": (
         "smoke", "fire", "burning", "flames", "humo", "fuego", "incendio",
         "crash", "collision", "accident", "choque", "accidente",

@@ -167,8 +167,8 @@ def find_all_phones(text: str) -> list[str]:
 _PERSONS = re.compile(
     r"\b(\d{1,3}|one|two|three|four|five|six|seven|eight|nine|ten"
     r"|un|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s+"
-    r"(?:people|persons?|passengers?|victims?|kids?|children|adults?"
-    r"|personas?|pasajeros?|victimas?|ninos?|adultos?)\b",
+    r"(?:people|persons?|passengers?|victims?|kids?|children|adults?|employees?"
+    r"|personas?|pasajeros?|victimas?|ninos?|adultos?|empleados?)\b",
     re.IGNORECASE,
 )
 
@@ -238,6 +238,106 @@ def find_address(text: str) -> str | None:
     return match.group(0).strip(" ,.") if match else None
 
 
+_CALLER_NAME = re.compile(
+    r"\b(?:my name is|me llamo)\s+([A-Za-z]+(?:\s+[A-Za-z]+){0,2})",
+    re.IGNORECASE,
+)
+
+
+def find_name(text: str) -> str | None:
+    match = _CALLER_NAME.search(text)
+    if not match:
+        return None
+    return " ".join(part.capitalize() for part in match.group(1).split())
+
+
+def find_extent(text: str) -> str | None:
+    low = text.lower()
+    if any(phrase in low for phrase in ("spreading", "spread to", "se extiende")):
+        return "spreading"
+    if any(phrase in low for phrase in ("whole building", "entire building", "todo el edificio")):
+        return "whole_building"
+    if any(phrase in low for phrase in ("one floor", "the floor", "upstairs", "piso")):
+        return "one_floor"
+    if any(phrase in low for phrase in ("kitchen", "one room", "the room", "departamento", "apartment")):
+        return "one_room"
+    if "smoke" in low or "humo" in low:
+        if not any(phrase in low for phrase in ("flame", "flames", "fuego", "burning")):
+            return "smoke_only"
+    return None
+
+
+def find_occupancy(text: str) -> str | None:
+    low = text.lower()
+    scores = {
+        "multi_unit": sum(phrase in low for phrase in ("apartment", "departamento", "flat")),
+        "commercial": sum(phrase in low for phrase in ("restaurant", "store", "office", "employees")),
+        "dwelling": sum(phrase in low for phrase in ("house", "home", "casa")),
+    }
+    hits = {name: count for name, count in scores.items() if count}
+    if not hits:
+        return None
+    best = max(hits, key=lambda name: hits[name])
+    if sum(1 for count in hits.values() if count == hits[best]) > 1:
+        return None
+    return best
+
+
+def find_complaint(text: str) -> str | None:
+    low = text.lower()
+    if any(phrase in low for phrase in ("unconscious", "collapsed", "inconsciente", "desmayo")):
+        return "unconscious"
+    if any(phrase in low for phrase in (
+        "not breathing", "isn't breathing", "is not breathing", "no respira",
+        "can't breathe", "cannot breathe",
+    )):
+        return "trouble_breathing"
+    if "chest pain" in low or "dolor de pecho" in low:
+        return "chest_pain"
+    if "bleeding" in low or "sangrando" in low:
+        return "bleeding"
+    if "seizure" in low or "convulsion" in low:
+        return "seizure"
+    return None
+
+
+def find_awake(text: str) -> str | None:
+    low = text.lower()
+    if any(phrase in low for phrase in ("unconscious", "not awake", "collapsed", "inconsciente")):
+        return "no"
+    if re.search(r"\bawake\b", low):
+        return "yes"
+    return None
+
+
+def find_breathing(text: str) -> str | None:
+    low = text.lower()
+    if any(phrase in low for phrase in (
+        "not breathing", "isn't breathing", "is not breathing", "no respira",
+        "can't breathe", "cannot breathe",
+    )):
+        return "no"
+    if re.search(r"\bbreathing\b", low) or "respirando" in low:
+        return "yes"
+    return None
+
+
+def find_injuries(text: str) -> str | None:
+    low = text.lower()
+    if any(phrase in low for phrase in (
+        "not breathing", "isn't breathing", "is not breathing", "unconscious", "collapsed",
+        "bleeding", "sangrando", "esta herida", "está herida",
+    )):
+        return "confirmed"
+    if any(phrase in low for phrase in ("chest pain", "dolor de pecho", "coughing", "tosiendo")):
+        return "suspected"
+    if any(phrase in low for phrase in (
+        "no one is injured", "nobody is hurt", "not hurt", "nadie esta herido", "nadie está herido",
+    )):
+        return "none"
+    return None
+
+
 def find_persons(text: str) -> int | None:
     match = _PERSONS.search(text)
     if not match:
@@ -303,6 +403,41 @@ class RuleEngine:
         if persons is not None:
             answers["persons_involved"] = FieldAnswer(
                 label="persons_involved", value=persons, decided_on="rules"
+            )
+
+        name = find_name(joined)
+        if name:
+            answers["caller_name"] = FieldAnswer(
+                label="caller_name", value=name, quote=name, decided_on="rules"
+            )
+
+        extent = find_extent(joined)
+        if extent:
+            answers["fire_extent"] = FieldAnswer(
+                label="fire_extent", value=extent, decided_on="rules"
+            )
+        occupancy = find_occupancy(joined)
+        if occupancy:
+            answers["occupancy"] = FieldAnswer(
+                label="occupancy", value=occupancy, decided_on="rules"
+            )
+        complaint = find_complaint(joined)
+        if complaint:
+            answers["chief_complaint"] = FieldAnswer(
+                label="chief_complaint", value=complaint, decided_on="rules"
+            )
+        awake = find_awake(joined)
+        if awake:
+            answers["awake"] = FieldAnswer(label="awake", value=awake, decided_on="rules")
+        breathing = find_breathing(joined)
+        if breathing:
+            answers["breathing"] = FieldAnswer(
+                label="breathing", value=breathing, decided_on="rules"
+            )
+        injuries = find_injuries(joined)
+        if injuries:
+            answers["injuries"] = FieldAnswer(
+                label="injuries", value=injuries, decided_on="rules"
             )
 
         incident, hits = _best_keyword_match(joined, _INCIDENT_KEYWORDS)

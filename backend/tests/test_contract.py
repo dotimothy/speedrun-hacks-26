@@ -311,3 +311,55 @@ class TestRecordedFixtures:
     def test_calibration_warning_is_carried(self, path):
         data = json.loads(path.read_text(encoding="utf-8"))
         assert data.get("calibration_warning")
+
+
+class TestCallRecordSections:
+    def test_medical_call_reads_complaint_awake_and_breathing(self):
+        from app.decision.rules import RuleEngine
+
+        answers = RuleEngine().extract(
+            "My name is Helen Cho. My father has chest pain. He is awake and breathing. "
+            "We are at our house at 220 Cedar Avenue.",
+            "",
+            "en",
+        ).answers
+        assert answers["caller_name"].value == "Helen Cho"
+        assert answers["chief_complaint"].value == "chest_pain"
+        assert answers["awake"].value == "yes"
+        assert answers["breathing"].value == "yes"
+        assert answers["incident_type"].value == "medical"
+
+    def test_fire_call_reads_extent_and_occupancy(self):
+        from app.decision.rules import RuleEngine
+
+        answers = RuleEngine().extract(
+            "There is smoke and flames in the kitchen of the restaurant at 900 Market Street. "
+            "My name is Luis Ortega. All six employees are outside. No one is injured.",
+            "",
+            "en",
+        ).answers
+        assert answers["caller_name"].value == "Luis Ortega"
+        assert answers["fire_extent"].value == "one_room"
+        assert answers["occupancy"].value == "commercial"
+        assert answers["persons_involved"].value == 6
+        assert answers["injuries"].value == "none"
+        assert answers["incident_type"].value == "structure_fire"
+
+    def test_a_medical_call_does_not_keep_a_fire_size(self):
+        from app.confidence import resolve as resolve_confidence
+        from app.decision.base import EngineResult, FieldAnswer
+        from app.decision.rules import RuleEngine
+
+        text = (
+            "My name is Helen Cho. My father has chest pain in the kitchen. "
+            "He is awake and breathing."
+        )
+        rules = RuleEngine().extract(text, "", "en")
+        laya = EngineResult(
+            answers={"incident_type": FieldAnswer("incident_type", "medical", probability=0.9)},
+        )
+        form = resolve_confidence(laya, rules, text, "").form
+        assert form.incident_type.value == "medical"
+        assert form.chief_complaint.value == "chest_pain"
+        assert form.fire_extent.value == "unknown"
+        assert form.occupancy.value == "unknown"
