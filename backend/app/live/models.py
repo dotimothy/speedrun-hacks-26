@@ -303,6 +303,9 @@ class ReviewFlagKind(str, Enum):
     LANGUAGE_UNCERTAIN = "language_uncertain"
     NO_SPEECH_DETECTED = "no_speech_detected"
     TRANSLATION_UNVERIFIED = "translation_unverified"
+    CONTRADICTORY_STATEMENTS = "contradictory_statements"
+    PERSON_COUNT_UNCERTAIN = "person_count_uncertain"
+    MODEL_PASSES_DISAGREED = "model_passes_disagreed"
 
 
 class ReviewFlag(BaseModel):
